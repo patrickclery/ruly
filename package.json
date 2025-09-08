@@ -1,0 +1,25 @@
+{
+  "name": "ruly",
+  "version": "1.0.0",
+  "description": "Ruly is an agent rules management tool.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prettier:yaml": "prettier --write \"**/*.{yml,yaml}\"",
+    "prettier:markdown": "prettier --write \"**/*.md\"",
+    "prettier:all": "prettier --write \"**/*.{yml,yaml,md}\"",
+    "format:tables": "markdown-table-prettify **/*.md",
+    "format:markdown-full": "npm run prettier:markdown && npm run format:tables"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "markdown-table": "^3.0.4",
+    "markdown-table-prettify": "^3.6.0",
+    "prettier": "^3.6.2"
+  }
+}

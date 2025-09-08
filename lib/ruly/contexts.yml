@@ -1,0 +1,108 @@
+# AI Agent Context Windows by Pricing Tier
+# Updated: December 2024
+
+claude:
+  free:
+    name: "Claude.ai Free"
+    context: 8_000
+    daily_limit: 20
+  pro:
+    name: "Claude.ai Pro"
+    context: 200_000
+    daily_limit: 500
+  team:
+    name: "Claude.ai Team"
+    context: 200_000
+    daily_limit: 1000
+  api_sonnet:
+    name: "Claude 3.5 Sonnet API"
+    context: 200_000
+  api_opus:
+    name: "Claude 3 Opus API"
+    context: 200_000
+  api_haiku:
+    name: "Claude 3 Haiku API"
+    context: 200_000
+
+openai:
+  gpt3_turbo:
+    name: "GPT-3.5 Turbo"
+    context: 16_385
+  gpt4:
+    name: "GPT-4"
+    context: 8_192
+  gpt4_32k:
+    name: "GPT-4 32K"
+    context: 32_768
+  gpt4_turbo:
+    name: "GPT-4 Turbo"
+    context: 128_000
+  gpt4o:
+    name: "GPT-4o"
+    context: 128_000
+  gpt4o_mini:
+    name: "GPT-4o mini"
+    context: 128_000
+
+cursor:
+  free:
+    name: "Cursor Free"
+    context: 8_000
+    requests_per_month: 50
+  pro:
+    name: "Cursor Pro"
+    context: 32_000
+    requests_per_month: 500
+  business:
+    name: "Cursor Business"
+    context: 32_000
+    requests_per_month: "unlimited"
+
+github:
+  copilot_individual:
+    name: "GitHub Copilot Individual"
+    context: 32_000
+  copilot_business:
+    name: "GitHub Copilot Business"
+    context: 32_000
+  copilot_enterprise:
+    name: "GitHub Copilot Enterprise"
+    context: 128_000
+
+aider:
+  default:
+    name: "Aider (GPT-4)"
+    context: 128_000
+
+continue:
+  free:
+    name: "Continue Free"
+    context: 32_000
+  pro:
+    name: "Continue Pro"
+    context: 128_000
+
+codeium:
+  free:
+    name: "Codeium Free"
+    context: 32_000
+  pro:
+    name: "Codeium Pro"
+    context: 64_000
+
+windsurf:
+  free:
+    name: "Windsurf Free"
+    context: 32_000
+  pro:
+    name: "Windsurf Pro"
+    context: 128_000
+
+# Common aliases for quick reference
+aliases:
+  claude_free: claude.free
+  claude_pro: claude.pro
+  claude_max: claude.api_sonnet
+  gpt4_max: openai.gpt4_turbo
+  cursor_max: cursor.business
+  copilot_max: github.copilot_enterprise

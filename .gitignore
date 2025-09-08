@@ -1,0 +1,19 @@
+.cursor/rules
+.ruby-version
+CLAUDE.local.md
+cache/
+.tmp/
+.claude/commands/
+/.idea/
+
+# Ruly generated files
+test.md
+.ruly.yml
+vendor/bundle
+*.gem
+.bundle
+.rspec_status
+/node_modules/
+.lefthook-local/
+mcp.yml
+/test_results.json

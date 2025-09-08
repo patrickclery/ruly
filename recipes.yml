@@ -1,0 +1,33 @@
+# Recipe definitions for Ruly
+# Each recipe defines a collection of rule files to combine
+# Use 'ruly import --recipe <name>' or 'ruly squash --recipe <name>' to use a specific recipe
+
+# Global default plan (can be overridden per recipe or in user config)
+plan: claude_pro
+
+recipes:
+  # Rails projects with Sequel (no Jira dependencies)
+  rails:
+    description: "Ruby on Rails development with Sequel ORM, monads, and RSpec testing"
+    plan: claude_max # This recipe targets Claude API users
+    files:
+      - rules/ruby/ruby-practices.md
+      - rules/ruby/sequel.md
+      - rules/ruby/monads.md
+      - rules/ruby/rspec.md
+  # Example recipe with multiple source types
+  example_mixed:
+    description: "Mixed local and remote sources demonstration recipe"
+    # 'sources' accepts both local files and remote URLs
+    sources:
+      - rules/awesome-cursor.md # Local file
+      - https://github.com/metabase/metabase/blob/master/.claude/commands/fix-issue.md # GitHub URL
+      - https://raw.githubusercontent.com/anthropics/anthropic-cookbook/main/misc/claude_prompting_guide.md # Raw URL
+      - rules/ruby/rspec.md # Another local file
+  # Example with separate files and remote sources (backward compatible)
+  legacy_format:
+    description: "Backward compatible format with separate files and remote_sources"
+    files:
+      - rules/awesome-cursor.md
+    remote_sources:
+      - https://github.com/metabase/metabase/blob/master/.claude/commands/fix-issue.md

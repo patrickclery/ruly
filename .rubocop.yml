@@ -1,0 +1,221 @@
+AllCops:
+  NewCops: enable
+Layout/ClassStructure:
+  AutoCorrect: true
+  Categories:
+    association:
+      - has_many
+      - has_one
+    attribute_macros:
+      - attr_accessor
+      - attr_reader
+      - attr_writer
+    macros:
+      - validates
+      - validate
+    module_inclusion:
+      - include
+      - prepend
+      - extend
+  Enabled: true
+  Severity: warning
+  ExpectedOrder:
+    - module_inclusion
+    - constants
+    - association
+    - public_attribute_macros
+    - public_delegate
+    - macros
+    - public_class_methods
+    - initializer
+    - public_methods
+    - protected_attribute_macros
+    - protected_methods
+    - constants
+    - private_attribute_macros
+    - private_delegate
+    - private_methods
+Layout/EmptyLines:
+  Enabled: true
+Layout/EmptyLinesAroundAttributeAccessor:
+  Enabled: true
+Layout/EmptyLinesAroundClassBody:
+  Enabled: true
+Layout/ExtraSpacing:
+  Enabled: true
+  ForceEqualSignAlignment: false
+  AllowForAlignment: true
+Layout/FirstArrayElementIndentation:
+  Enabled: false
+Layout/FirstHashElementIndentation:
+  Enabled: false
+Layout/HashAlignment:
+  EnforcedHashRocketStyle:
+    - key
+  EnforcedColonStyle:
+    - key
+Layout/LineLength:
+  Enabled: true
+  Max: 120
+Layout/MultilineHashKeyLineBreaks: { Enabled: true, AutoCorrect: false }
+Layout/MultilineMethodCallIndentation:
+  Enabled: false
+Layout/SpaceInsideHashLiteralBraces: { EnforcedStyle: no_space }
+Lint/DeprecatedOpenSSLConstant:
+  Enabled: true
+Lint/MissingSuper:
+  Enabled: false
+Lint/MixedRegexpCaptureTypes:
+  Enabled: true
+Lint/RaiseException:
+  Enabled: true
+Lint/StructNewOverride:
+  Enabled: true
+Metrics/AbcSize:
+  Enabled: false
+Metrics/ClassLength:
+  Max: 500
+Metrics/CyclomaticComplexity:
+  Max: 15
+Metrics/MethodLength:
+  Max: 30
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+Metrics/PerceivedComplexity:
+  Enabled: false
+Naming/VariableNumber:
+  CheckSymbols: false
+Obsession/MethodOrder: { Enabled: true, Severity: warning }
+Performance/AncestorsInclude:
+  Enabled: true
+Performance/BigDecimalWithNumericArgument:
+  Enabled: true
+Performance/CollectionLiteralInLoop:
+  Enabled: true
+Performance/ConcurrentMonotonicTime:
+  Enabled: true
+Performance/ConstantRegexp:
+  Enabled: true
+Performance/MapCompact:
+  Enabled: true
+Performance/MapMethodChain:
+  Enabled: true
+Performance/MethodObjectAsBlock:
+  Enabled: true
+Performance/RedundantBlockCall:
+  Enabled: false
+Performance/RedundantEqualityComparisonBlock:
+  Enabled: true
+Performance/RedundantSortBlock:
+  Enabled: true
+Performance/RedundantSplitRegexpArgument:
+  Enabled: true
+Performance/RedundantStringChars:
+  Enabled: true
+Performance/ReverseFirst:
+  Enabled: true
+Performance/SortReverse:
+  Enabled: true
+Performance/Squeeze:
+  Enabled: true
+Performance/StringBytesize:
+  Enabled: true
+Performance/StringIdentifierArgument:
+  Enabled: true
+Performance/StringInclude:
+  Enabled: true
+Performance/Sum:
+  Enabled: true
+RSpec/AlignLeftLetBrace: { Enabled: false }
+RSpec/AlignRightLetBrace: { Enabled: false }
+RSpec/AnyInstance: { Enabled: true, Severity: warning }
+RSpec/AroundBlock: { Enabled: true }
+RSpec/ContextWording: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/EmptyLineAfterFinalLet: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/EmptyLineAfterHook: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/EmptyLineAfterSubject: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/ExampleLength: { Enabled: false }
+RSpec/ExampleWording: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/ExpectChange: { Enabled: false }
+RSpec/ExpectInHook: { Enabled: false }
+RSpec/ImplicitSubject: { Enabled: false }
+RSpec/IndexedLet: { Enabled: false }
+RSpec/LeadingSubject: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/LetBeforeExamples: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/LetSetup: { Enabled: false }
+RSpec/MatchArray: { Enabled: false }
+RSpec/MessageSpies: { Enabled: false }
+RSpec/MetadataStyle: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/MultipleExpectations: { Enabled: false }
+RSpec/MultipleMemoizedHelpers: { Enabled: false }
+RSpec/NamedSubject: { Enabled: false }
+RSpec/NestedGroups: { Enabled: false }
+RSpec/PendingWithoutReason: { Enabled: false }
+RSpec/ReceiveCounts: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/ScatteredLet: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/SortMetadata: { Enabled: true, AutoCorrect: true, Severity: warning }
+RSpec/StubbedMock: { Enabled: false }
+RSpec/SpecFilePathFormat: { Enabled: false }
+RSpec/VerifiedDoubles: { Enabled: false }
+Sevencop/HashElementOrdered:
+  Enabled: true
+  Safe: false
+  Exclude:
+    - config/routes.rb
+Sevencop/MethodDefinitionArgumentsMultiline: { Enabled: false }
+Sevencop/MethodDefinitionInIncluded: { Enabled: true }
+Sevencop/MethodDefinitionKeywordArgumentOrdered: { Enabled: true }
+Sevencop/MethodDefinitionOrdered: { Enabled: false }
+Sevencop/RSpecDescribeHttpEndpoint: { Enabled: true }
+Sevencop/RSpecEmptyLineAfterLet: { Enabled: false }
+Sevencop/RSpecExamplesInSameGroup: { Enabled: true }
+Sevencop/RSpecMatcherConsistentParentheses: { Enabled: true }
+Sevencop/RSpecMemoizedHelperBlockDelimiter: { Enabled: false }
+Style/AccessorGrouping:
+  Enabled: false
+Style/BisectedAttrAccessor:
+  Enabled: true
+Style/CombinableLoops:
+  Enabled: false
+Style/ExponentialNotation:
+  Enabled: true
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  Exclude:
+    - "bin/*"
+Style/HashEachMethods:
+  Enabled: true
+Style/HashSyntax: { Enabled: true, EnforcedShorthandSyntax: always }
+Style/HashTransformKeys:
+  Enabled: true
+Style/HashTransformValues:
+  Enabled: true
+Style/MixinUsage:
+  Enabled: true
+  Exclude:
+Style/MultilineBlockChain:
+  Enabled: false
+Style/NumericPredicate:
+  Enabled: false
+Style/ParallelAssignment:
+  Enabled: false
+Style/RedundantAssignment:
+  Enabled: true
+Style/RedundantFetchBlock:
+  Enabled: true
+Style/RedundantRegexpCharacterClass:
+  Enabled: true
+Style/RedundantRegexpEscape:
+  Enabled: true
+Style/SlicingWithRange:
+  Enabled: true
+Style/SoleNestedConditional:
+  Enabled: false
+Style/SymbolArray: { Enabled: true, EnforcedStyle: percent }
+Style/WordArray: { Enabled: true, EnforcedStyle: percent }
+plugins:
+  - rubocop-obsession
+  - rubocop-performance
+  - rubocop-rake
+  - rubocop-rspec
+  - sevencop

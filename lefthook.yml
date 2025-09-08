@@ -1,0 +1,24 @@
+# Lefthook configuration for pre-commit hooks
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: false
+  commands:
+    prettier:
+      glob: "*.{yml,yaml,json}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+    prettier-markdown:
+      glob: "*.md"
+      run: npx prettier --write {staged_files} && npx markdown-table-prettify {staged_files}
+      stage_fixed: true
+
+    rubocop:
+      glob: "*.{rb,rake}"
+      run: bundle exec rubocop --autocorrect-all --force-exclusion {staged_files}
+      stage_fixed: true
+
+    rspec:
+      glob: "spec/**/*_spec.rb"
+      run: bundle exec rspec {staged_files}
