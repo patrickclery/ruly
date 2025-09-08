@@ -32,6 +32,7 @@ module Ruly
                      type: :boolean
     option :git_ignore, aliases: '-i', default: false, desc: 'Add generated files to .gitignore', type: :boolean
     option :git_exclude, aliases: '-I', default: false, desc: 'Add generated files to .git/info/exclude', type: :boolean
+    option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file', type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested
@@ -112,6 +113,14 @@ module Ruly
         File.open(output_file, 'w') do |output|
           output.puts '# Combined Ruly Documentation'
           output.puts
+
+          # Generate TOC if requested
+          if options[:toc]
+            toc_content = generate_toc_content(local_sources, command_files, agent)
+            output.puts toc_content
+            output.puts
+          end
+
           output.puts '---'
 
           local_sources.each do |source|
@@ -1545,5 +1554,101 @@ module Ruly
         end
       end
     end
+
+    def generate_toc_content(local_sources, command_files, agent)
+      toc_lines = ['## Table of Contents', '']
+      
+      # Generate TOC for source files
+      local_sources.each do |source|
+        toc_lines << generate_toc_for_source(source)
+      end
+      
+      # Generate slash commands section
+      if agent == 'claude' && !command_files.empty?
+        toc_lines.concat(generate_toc_slash_commands(command_files))
+      end
+      
+      toc_lines.join("\n")
+    end
+
+    def generate_toc_for_source(source)
+      toc_section = ["### #{source[:path]}", '']
+      headers = extract_headers_from_content(source[:content])
+      
+      if headers.any?
+        headers.each do |header|
+          indent = '  ' * (header[:level] - 2) if header[:level] > 2
+          toc_section << "#{indent}- [#{header[:text]}](##{header[:anchor]})"
+        end
+        toc_section << ''
+      end
+      
+      toc_section.join("\n")
+    end
+
+    def generate_toc_slash_commands(command_files)
+      ['### Available Slash Commands', ''] +
+        command_files.map do |file|
+          cmd_name = extract_command_name(file[:path])
+          description = extract_command_description(file[:content])
+          "- `/#{cmd_name}` - #{description}"
+        end + ['']
+    end
+
+    def extract_headers_from_content(content)
+      headers = []
+      content = content.force_encoding('UTF-8')
+      content.each_line.with_index do |line, index|
+        if line =~ /^(#+)\s+(.+)$/
+          level = Regexp.last_match(1).length
+          text = Regexp.last_match(2).strip
+          anchor = generate_anchor(text)
+          headers << { level: level, text: text, anchor: anchor, line: index + 1 }
+        end
+      end
+      headers
+    end
+
+    def generate_anchor(text)
+      text.downcase
+          .gsub(/[^\w\s-]/, '')
+          .gsub(/\s+/, '-')
+          .gsub(/-+/, '-')
+          .gsub(/^-|-$/, '')
+    end
+
+    def extract_command_name(file_path)
+      File.basename(file_path, '.md').gsub(/[_-]/, ':')
+    end
+
+    def extract_command_description(content)
+      content = content.force_encoding('UTF-8')
+      
+      # Look for description in YAML frontmatter
+      if content.start_with?('---')
+        yaml_match = content.match(/^---\n(.+?)\n---/m)
+        if yaml_match
+          begin
+            yaml_data = YAML.safe_load(yaml_match[1])
+            return yaml_data['description'] if yaml_data&.key?('description')
+          rescue
+            # Continue to fallback methods
+          end
+        end
+      end
+      
+      # Look for first paragraph after heading
+      lines = content.split("\n")
+      lines.each_with_index do |line, index|
+        next if line.strip.empty? || line.start_with?('#') || line.start_with?('---')
+        
+        if line.strip.length > 10
+          return line.strip.gsub(/[*_`]/, '')[0..80] + (line.length > 80 ? '...' : '')
+        end
+      end
+      
+      'Command description not available'
+    end
+
   end # rubocop:enable Metrics/ClassLength
 end
