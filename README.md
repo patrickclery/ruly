@@ -9,31 +9,44 @@
 
 ## 🚀 Quick Install
 
-### Option 1: Install from RubyGems (When Published)
+### One-Line Installation
 
 ```bash
-gem install ruly
+curl -fsSL https://raw.githubusercontent.com/patrickclery/ruly/main/setup.rb -o /tmp/ruly_setup.rb && ruby /tmp/ruly_setup.rb
 ```
 
-### Option 2: Install from GitHub with Default Rules
+This will:
+- Install Ruly to `~/ruly`
+- Add `ruly` command to your PATH
+- Set up initial configuration at `~/.config/ruly/recipes.yml`
+
+### Manual Installation
+
+If you prefer to install manually:
 
 ```bash
-# Clone with submodules to get the default rules
-git clone --recursive git@github.com:patrickclery/ruly.git
-cd ruly
-gem build ruly.gemspec
-gem install ruly-*.gem
+# Clone the repository
+git clone https://github.com/patrickclery/ruly.git ~/ruly
+cd ~/ruly
+
+# Install dependencies
+bundle config set --local path 'vendor/bundle'
+bundle install
+
+# Add to PATH (add to your ~/.bashrc or ~/.zshrc)
+export PATH="$HOME/ruly/bin:$PATH"
+
+# Initialize configuration
+ruly init
 ```
 
-### Option 3: Install Without Rules
+### Uninstall
+
+To remove Ruly:
 
 ```bash
-# Clone without submodules
-git clone git@github.com:patrickclery/ruly.git
-cd ruly
-gem build ruly.gemspec
-gem install ruly-*.gem
-# Then set up your own rules (see Setting Up Your Rules section)
+rm -rf ~/ruly
+# Remove the PATH export from your shell configuration file
 ```
 
 ### Getting Started
@@ -41,6 +54,9 @@ gem install ruly-*.gem
 After installation, you can immediately start using Ruly:
 
 ```bash
+# Initialize configuration (if not done during install)
+$ ruly init
+
 # List available commands
 $ ruly help
 
@@ -48,7 +64,7 @@ $ ruly help
 $ ruly squash
 
 # Use a specific recipe
-$ ruly squash --recipe rails
+$ ruly squash starter
 
 # Clean up generated files
 $ ruly clean
@@ -62,21 +78,21 @@ $ ruly version
 
 ## 🌟 How It Works
 
-### Ruby Gem CLI Tool
+### Standalone CLI Tool
 
-Ruly is a global command-line tool installed via Ruby gems:
+Ruly is a standalone command-line tool that manages AI assistant rules:
 
-1. **One-time Installation**: Install globally with `gem install ruly`
-2. **Available Everywhere**: The `ruly` command works in any directory
+1. **Simple Installation**: One-line install with curl
+2. **Self-Contained**: Everything runs from `~/ruly`
 3. **Recipe System**: Use pre-configured recipes or create your own
 4. **Smart Caching**: Cache compiled recipes for performance
 5. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
 
 **Benefits:**
 
-- ✅ **Global CLI tool**: Available system-wide after installation
-- ✅ **Easy updates**: Update with `gem update ruly`
-- ✅ **No project dependencies**: Works independently in any directory
+- ✅ **Standalone**: No gem installation required
+- ✅ **Easy updates**: Just pull the latest changes
+- ✅ **No system dependencies**: Self-contained in your home directory
 - ✅ **Flexible rules system**: Define your own rules repository or use remote sources
 - ✅ **Cross-platform**: Works anywhere Ruby is installed
 
@@ -121,8 +137,8 @@ Ruly is a powerful CLI tool that manages AI assistant rules and configurations f
 This repository **does not include rule files**. You need to:
 
 1. Create your own rules repository (private or public)
-2. Clone this repo with submodules if you have access to the default rules
-3. Configure recipes to point to your rule sources
+2. Configure recipes to point to your rule sources
+3. Use the `ruly init` command to get started with a template
 
 ## 🎯 Setting Up Your Rules
 
@@ -186,7 +202,19 @@ recipes:
       - https://github.com/thoughtbot/guides/blob/main/ruby/README.md
 ```
 
-### Option 3: Use Remote Sources Only
+### Option 3: Quick Start with Init
+
+After installing Ruly, you can quickly get started with a basic configuration:
+
+```bash
+# Initialize Ruly with a starter configuration
+ruly init
+
+# This creates ~/.config/ruly/recipes.yml with example recipes
+# Edit this file to add your own rule sources
+```
+
+### Option 4: Use Remote Sources Only
 
 If you don't want to maintain your own rules repository, you can use rules directly from GitHub:
 
@@ -214,30 +242,9 @@ Here's how the maintainer set up their private rules repository:
    gh repo create patrickclery/rules --private --description "Private rules for Ruly gem"
    ```
 
-2. **Moved existing rules:**
+2. **Created your rules content and pushed to GitHub**
 
-   ```bash
-   # Copy rules to new repo
-   cp -r ruly/rules/* rules/
-   cd rules
-   git init
-   git add -A
-   git commit -m "Initial commit: Move rules from ruly repository"
-   git remote add origin git@github.com:patrickclery/rules.git
-   git push -u origin main
-   ```
-
-3. **Added as submodule to ruly:**
-
-   ```bash
-   cd ruly
-   git rm -r rules/
-   git commit -m "Remove rules directory"
-   git submodule add git@github.com:patrickclery/rules.git rules
-   git commit -m "Add rules as submodule"
-   ```
-
-4. **Combined with work repository (FakeCorp example):**
+3. **Updated your Ruly configuration:**
 
    ```yaml
    # ~/.config/ruly/recipes.yml

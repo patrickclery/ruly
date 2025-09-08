@@ -1,10 +1,3 @@
-PATH
-  remote: .
-  specs:
-    ruly (0.1.0)
-      thor (~> 1.2)
-      tiktoken_ruby (~> 0.0.9)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -107,6 +100,7 @@ PLATFORMS
   arm64-darwin-24
 
 DEPENDENCIES
+  base64
   lefthook (~> 1.0)
   rake (~> 13.0)
   rspec (~> 3.0)
@@ -115,8 +109,9 @@ DEPENDENCIES
   rubocop-performance
   rubocop-rake
   rubocop-rspec
-  ruly!
   sevencop
+  thor (~> 1.2)
+  tiktoken_ruby (~> 0.0.9)
 
 BUNDLED WITH
    2.6.9

@@ -32,7 +32,8 @@ module Ruly
                      type: :boolean
     option :git_ignore, aliases: '-i', default: false, desc: 'Add generated files to .gitignore', type: :boolean
     option :git_exclude, aliases: '-I', default: false, desc: 'Add generated files to .git/info/exclude', type: :boolean
-    option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file', type: :boolean
+    option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file',
+                 type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested
@@ -390,6 +391,63 @@ module Ruly
       end
     end
 
+    desc 'init', 'Initialize Ruly with a basic configuration'
+    def init
+      config_dir = File.expand_path('~/.config/ruly')
+      config_file = File.join(config_dir, 'recipes.yml')
+
+      if File.exist?(config_file)
+        puts "✅ Configuration already exists at #{config_file}"
+        puts '   Edit this file to customize your recipes and rule sources.'
+        return
+      end
+
+      # Create directory if it doesn't exist
+      FileUtils.mkdir_p(config_dir)
+
+      # Create starter configuration
+      starter_config = <<~YAML
+        # Ruly Configuration
+        # Add your own recipes and rule sources here
+
+        recipes:
+          starter:
+            description: "Basic starter recipe - uncomment and customize the sources below"
+        #{'    '}
+            # Example: Add rules from GitHub repositories
+            # sources:
+            #   - github: patrickclery/rules
+            #     branch: main
+            #     rules:
+            #       - ruby/common.md
+            #       - testing/common.md
+            ##{'   '}
+            #   # Add rules from your own repository:
+            #   - github: yourusername/your-rules
+            #     branch: main
+            #     rules:
+            #       - path/to/your/rules.md
+        #{'    '}
+            # Example: Add local rule files
+            # files:
+            #   - /path/to/local/rules.md
+            #   - ~/my-rules/ruby.md
+      YAML
+
+      File.write(config_file, starter_config)
+
+      puts '🎉 Successfully initialized Ruly!'
+      puts
+      puts "📁 Created configuration at: #{config_file}"
+      puts
+      puts 'Next steps:'
+      puts "  1. Edit #{config_file} to add your rule sources"
+      puts '  2. Uncomment and customize the example configurations'
+      puts "  3. Run 'ruly squash starter' to combine your rules"
+      puts
+      puts 'For more information, see: https://github.com/patrickclery/ruly'
+    end
+
     desc 'version', 'Show version'
     def version
       puts "Ruly v#{Ruly::VERSION}"
@@ -403,11 +461,18 @@ module Ruly
     end
 
     def cache_dir
-      @cache_dir ||= File.join(gem_root, 'cache')
+      # Use ~/.cache/ruly for standalone mode, otherwise use gem's cache directory
+      @cache_dir ||= if ENV['RULY_HOME']
+                       File.expand_path('~/.cache/ruly')
+                     else
+                       File.join(gem_root, 'cache')
+                     end
     end
 
     def gem_root
-      @gem_root ||= File.expand_path('../..', __dir__)
+      # Use RULY_HOME environment variable if set (standalone mode)
+      # Otherwise fall back to gem installation path
+      @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
     end
 
     def should_use_cache?
@@ -1069,6 +1134,98 @@ module Ruly
       end
     end
 
+    def generate_toc_content(local_sources, command_files, agent)
+      toc_lines = ['## Table of Contents', '']
+
+      # Generate TOC for source files
+      local_sources.each do |source|
+        toc_lines << generate_toc_for_source(source)
+      end
+
+      # Generate slash commands section
+      toc_lines.concat(generate_toc_slash_commands(command_files)) if agent == 'claude' && !command_files.empty?
+
+      toc_lines.join("\n")
+    end
+
+    def generate_toc_for_source(source)
+      toc_section = ["### #{source[:path]}", '']
+      headers = extract_headers_from_content(source[:content])
+
+      if headers.any?
+        headers.each do |header|
+          indent = '  ' * (header[:level] - 2) if header[:level] > 2
+          toc_section << "#{indent}- [#{header[:text]}](##{header[:anchor]})"
+        end
+        toc_section << ''
+      end
+
+      toc_section.join("\n")
+    end
+
+    def extract_headers_from_content(content)
+      headers = []
+      content = content.force_encoding('UTF-8')
+      content.each_line.with_index do |line, index|
+        if line =~ /^(#+)\s+(.+)$/
+          level = Regexp.last_match(1).length
+          text = Regexp.last_match(2).strip
+          anchor = generate_anchor(text)
+          headers << {anchor:, level:, line: index + 1, text:}
+        end
+      end
+      headers
+    end
+
+    def generate_anchor(text)
+      text.downcase
+          .gsub(/[^\w\s-]/, '')
+          .gsub(/\s+/, '-').squeeze('-')
+          .gsub(/^-|-$/, '')
+    end
+
+    def generate_toc_slash_commands(command_files)
+      ['### Available Slash Commands', ''] +
+        command_files.map do |file|
+          cmd_name = extract_command_name(file[:path])
+          description = extract_command_description(file[:content])
+          "- `/#{cmd_name}` - #{description}"
+        end + ['']
+    end
+
+    def extract_command_name(file_path)
+      File.basename(file_path, '.md').gsub(/[_-]/, ':')
+    end
+
+    def extract_command_description(content)
+      content = content.force_encoding('UTF-8')
+
+      # Look for description in YAML frontmatter
+      if content.start_with?('---')
+        yaml_match = content.match(/^---\n(.+?)\n---/m)
+        if yaml_match
+          begin
+            yaml_data = YAML.safe_load(yaml_match[1])
+            return yaml_data['description'] if yaml_data&.key?('description')
+          rescue StandardError
+            # Continue to fallback methods
+          end
+        end
+      end
+
+      # Look for first paragraph after heading
+      lines = content.split("\n")
+      lines.each_with_index do |line, _index|
+        next if line.strip.empty? || line.start_with?('#') || line.start_with?('---')
+
+        if line.strip.length > 10
+          return line.strip.gsub(/[*_`]/, '')[0..80] + (line.length > 80 ? '...' : '')
+        end
+      end
+
+      'Command description not available'
+    end
+
     def generate_ignore_patterns(output_file, agent, command_files)
       patterns = []
 
@@ -1554,101 +1711,5 @@ module Ruly
         end
       end
     end
-
-    def generate_toc_content(local_sources, command_files, agent)
-      toc_lines = ['## Table of Contents', '']
-      
-      # Generate TOC for source files
-      local_sources.each do |source|
-        toc_lines << generate_toc_for_source(source)
-      end
-      
-      # Generate slash commands section
-      if agent == 'claude' && !command_files.empty?
-        toc_lines.concat(generate_toc_slash_commands(command_files))
-      end
-      
-      toc_lines.join("\n")
-    end
-
-    def generate_toc_for_source(source)
-      toc_section = ["### #{source[:path]}", '']
-      headers = extract_headers_from_content(source[:content])
-      
-      if headers.any?
-        headers.each do |header|
-          indent = '  ' * (header[:level] - 2) if header[:level] > 2
-          toc_section << "#{indent}- [#{header[:text]}](##{header[:anchor]})"
-        end
-        toc_section << ''
-      end
-      
-      toc_section.join("\n")
-    end
-
-    def generate_toc_slash_commands(command_files)
-      ['### Available Slash Commands', ''] +
-        command_files.map do |file|
-          cmd_name = extract_command_name(file[:path])
-          description = extract_command_description(file[:content])
-          "- `/#{cmd_name}` - #{description}"
-        end + ['']
-    end
-
-    def extract_headers_from_content(content)
-      headers = []
-      content = content.force_encoding('UTF-8')
-      content.each_line.with_index do |line, index|
-        if line =~ /^(#+)\s+(.+)$/
-          level = Regexp.last_match(1).length
-          text = Regexp.last_match(2).strip
-          anchor = generate_anchor(text)
-          headers << { level: level, text: text, anchor: anchor, line: index + 1 }
-        end
-      end
-      headers
-    end
-
-    def generate_anchor(text)
-      text.downcase
-          .gsub(/[^\w\s-]/, '')
-          .gsub(/\s+/, '-')
-          .gsub(/-+/, '-')
-          .gsub(/^-|-$/, '')
-    end
-
-    def extract_command_name(file_path)
-      File.basename(file_path, '.md').gsub(/[_-]/, ':')
-    end
-
-    def extract_command_description(content)
-      content = content.force_encoding('UTF-8')
-      
-      # Look for description in YAML frontmatter
-      if content.start_with?('---')
-        yaml_match = content.match(/^---\n(.+?)\n---/m)
-        if yaml_match
-          begin
-            yaml_data = YAML.safe_load(yaml_match[1])
-            return yaml_data['description'] if yaml_data&.key?('description')
-          rescue
-            # Continue to fallback methods
-          end
-        end
-      end
-      
-      # Look for first paragraph after heading
-      lines = content.split("\n")
-      lines.each_with_index do |line, index|
-        next if line.strip.empty? || line.start_with?('#') || line.start_with?('---')
-        
-        if line.strip.length > 10
-          return line.strip.gsub(/[*_`]/, '')[0..80] + (line.length > 80 ? '...' : '')
-        end
-      end
-      
-      'Command description not available'
-    end
-
   end # rubocop:enable Metrics/ClassLength
 end
