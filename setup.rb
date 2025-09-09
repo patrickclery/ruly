@@ -162,35 +162,35 @@ if THOR_AVAILABLE
 
     def update_shell_path
       shell_config = detect_shell_config
+      path_line = 'export PATH="$HOME/ruly/bin:$PATH"'
 
-      if shell_config
-        path_line = 'export PATH="$HOME/ruly/bin:$PATH"'
-
-        if File.exist?(shell_config)
-          config_content = File.read(shell_config)
-
-          if config_content.include?(path_line)
-            say Colors.green("✅ PATH already configured in #{shell_config}")
-          else
-            append_to_file shell_config do
-              "\n# Ruly - AI assistant rules manager\n#{path_line}\n"
-            end
-            say Colors.green("✅ Added #{@install_dir}/bin to PATH in #{shell_config}")
-            say Colors.yellow("   Run 'source #{shell_config}' or start a new terminal to use ruly")
-          end
-        else
-          create_file shell_config do
-            "# Ruly - AI assistant rules manager\n#{path_line}\n"
-          end
-          say Colors.green("✅ Created #{shell_config} and added PATH")
+      if shell_config && File.exist?(shell_config)
+        config_content = File.read(shell_config)
+        if config_content.include?(path_line)
+          say Colors.green("✅ PATH already configured in #{shell_config}")
+          @shell_config = shell_config
+          return
         end
-      else
-        say Colors.yellow('⚠️  Could not detect shell configuration file')
-        say Colors.yellow('   Please add the following to your shell configuration:')
-        say
-        say '   export PATH="$HOME/ruly/bin:$PATH"'
-        say
       end
+
+      # Don't modify shell config, just show instructions
+      say
+      say Colors.yellow('⚠️  Please add Ruly to your PATH')
+      say
+      if shell_config
+        say "Add the following line to #{shell_config}:"
+        say
+        say Colors.green("   #{path_line}")
+        say
+        say 'Then run:'
+        say Colors.green("   source #{shell_config}")
+      else
+        say 'Add the following to your shell configuration file:'
+        say
+        say Colors.green("   #{path_line}")
+      end
+      say
+      say 'Or start a new terminal session for changes to take effect.'
 
       @shell_config = shell_config
     end
@@ -201,14 +201,24 @@ if THOR_AVAILABLE
       if shell.include?('zsh')
         File.expand_path('~/.zshrc')
       elsif shell.include?('bash')
-        if File.exist?(File.expand_path('~/.bash_profile'))
-          File.expand_path('~/.bash_profile')
-        else
-          File.expand_path('~/.bashrc')
-        end
+        detect_bash_config
       elsif shell.include?('fish')
         File.expand_path('~/.config/fish/config.fish')
-      elsif File.exist?(File.expand_path('~/.zshrc'))
+      else
+        detect_shell_config_fallback
+      end
+    end
+
+    def detect_bash_config
+      if File.exist?(File.expand_path('~/.bash_profile'))
+        File.expand_path('~/.bash_profile')
+      else
+        File.expand_path('~/.bashrc')
+      end
+    end
+
+    def detect_shell_config_fallback
+      if File.exist?(File.expand_path('~/.zshrc'))
         File.expand_path('~/.zshrc')
       elsif File.exist?(File.expand_path('~/.bash_profile'))
         File.expand_path('~/.bash_profile')
@@ -239,7 +249,7 @@ if THOR_AVAILABLE
   end
 else
   # Fallback simple installer when Thor is not available
-  class RulyInstaller
+  class SimpleRulyInstaller
     INSTALL_DIR = File.expand_path('~/ruly')
     REPO_URL = 'https://github.com/patrickclery/ruly.git'
     REPO_BRANCH = ENV['RULY_BRANCH'] || 'main' # Default to main branch
@@ -247,7 +257,9 @@ else
     def run
       puts "🚀 Installing Ruly to #{INSTALL_DIR}"
       puts
-      puts Colors.yellow('Note: Installing without Thor gem. For better experience, install Thor first: gem install thor')
+      note = 'Note: Installing without Thor gem. For better experience, '
+      note += 'install Thor first: gem install thor'
+      puts Colors.yellow(note)
       puts
 
       check_ruby_version
@@ -297,7 +309,8 @@ else
     def clone_repository
       puts '📥 Downloading Ruly...'
       branch = ENV['RULY_BRANCH'] || 'main'
-      system("git clone --quiet --branch '#{branch}' '#{REPO_URL}' '#{INSTALL_DIR}'") or raise 'Failed to clone repository'
+      cmd = "git clone --quiet --branch '#{branch}' '#{REPO_URL}' '#{INSTALL_DIR}'"
+      system(cmd) or raise 'Failed to clone repository'
     end
 
     def install_dependencies
@@ -335,37 +348,14 @@ else
 
     def update_shell_path
       shell_config = detect_shell_config
+      path_line = 'export PATH="$HOME/ruly/bin:$PATH"'
 
-      if shell_config
-        path_line = 'export PATH="$HOME/ruly/bin:$PATH"'
-
-        if File.exist?(shell_config)
-          config_content = File.read(shell_config)
-
-          if config_content.include?(path_line)
-            puts Colors.green("✅ PATH already configured in #{shell_config}")
-          else
-            File.open(shell_config, 'a') do |f|
-              f.puts
-              f.puts '# Ruly - AI assistant rules manager'
-              f.puts path_line
-            end
-            puts Colors.green("✅ Added #{INSTALL_DIR}/bin to PATH in #{shell_config}")
-            puts Colors.yellow("   Run 'source #{shell_config}' or start a new terminal to use ruly")
-          end
-        else
-          File.open(shell_config, 'w') do |f|
-            f.puts '# Ruly - AI assistant rules manager'
-            f.puts path_line
-          end
-          puts Colors.green("✅ Created #{shell_config} and added PATH")
-        end
+      if shell_config && File.exist?(shell_config)
+        handle_existing_config(shell_config, path_line)
+      elsif shell_config
+        create_shell_config(shell_config, path_line)
       else
-        puts Colors.yellow('⚠️  Could not detect shell configuration file')
-        puts Colors.yellow('   Please add the following to your shell configuration:')
-        puts
-        puts '   export PATH="$HOME/ruly/bin:$PATH"'
-        puts
+        print_manual_instructions
       end
 
       @shell_config = shell_config
@@ -377,20 +367,67 @@ else
       if shell.include?('zsh')
         File.expand_path('~/.zshrc')
       elsif shell.include?('bash')
-        if File.exist?(File.expand_path('~/.bash_profile'))
-          File.expand_path('~/.bash_profile')
-        else
-          File.expand_path('~/.bashrc')
-        end
+        detect_bash_config
       elsif shell.include?('fish')
         File.expand_path('~/.config/fish/config.fish')
-      elsif File.exist?(File.expand_path('~/.zshrc'))
+      else
+        detect_shell_config_fallback
+      end
+    end
+
+    def detect_bash_config
+      if File.exist?(File.expand_path('~/.bash_profile'))
+        File.expand_path('~/.bash_profile')
+      else
+        File.expand_path('~/.bashrc')
+      end
+    end
+
+    def detect_shell_config_fallback
+      if File.exist?(File.expand_path('~/.zshrc'))
         File.expand_path('~/.zshrc')
       elsif File.exist?(File.expand_path('~/.bash_profile'))
         File.expand_path('~/.bash_profile')
       elsif File.exist?(File.expand_path('~/.bashrc'))
         File.expand_path('~/.bashrc')
       end
+    end
+
+    def handle_existing_config(shell_config, path_line)
+      config_content = File.read(shell_config)
+
+      if config_content.include?(path_line)
+        puts Colors.green("✅ PATH already configured in #{shell_config}")
+      else
+        append_to_shell_config(shell_config, path_line)
+      end
+    end
+
+    def append_to_shell_config(shell_config, path_line)
+      File.open(shell_config, 'a') do |f|
+        f.puts
+        f.puts '# Ruly - AI assistant rules manager'
+        f.puts path_line
+      end
+      puts Colors.green("✅ Added #{INSTALL_DIR}/bin to PATH in #{shell_config}")
+      msg = "   Run 'source #{shell_config}' or start a new terminal to use ruly"
+      puts Colors.yellow(msg)
+    end
+
+    def create_shell_config(shell_config, path_line)
+      File.open(shell_config, 'w') do |f|
+        f.puts '# Ruly - AI assistant rules manager'
+        f.puts path_line
+      end
+      puts Colors.green("✅ Created #{shell_config} and added PATH")
+    end
+
+    def print_manual_instructions
+      puts Colors.yellow('⚠️  Could not detect shell configuration file')
+      puts Colors.yellow('   Please add the following to your shell configuration:')
+      puts
+      puts '   export PATH="$HOME/ruly/bin:$PATH"'
+      puts
     end
 
     def initialize_config
@@ -420,6 +457,6 @@ if __FILE__ == $PROGRAM_NAME
   if THOR_AVAILABLE
     RulyInstaller.start(ARGV)
   else
-    RulyInstaller.new.run
+    SimpleRulyInstaller.new.run
   end
 end

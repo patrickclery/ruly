@@ -28,6 +28,7 @@ module Ruly
     option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, etc.)', type: :string
     option :cache, default: false, desc: 'Enable caching for this recipe', type: :boolean
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
+    option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
     option :dry_run, aliases: '-d', default: false, desc: 'Show what would be done without actually doing it',
                      type: :boolean
     option :git_ignore, aliases: '-i', default: false, desc: 'Add generated files to .gitignore', type: :boolean
@@ -36,8 +37,12 @@ module Ruly
                  type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
-      # Clean first if requested
-      invoke :clean, [recipe_name], options.slice(:output_file, :agent) if options[:clean] && !options[:dry_run]
+      # Clean first if requested (deepclean takes precedence over clean)
+      if options[:deepclean] && !options[:dry_run]
+        invoke :clean, [], { deepclean: true }
+      elsif options[:clean] && !options[:dry_run]
+        invoke :clean, [recipe_name], options.slice(:output_file, :agent)
+      end
 
       output_file = options[:output_file]
       agent = options[:agent]
@@ -81,6 +86,20 @@ module Ruly
 
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
+          
+          # Show what would be cleaned first
+          if options[:deepclean]
+            puts "Would deep clean first:"
+            puts "  → Remove .claude/ directory"
+            puts "  → Remove CLAUDE.local.md"
+            puts "  → Remove CLAUDE.md"
+            puts "  → Remove .ruly.yml"
+            puts ""
+          elsif options[:clean]
+            puts "Would clean existing files first"
+            puts ""
+          end
+          
           puts "Would create: #{output_file}"
           puts "  → #{local_sources.size} rule files combined"
           puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
@@ -128,7 +147,14 @@ module Ruly
             output.puts
             output.puts "## #{source[:path]}"
             output.puts
-            output.puts source[:content]
+            
+            # If TOC is enabled, add anchor IDs to headers in content
+            if options[:toc]
+              output.puts add_anchor_ids_to_content(source[:content], source[:path])
+            else
+              output.puts source[:content]
+            end
+            
             output.puts
             output.puts '---'
             output.puts
@@ -196,6 +222,8 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, desc: 'Show what would be deleted without actually deleting',
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
+    option :deepclean, default: false, desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md)',
+                       type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def clean(recipe_name = nil)
       dry_run = options[:dry_run]
@@ -203,29 +231,42 @@ module Ruly
       files_to_remove = []
       agent = options[:agent] || 'claude'
 
-      # Try to use metadata file if it exists and no explicit options given
-      if File.exist?(metadata_file) && !options[:output_file] && !recipe_name
-        metadata = YAML.load_file(metadata_file)
-        output_file = metadata['output_file']
-        command_files = metadata['command_files'] || []
-        agent = metadata['agent'] || 'claude'
-
-        # Add files from metadata
-        files_to_remove << output_file if File.exist?(output_file)
-        command_files.each do |f|
-          files_to_remove << f if File.exist?(f)
-        end
-        # Add all agent-specific files
-        add_agent_files_to_remove(agent, files_to_remove)
-        files_to_remove << metadata_file
-      else
-        # Clean based on recipe or fall back to defaults
-        output_file = options[:output_file] || "#{agent.upcase}.local.md"
-
-        files_to_remove << output_file if File.exist?(output_file)
-        # Add all agent-specific files
-        add_agent_files_to_remove(agent, files_to_remove)
+      # Handle deepclean option - removes all Claude artifacts
+      if options[:deepclean]
+        # Remove entire .claude directory
+        files_to_remove << '.claude/' if Dir.exist?('.claude')
+        
+        # Remove all CLAUDE*.md files
+        files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
+        files_to_remove << 'CLAUDE.md' if File.exist?('CLAUDE.md')
+        
+        # Also remove metadata file
         files_to_remove << metadata_file if File.exist?(metadata_file)
+      else
+        # Normal clean behavior - use metadata or recipe
+        if File.exist?(metadata_file) && !options[:output_file] && !recipe_name
+          metadata = YAML.load_file(metadata_file)
+          output_file = metadata['output_file']
+          command_files = metadata['command_files'] || []
+          agent = metadata['agent'] || 'claude'
+
+          # Add files from metadata
+          files_to_remove << output_file if File.exist?(output_file)
+          command_files.each do |f|
+            files_to_remove << f if File.exist?(f)
+          end
+          # Add all agent-specific files
+          add_agent_files_to_remove(agent, files_to_remove)
+          files_to_remove << metadata_file
+        else
+          # Clean based on recipe or fall back to defaults
+          output_file = options[:output_file] || "#{agent.upcase}.local.md"
+
+          files_to_remove << output_file if File.exist?(output_file)
+          # Add all agent-specific files
+          add_agent_files_to_remove(agent, files_to_remove)
+          files_to_remove << metadata_file if File.exist?(metadata_file)
+        end
       end
 
       # Remove duplicates while preserving order
@@ -1150,7 +1191,7 @@ module Ruly
 
     def generate_toc_for_source(source)
       toc_section = ["### #{source[:path]}", '']
-      headers = extract_headers_from_content(source[:content])
+      headers = extract_headers_from_content(source[:content], source[:path])
 
       if headers.any?
         headers.each do |header|
@@ -1163,25 +1204,90 @@ module Ruly
       toc_section.join("\n")
     end
 
-    def extract_headers_from_content(content)
+    def extract_headers_from_content(content, source_path = nil)
       headers = []
       content = content.force_encoding('UTF-8')
+      
+      # Generate file prefix from source path
+      file_prefix = if source_path
+                      generate_file_prefix(source_path)
+                    else
+                      nil
+                    end
+      
       content.each_line.with_index do |line, index|
         if line =~ /^(#+)\s+(.+)$/
           level = Regexp.last_match(1).length
           text = Regexp.last_match(2).strip
-          anchor = generate_anchor(text)
+          anchor = generate_anchor(text, file_prefix)
           headers << {anchor:, level:, line: index + 1, text:}
         end
       end
       headers
     end
 
-    def generate_anchor(text)
-      text.downcase
-          .gsub(/[^\w\s-]/, '')
-          .gsub(/\s+/, '-').squeeze('-')
-          .gsub(/^-|-$/, '')
+    def generate_anchor(text, prefix = nil)
+      anchor = text.downcase
+                   .gsub(/[^\w\s-]/, '')
+                   .gsub(/\s+/, '-').squeeze('-')
+                   .gsub(/^-|-$/, '')
+      
+      prefix ? "#{prefix}-#{anchor}" : anchor
+    end
+    
+    def generate_file_prefix(source_path)
+      # Convert file path to a URL-safe prefix
+      # Examples:
+      #   "ruby/common.md" -> "ruby-common-md"
+      #   "https://github.com/user/repo/blob/main/rules/test.md" -> "rules-test-md"
+      
+      # Extract just the path portion if it's a URL
+      path = if source_path.start_with?('http')
+               # Extract path after blob/branch/ for GitHub URLs
+               if source_path =~ %r{/blob/[^/]+/(.+)$}
+                 Regexp.last_match(1)
+               elsif source_path =~ %r{/tree/[^/]+/(.+)$}
+                 Regexp.last_match(1)
+               else
+                 # Fallback: use last part of URL
+                 source_path.split('/').last
+               end
+             else
+               source_path
+             end
+      
+      # Sanitize the path to create a valid anchor prefix
+      path.downcase
+          .gsub(/\.md$/, '') # Remove .md extension
+          .gsub(/[^\w\/-]/, '') # Keep only word chars, slashes, and hyphens
+          .gsub(/\/+/, '-') # Replace slashes with hyphens
+          .gsub(/^-|-$/, '') # Remove leading/trailing hyphens
+    end
+    
+    def add_anchor_ids_to_content(content, source_path)
+      # Add HTML anchor tags before headers to make them linkable
+      # This ensures the TOC links work correctly
+      
+      file_prefix = generate_file_prefix(source_path)
+      modified_content = []
+      
+      content.force_encoding('UTF-8').each_line do |line|
+        if line =~ /^(#+)\s+(.+)$/
+          level = Regexp.last_match(1)
+          text = Regexp.last_match(2).strip
+          anchor = generate_anchor(text, file_prefix)
+          
+          # Add the header with an anchor that matches what's in the TOC
+          # Using HTML comment style anchor that works in markdown
+          modified_content << "<a id=\"#{anchor}\"></a>"
+          modified_content << ""
+          modified_content << "#{level} #{text}"
+        else
+          modified_content << line.chomp
+        end
+      end
+      
+      modified_content.join("\n")
     end
 
     def generate_toc_slash_commands(command_files)

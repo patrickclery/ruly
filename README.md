@@ -330,6 +330,10 @@ ruly clean -d
 ruly squash --clean
 ruly squash rails --clean
 ruly squash -c  # Short form
+
+# Deep clean before squashing (remove ALL Claude artifacts)
+ruly squash --deepclean
+ruly squash rails --deepclean
 ```
 
 ### Recipe System
@@ -446,13 +450,15 @@ User recipes:
 
 - **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
   optional positional parameter. Supports fetching remote GitHub files and caching for performance.
-  Use `--toc` or `-t` to generate a table of contents with links to all headers and a list of available slash commands.
+  Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
+  Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
 
 - **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
   detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.
 
 - **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Recipe is
   optional and overrides metadata. Removes main output file and command files directory.
+  Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
 
 - **List Recipes** (`list-recipes`): Shows all available recipes with file counts and cache
   indicators.
@@ -465,7 +471,12 @@ Slash commands are special commands that can be defined in your rule files to pr
 
 For example, if you have a file `commands/bug/diagnose.md` in your rules, it would become available as `/bug:diagnose` when using the generated rules with Claude or other AI assistants.
 
-The `--toc` option will automatically generate a list of all available slash commands in your squashed output, making them easy to discover and use.
+The `--toc` option will automatically generate:
+1. A table of contents with links to all headers in the combined document
+2. Unique anchors for headers (prefixed with the source file path) to handle duplicate header names across files
+3. A list of all available slash commands in your squashed output
+
+This ensures proper navigation even when multiple rule files contain headers with identical names (e.g., multiple files with "# Introduction" sections).
 
 ### Examples
 
@@ -503,6 +514,9 @@ ruly clean
 # Dry run - see what would be deleted
 ruly clean --dry-run
 ruly clean -d
+
+# Deep clean - remove all Claude artifacts
+ruly clean --deepclean
 
 # Clean specific output file
 ruly clean -o test/testing-rules.md
