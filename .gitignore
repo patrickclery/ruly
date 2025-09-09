@@ -17,3 +17,8 @@ vendor/bundle
 .lefthook-local/
 mcp.yml
 /test_results.json
+
+# Local-only directories and submodules
+rules/
+workaxle-rules/
+.gitmodules
