@@ -222,7 +222,7 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, desc: 'Show what would be deleted without actually deleting',
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
-    option :deepclean, default: false, desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md)',
+    option :deepclean, default: false, desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml)',
                        type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def clean(recipe_name = nil)
@@ -231,40 +231,35 @@ module Ruly
       files_to_remove = []
       agent = options[:agent] || 'claude'
 
-      # Handle deepclean option - removes all Claude artifacts
+      # Handle deepclean option - removes all Claude artifacts including CLAUDE.md
       if options[:deepclean]
         # Remove entire .claude directory
         files_to_remove << '.claude/' if Dir.exist?('.claude')
         
-        # Remove all CLAUDE*.md files
+        # Remove all CLAUDE*.md files (including CLAUDE.md)
         files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
         files_to_remove << 'CLAUDE.md' if File.exist?('CLAUDE.md')
         
         # Also remove metadata file
         files_to_remove << metadata_file if File.exist?(metadata_file)
       else
-        # Normal clean behavior - use metadata or recipe
+        # Normal clean behavior - ALWAYS remove entire .claude directory
+        files_to_remove << '.claude/' if Dir.exist?('.claude')
+        
+        # Use metadata or recipe for other files
         if File.exist?(metadata_file) && !options[:output_file] && !recipe_name
           metadata = YAML.load_file(metadata_file)
           output_file = metadata['output_file']
-          command_files = metadata['command_files'] || []
           agent = metadata['agent'] || 'claude'
 
-          # Add files from metadata
+          # Add output file from metadata
           files_to_remove << output_file if File.exist?(output_file)
-          command_files.each do |f|
-            files_to_remove << f if File.exist?(f)
-          end
-          # Add all agent-specific files
-          add_agent_files_to_remove(agent, files_to_remove)
           files_to_remove << metadata_file
         else
           # Clean based on recipe or fall back to defaults
           output_file = options[:output_file] || "#{agent.upcase}.local.md"
 
           files_to_remove << output_file if File.exist?(output_file)
-          # Add all agent-specific files
-          add_agent_files_to_remove(agent, files_to_remove)
           files_to_remove << metadata_file if File.exist?(metadata_file)
         end
       end
