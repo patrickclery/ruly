@@ -1,13 +1,26 @@
 ---
-description: Extract inline bash snippets from markdown files into reusable shell scripts
-alwaysApply: false
+description: Extract bash code snippets from markdown files into reusable shell scripts
+alwaysApply: true
 ---
 
 # Snippets to Scripts
 
 ## Overview
 
-The `/snippets-to-scripts` command scans markdown files for bash code snippets and extracts them into standalone shell scripts in the `rules/bin/` directory. This promotes code reuse, maintainability, and testability.
+The `/snippets-to-scripts` command is a Ruly tool that scans markdown files in any repository for bash code snippets and extracts them into standalone shell scripts. This promotes code reuse, maintainability, and testability across your projects.
+
+## Path Strategy
+
+When extracting scripts from a target repository:
+
+- **Extraction Location:** Scripts are created in the target repo (default: `bin/` or specified via `--output-dir`)
+- **Documentation References:** Updated to use consistent paths (default: `bin/ruly/` or specified via `--reference-path`)
+- **Installation Path:** Where scripts will be deployed in production environments
+
+This allows:
+- Scripts to be extracted and stored in the target repository
+- Documentation to reference the final installation paths
+- Flexible deployment strategies per project
 
 ## Usage
 
@@ -18,22 +31,30 @@ The `/snippets-to-scripts` command scans markdown files for bash code snippets a
 ### Arguments
 
 - `file-pattern` - Glob pattern for files to scan (default: `**/*.md`)
-- `--output-dir` - Directory for generated scripts (default: `rules/bin/`)
+- `--output-dir` - Where to create extracted scripts (default: `bin/`)
+- `--reference-path` - Path to use in documentation references (default: `bin/ruly/`)
 - `--dry-run` - Preview changes without creating files
 - `--min-lines` - Minimum lines for extraction (default: 5)
 - `--interactive` - Prompt for each extraction
+- `--target-repo` - Path to target repository (default: current directory)
 
 ### Examples
 
 ```bash
-# Extract from all markdown files
+# Extract from all markdown files in current repo
 /snippets-to-scripts
 
 # Extract from specific directory
-/snippets-to-scripts "workaxle-rules/commands/**/*.md"
+/snippets-to-scripts "docs/**/*.md"
+
+# Extract with custom output and reference paths
+/snippets-to-scripts --output-dir="scripts/extracted" --reference-path="bin/project"
 
 # Preview what would be extracted
 /snippets-to-scripts --dry-run
+
+# Extract from another repository
+/snippets-to-scripts --target-repo="../other-project" "**/*.md"
 
 # Extract only larger snippets
 /snippets-to-scripts --min-lines=10
@@ -120,98 +141,27 @@ Identify and extract common snippet patterns:
 
 #### Pattern: File Change Detection
 ```bash
-# Original snippet
-FILES=$(git diff --name-only $(git merge-base HEAD origin/main)..HEAD)
-RUBY_FILES=$(echo "$FILES" | grep -E '\.(rb|rake|gemspec)$' || true)
-SPEC_FILES=$(echo "$FILES" | grep -E '_spec\.rb$' || true)
+# Original snippet becomes a call to:
+source bin/ruly/testing/detect-changed-files.sh
 ```
 
-Becomes `rules/bin/detect-changed-files.sh`:
-```bash
-#!/bin/bash
-# Detect changed files by type from current branch
-
-BASE_BRANCH="${1:-origin/main}"
-FILES=$(git diff --name-only $(git merge-base HEAD "$BASE_BRANCH")..HEAD)
-
-# Export for use in other scripts
-export CHANGED_FILES="$FILES"
-export RUBY_FILES=$(echo "$FILES" | grep -E '\.(rb|rake|gemspec)$' || true)
-export SPEC_FILES=$(echo "$FILES" | grep -E '_spec\.rb$' || true)
-export JS_FILES=$(echo "$FILES" | grep -E '\.(js|jsx|ts|tsx)$' || true)
-export PY_FILES=$(echo "$FILES" | grep -E '\.py$' || true)
-
-# Output if running directly
-if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
-  echo "Changed files detected:"
-  [ -n "$RUBY_FILES" ] && echo "  Ruby: $(echo $RUBY_FILES | wc -w) files"
-  [ -n "$JS_FILES" ] && echo "  JavaScript: $(echo $JS_FILES | wc -w) files"
-  [ -n "$PY_FILES" ] && echo "  Python: $(echo $PY_FILES | wc -w) files"
-fi
-```
+Script created at `[output-dir]/testing/detect-changed-files.sh`
 
 #### Pattern: Test Runner
 ```bash
-# Original snippet
-if [ -n "$REQUIRED_TESTS" ]; then
-  echo "🔒 Running required tests..."
-  make spec T="$REQUIRED_TESTS"
-  if [ $? -ne 0 ]; then
-    echo "❌ Required tests failed!"
-    exit 1
-  fi
-fi
+# Original snippet becomes a call to:
+bin/ruly/testing/run-required-tests.sh
 ```
 
-Becomes `rules/bin/run-required-tests.sh`:
-```bash
-#!/bin/bash
-# Run required tests from tmp/required-tests
-
-REQUIRED_TESTS=""
-if [ -f tmp/required-tests ]; then
-  REQUIRED_TESTS=$(cat tmp/required-tests | tr '\n' ' ')
-fi
-
-if [ -n "$REQUIRED_TESTS" ]; then
-  echo "🔒 Running $(echo $REQUIRED_TESTS | wc -w) required tests..."
-  make spec T="$REQUIRED_TESTS"
-  
-  if [ $? -ne 0 ]; then
-    echo "❌ Required tests failed!"
-    exit 1
-  fi
-  
-  echo "✅ All required tests passed"
-else
-  echo "📋 No required tests configured"
-fi
-```
+Script created at `[output-dir]/testing/run-required-tests.sh`
 
 #### Pattern: Countdown Timer
 ```bash
-# Original snippet
-for i in $(seq $WAIT_TIME -1 1); do
-  printf "\r⏳ Time remaining: %02d seconds" $i
-  sleep 1
-done
+# Original snippet becomes a call to:
+bin/ruly/common/countdown-timer.sh 30 "Custom message"
 ```
 
-Becomes `rules/bin/countdown-timer.sh`:
-```bash
-#!/bin/bash
-# Display countdown timer with custom message
-
-WAIT_TIME="${1:-30}"
-MESSAGE="${2:-Time remaining}"
-
-echo "⏱️ Starting ${WAIT_TIME} second countdown..."
-for i in $(seq $WAIT_TIME -1 1); do
-  printf "\r⏳ %s: %02d seconds" "$MESSAGE" $i
-  sleep 1
-done
-printf "\r✅ %s: Complete!        \n" "$MESSAGE"
-```
+Script created at `[output-dir]/common/countdown-timer.sh`
 
 ### Step 5: Update Original Files
 
@@ -223,20 +173,21 @@ def update_markdown_file(file, replacements)
   
   replacements.each do |replacement|
     original = replacement[:original]
-    script_path = replacement[:script_path]
-    script_name = File.basename(script_path)
+    output_path = replacement[:output_path]      # Where script is created
+    reference_path = replacement[:reference_path] # Path used in documentation
+    script_name = File.basename(reference_path)
     
-    # Create usage example
-    usage_example = generate_usage_example(script_path)
+    # Create usage example with installation path
+    usage_example = generate_usage_example(install_path)
     
-    # Replace with reference
+    # Replace with reference using installation path
     new_content = <<~MD
       ```bash
       # Run the #{script_name.sub('.sh', '')} script
       #{usage_example}
       ```
       
-      _See `#{script_path}` for implementation details._
+      _See `#{install_path}` for implementation details._
     MD
     
     content.sub!(original, new_content)
@@ -252,18 +203,14 @@ Add documentation to extracted scripts:
 
 ```bash
 #!/bin/bash
-# Generated from: workaxle-rules/commands/testing/pre-commit.md#L151-172
-# Purpose: Final verification of all pre-commit checks
-# Usage: ./rules/bin/final-verification.sh [ruby_files] [js_files] [py_files]
+# Generated from: [source-file]#[line-range]
+# Purpose: [extracted-purpose]
+# Usage: [reference-path]/[script-name] [arguments]
 #
-# This script performs final verification of linting and tests before commit.
-# It checks Ruby, JavaScript, and Python files based on provided arguments.
-
-RUBY_FILES="$1"
-JS_FILES="$2"
-PY_FILES="$3"
-
-echo "✅ Running final verification..."
+# Extracted to: [output-dir]/[category]/[script-name]
+# Referenced as: [reference-path]/[category]/[script-name]
+#
+# [Description of what the script does]
 
 # ... rest of extracted code ...
 ```
@@ -292,26 +239,24 @@ These patterns are NOT extracted:
 
 ## Output Structure
 
-Generated scripts follow this structure:
+Example structure when extracting with default settings:
 
 ```
-rules/bin/
-├── pre-commit/
-│   ├── detect-changed-files.sh
-│   ├── run-rubocop.sh
-│   ├── run-tests.sh
-│   └── final-verification.sh
-├── testing/
-│   ├── run-required-tests.sh
-│   └── manage-required-tests.sh
-├── pr/
-│   ├── resolve-comments.sh
-│   └── monitor-workflow.sh
-└── common/
-    ├── countdown-timer.sh
-    ├── check-status.sh
-    └── git-helpers.sh
+[target-repo]/
+├── bin/                         # Default output directory
+│   ├── common/
+│   │   └── countdown-timer.sh
+│   ├── testing/
+│   │   ├── detect-changed-files.sh
+│   │   ├── run-rubocop.sh
+│   │   ├── run-tests.sh
+│   │   └── final-verification.sh
+│   └── MANIFEST.md
+└── docs/
+    └── *.md                     # Updated to reference bin/ruly/ paths
 ```
+
+Documentation will reference scripts using the reference path (e.g., `bin/ruly/testing/script.sh`)
 
 ## Script Templates
 
@@ -320,7 +265,10 @@ rules/bin/
 #!/bin/bash
 # Generated from: [source-file]#[line-range]
 # Purpose: [extracted-purpose]
-# Usage: [script-name] [arguments]
+# Usage: [reference-path]/[category]/[script-name] [arguments]
+#
+# Location: [output-dir]/[category]/[script-name]
+# Referenced as: [reference-path]/[category]/[script-name]
 
 set -e  # Exit on error
 
@@ -331,20 +279,15 @@ set -e  # Exit on error
 ```bash
 #!/bin/bash
 # Common functions extracted from multiple sources
-# Source this file: source rules/bin/common/functions.sh
+# Source this file: source [reference-path]/common/functions.sh
+#
+# Location: [output-dir]/common/functions.sh
+# Referenced as: [reference-path]/common/functions.sh
 
 function countdown_timer() {
   local wait_time="${1:-30}"
   local message="${2:-Time remaining}"
   # ... implementation ...
-}
-
-function check_command_status() {
-  if [ $? -ne 0 ]; then
-    echo "❌ $1"
-    exit 1
-  fi
-  echo "✅ $1"
 }
 ```
 
@@ -356,12 +299,13 @@ function check_command_status() {
 4. **Versioning** - Scripts can be versioned and tracked
 5. **Documentation** - Scripts are self-documenting with usage info
 6. **Parameterization** - Hardcoded values become configurable
+7. **Installation** - Clean separation between repo and installed locations
 
 ## Configuration
 
 ### Extraction Rules
 
-Configure which snippets to extract in `.ruly/snippets-config.yml`:
+Configure extraction in the target repository's `.ruly/snippets-config.yml`:
 
 ```yaml
 extraction:
@@ -382,99 +326,60 @@ naming:
   prefix_with_category: true
   
 output:
-  directory: rules/bin
+  output_dir: bin            # Where to create scripts
+  reference_path: bin/ruly   # Path used in documentation
   organize_by_category: true
-  generate_index: true
-```
-
-## Error Handling
-
-The command handles these scenarios:
-
-1. **Duplicate scripts** - Prompts for name resolution
-2. **Syntax errors** - Validates bash syntax before extraction
-3. **Missing context** - Skips snippets without clear purpose
-4. **File conflicts** - Backs up existing scripts before overwriting
-
-## Examples
-
-### Example 1: Extract from specific command
-
-```bash
-/snippets-to-scripts "workaxle-rules/commands/testing/pre-commit.md"
-```
-
-Output:
-```
-📋 Found 8 bash snippets in 1 file
-✅ Extracted 6 snippets into scripts:
-  - rules/bin/pre-commit/load-required-tests.sh
-  - rules/bin/pre-commit/detect-changed-files.sh
-  - rules/bin/pre-commit/run-rubocop.sh
-  - rules/bin/pre-commit/run-required-tests.sh
-  - rules/bin/pre-commit/run-all-tests.sh
-  - rules/bin/pre-commit/final-verification.sh
-📝 Updated workaxle-rules/commands/testing/pre-commit.md with script references
-```
-
-### Example 2: Dry run to preview
-
-```bash
-/snippets-to-scripts --dry-run
-```
-
-Output:
-```
-🔍 Scanning for bash snippets...
-📋 Would extract 42 snippets from 15 files:
-
-workaxle-rules/commands/testing/pre-commit.md:
-  Line 16-23 → rules/bin/testing/load-required-tests.sh
-  Line 27-46 → rules/bin/testing/detect-changed-files.sh
-  ...
-
-workaxle-rules/commands/pr/review-feedback-loop.md:
-  Line 41-47 → rules/bin/common/countdown-timer.sh
-  ...
-
-No files were modified (dry run mode)
-```
-
-### Example 3: Interactive extraction
-
-```bash
-/snippets-to-scripts --interactive
-```
-
-Output:
-```
-Found snippet in workaxle-rules/commands/testing/pre-commit.md:16-23
-Purpose: Load required tests from tmp/required-tests
-
-Extract as script? (y/n/skip): y
-Script name [load-required-tests.sh]: 
-Category [testing]: 
-✅ Extracted to rules/bin/testing/load-required-tests.sh
-
-Found snippet in workaxle-rules/commands/testing/pre-commit.md:27-46
-Purpose: Detect changed files by type
-...
+  generate_manifest: true
 ```
 
 ## Integration
 
-After extraction, scripts can be:
+After extraction, scripts in the target repository can be:
 
-1. **Sourced in other scripts**: `source rules/bin/common/functions.sh`
-2. **Called directly**: `./rules/bin/pre-commit/run-tests.sh`
-3. **Used in commands**: Reference in markdown as examples
-4. **Tested independently**: Create test suites for scripts
-5. **Version controlled**: Track changes to extracted scripts
+1. **Version controlled**: Commit extracted scripts to the repository
+2. **Deployed**: Install to production environments at the reference path
+3. **Sourced in other scripts**: `source [reference-path]/common/functions.sh`
+4. **Called directly**: `[reference-path]/testing/run-tests.sh`
+5. **Used in commands**: Reference in markdown documentation
+6. **Tested independently**: Create test suites for scripts
+
+## Deployment Flow
+
+After extracting scripts in your target repository:
+
+1. **Review extracted scripts** in the output directory
+2. **Commit scripts** to version control
+3. **Deploy to environments** at the reference path location
+4. **Ensure executable permissions** are maintained
+
+Example deployment script for the target repository:
+
+```bash
+#!/bin/bash
+# Deploy extracted scripts to production location
+
+SOURCE_DIR="bin"              # Where scripts were extracted
+DEPLOY_DIR="/usr/local/bin/ruly"  # Production location
+
+# Create deployment directory
+sudo mkdir -p "$DEPLOY_DIR"
+
+# Copy scripts maintaining structure
+sudo cp -r "$SOURCE_DIR"/* "$DEPLOY_DIR/"
+
+# Ensure scripts are executable
+sudo find "$DEPLOY_DIR" -name "*.sh" -exec chmod +x {} \;
+
+echo "✅ Scripts deployed to $DEPLOY_DIR"
+```
 
 ## Notes
 
+- This is a Ruly tool for processing any repository's markdown files
 - Extracted scripts maintain original logic while adding parameterization
-- Original markdown files are updated to reference the new scripts
+- Documentation is updated to reference the specified reference path
+- Scripts are created in the target repository's output directory
 - Scripts are made executable automatically (`chmod +x`)
 - A manifest file tracks which scripts came from which sources
 - Scripts can be re-extracted if source snippets change significantly
+- The tool is repository-agnostic and works with any project structure
