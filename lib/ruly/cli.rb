@@ -81,8 +81,8 @@ module Ruly
                                    [collect_local_sources, {}]
                                  end
 
-        # Process sources and separate command files
-        local_sources, command_files = process_sources_for_squash(sources, agent, recipe_config, options)
+        # Process sources and separate command files and bin files
+        local_sources, command_files, bin_files = process_sources_for_squash(sources, agent, recipe_config, options)
 
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
@@ -112,6 +112,19 @@ module Ruly
               # Show subdirectory structure if present
               relative_path = get_command_relative_path(file[:path])
               puts "  → #{relative_path}"
+            end
+          end
+          
+          if !bin_files.empty?
+            puts "\nWould copy bin files to .ruly/bin/:"
+            bin_files.each do |file|
+              relative_path = file[:relative_path]
+              if relative_path.match?(%r{bin/(.+\.sh)$})
+                target = Regexp.last_match(1)
+              else
+                target = File.basename(relative_path)
+              end
+              puts "  → #{target} (executable)"
             end
           end
 
@@ -235,6 +248,9 @@ module Ruly
       if options[:deepclean]
         # Remove entire .claude directory
         files_to_remove << '.claude/' if Dir.exist?('.claude')
+        
+        # Remove entire .ruly directory (includes bin/)
+        files_to_remove << '.ruly/' if Dir.exist?('.ruly')
         
         # Remove all CLAUDE*.md files (including CLAUDE.md)
         files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
@@ -519,6 +535,43 @@ module Ruly
       # Extract command file references from cached content
       # This is a simplified version - you might need to adjust based on actual cache format
       []
+    end
+
+    def copy_bin_files(bin_files)
+      return if bin_files.empty?
+
+      ruly_bin_dir = '.ruly/bin'
+      FileUtils.mkdir_p(ruly_bin_dir)
+      
+      copied_count = 0
+      bin_files.each do |file|
+        source_path = file[:source_path]
+        relative_path = file[:relative_path]
+        
+        # Extract subdirectory structure from bin/ onwards
+        if relative_path.match?(%r{bin/(.+\.sh)$})
+          target_relative = Regexp.last_match(1)
+        else
+          # Fallback: just use the filename
+          target_relative = File.basename(source_path)
+        end
+        
+        target_path = File.join(ruly_bin_dir, target_relative)
+        target_dir = File.dirname(target_path)
+        
+        # Create subdirectories if needed
+        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+        
+        # Copy the file
+        FileUtils.cp(source_path, target_path)
+        
+        # Make it executable
+        File.chmod(0755, target_path)
+        
+        copied_count += 1
+      end
+      
+      puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
     end
 
     def save_command_files(command_files)
@@ -824,7 +877,19 @@ module Ruly
     end
 
     def process_local_directory(directory_path, sources)
+      # Process markdown files
       Dir.glob(File.join(directory_path, '**', '*.md')).each do |file|
+        # Store relative path from gem root or absolute path
+        relative_path = if file.start_with?(gem_root)
+                          file.sub("#{gem_root}/", '')
+                        else
+                          file
+                        end
+        sources << {path: relative_path, type: 'local'}
+      end
+      
+      # Also process bin/*.sh files
+      Dir.glob(File.join(directory_path, 'bin', '**', '*.sh')).each do |file|
         # Store relative path from gem root or absolute path
         relative_path = if file.start_with?(gem_root)
                           file.sub("#{gem_root}/", '')
@@ -867,6 +932,7 @@ module Ruly
     def process_sources_for_squash(sources, agent, _recipe_config, _options)
       local_sources = []
       command_files = []
+      bin_files = []
 
       # Show total count
       puts "\n📚 Processing #{sources.length} sources..."
@@ -879,7 +945,9 @@ module Ruly
         result = process_single_source(source, index, sources.length, agent, prefetched_content)
 
         if result
-          if result[:is_command]
+          if result[:is_bin]
+            bin_files << result[:data]
+          elsif result[:is_command]
             command_files << result[:data]
           else
             local_sources << result[:data]
@@ -887,9 +955,12 @@ module Ruly
         end
       end
 
+      # Copy bin files to .ruly/bin if any exist
+      copy_bin_files(bin_files) unless bin_files.empty? || options[:dry_run]
+
       puts
 
-      [local_sources, command_files]
+      [local_sources, command_files, bin_files]
     end
 
     def prefetch_remote_files(sources)
@@ -1023,10 +1094,19 @@ module Ruly
       file_path = find_rule_file(source[:path])
 
       if file_path
-        content = File.read(file_path)
-        is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
-        puts is_command ? ' ✅ (command)' : ' ✅'
-        {data: {content:, path: source[:path]}, is_command:}
+        # Check if it's a bin/*.sh file
+        is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
+        
+        if is_bin
+          # For bin files, we'll copy them directly
+          puts ' ✅ (bin)'
+          {data: {source_path: file_path, relative_path: source[:path]}, is_bin: true}
+        else
+          content = File.read(file_path)
+          is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
+          puts is_command ? ' ✅ (command)' : ' ✅'
+          {data: {content:, path: source[:path]}, is_command:}
+        end
       else
         puts ' ❌ not found'
         nil

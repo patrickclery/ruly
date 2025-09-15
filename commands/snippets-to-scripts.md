@@ -14,8 +14,8 @@ The `/snippets-to-scripts` command is a Ruly tool that scans markdown files in a
 When extracting scripts from a target repository:
 
 - **Extraction Location:** Scripts are created in the target repo (default: `bin/` or specified via `--output-dir`)
-- **Documentation References:** Updated to use consistent paths (default: `bin/ruly/` or specified via `--reference-path`)
-- **Installation Path:** Where scripts will be deployed in production environments
+- **Documentation References:** Updated to use consistent paths (default: `.ruly/bin/` or specified via `--reference-path`)
+- **Installation Path:** Where scripts will be deployed in production environments (.ruly/bin/)
 
 This allows:
 - Scripts to be extracted and stored in the target repository
@@ -32,7 +32,7 @@ This allows:
 
 - `file-pattern` - Glob pattern for files to scan (default: `**/*.md`)
 - `--output-dir` - Where to create extracted scripts (default: `bin/`)
-- `--reference-path` - Path to use in documentation references (default: `bin/ruly/`)
+- `--reference-path` - Path to use in documentation references (default: `.ruly/bin/`)
 - `--dry-run` - Preview changes without creating files
 - `--min-lines` - Minimum lines for extraction (default: 5)
 - `--interactive` - Prompt for each extraction
@@ -142,7 +142,7 @@ Identify and extract common snippet patterns:
 #### Pattern: File Change Detection
 ```bash
 # Original snippet becomes a call to:
-source bin/ruly/testing/detect-changed-files.sh
+source .ruly/bin/testing/detect-changed-files.sh
 ```
 
 Script created at `[output-dir]/testing/detect-changed-files.sh`
@@ -150,7 +150,7 @@ Script created at `[output-dir]/testing/detect-changed-files.sh`
 #### Pattern: Test Runner
 ```bash
 # Original snippet becomes a call to:
-bin/ruly/testing/run-required-tests.sh
+.ruly/bin/testing/run-required-tests.sh
 ```
 
 Script created at `[output-dir]/testing/run-required-tests.sh`
@@ -158,7 +158,7 @@ Script created at `[output-dir]/testing/run-required-tests.sh`
 #### Pattern: Countdown Timer
 ```bash
 # Original snippet becomes a call to:
-bin/ruly/common/countdown-timer.sh 30 "Custom message"
+.ruly/bin/common/countdown-timer.sh 30 "Custom message"
 ```
 
 Script created at `[output-dir]/common/countdown-timer.sh`
@@ -253,10 +253,10 @@ Example structure when extracting with default settings:
 │   │   └── final-verification.sh
 │   └── MANIFEST.md
 └── docs/
-    └── *.md                     # Updated to reference bin/ruly/ paths
+    └── *.md                     # Updated to reference .ruly/bin/ paths
 ```
 
-Documentation will reference scripts using the reference path (e.g., `bin/ruly/testing/script.sh`)
+Documentation will reference scripts using the reference path (e.g., `.ruly/bin/testing/script.sh`)
 
 ## Script Templates
 
@@ -327,7 +327,7 @@ naming:
   
 output:
   output_dir: bin            # Where to create scripts
-  reference_path: bin/ruly   # Path used in documentation
+  reference_path: .ruly/bin  # Path used in documentation
   organize_by_category: true
   generate_manifest: true
 ```
@@ -359,7 +359,7 @@ Example deployment script for the target repository:
 # Deploy extracted scripts to production location
 
 SOURCE_DIR="bin"              # Where scripts were extracted
-DEPLOY_DIR="/usr/local/bin/ruly"  # Production location
+DEPLOY_DIR=".ruly/bin"         # Deployment location (created by ruly squash)
 
 # Create deployment directory
 sudo mkdir -p "$DEPLOY_DIR"
