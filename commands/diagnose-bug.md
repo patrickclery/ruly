@@ -1,5 +1,7 @@
 ---
 description: Systematically diagnose bugs using the debugging workflow methodology
+requires:
+  - "../rules/bug/common.md"
 globs:
 alwaysApply: true
 ---

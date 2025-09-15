@@ -39,7 +39,7 @@ module Ruly
     def squash(recipe_name = nil)
       # Clean first if requested (deepclean takes precedence over clean)
       if options[:deepclean] && !options[:dry_run]
-        invoke :clean, [], { deepclean: true }
+        invoke :clean, [], {deepclean: true}
       elsif options[:clean] && !options[:dry_run]
         invoke :clean, [recipe_name], options.slice(:output_file, :agent)
       end
@@ -86,20 +86,20 @@ module Ruly
 
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
-          
+
           # Show what would be cleaned first
           if options[:deepclean]
-            puts "Would deep clean first:"
-            puts "  → Remove .claude/ directory"
-            puts "  → Remove CLAUDE.local.md"
-            puts "  → Remove CLAUDE.md"
-            puts "  → Remove .ruly.yml"
-            puts ""
+            puts 'Would deep clean first:'
+            puts '  → Remove .claude/ directory'
+            puts '  → Remove CLAUDE.local.md'
+            puts '  → Remove CLAUDE.md'
+            puts '  → Remove .ruly.yml'
+            puts ''
           elsif options[:clean]
-            puts "Would clean existing files first"
-            puts ""
+            puts 'Would clean existing files first'
+            puts ''
           end
-          
+
           puts "Would create: #{output_file}"
           puts "  → #{local_sources.size} rule files combined"
           puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
@@ -114,16 +114,11 @@ module Ruly
               puts "  → #{relative_path}"
             end
           end
-          
-          if !bin_files.empty?
+
+          unless bin_files.empty?
             puts "\nWould copy bin files to .ruly/bin/:"
             bin_files.each do |file|
-              relative_path = file[:relative_path]
-              if relative_path.match?(%r{bin/(.+\.sh)$})
-                target = Regexp.last_match(1)
-              else
-                target = File.basename(relative_path)
-              end
+              target = calculate_bin_target(file[:relative_path])
               puts "  → #{target} (executable)"
             end
           end
@@ -160,14 +155,14 @@ module Ruly
             output.puts
             output.puts "## #{source[:path]}"
             output.puts
-            
+
             # If TOC is enabled, add anchor IDs to headers in content
             if options[:toc]
               output.puts add_anchor_ids_to_content(source[:content], source[:path])
             else
               output.puts source[:content]
             end
-            
+
             output.puts
             output.puts '---'
             output.puts
@@ -235,7 +230,8 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, desc: 'Show what would be deleted without actually deleting',
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
-    option :deepclean, default: false, desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml)',
+    option :deepclean, default: false,
+                       desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml)',
                        type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def clean(recipe_name = nil)
@@ -245,39 +241,36 @@ module Ruly
       agent = options[:agent] || 'claude'
 
       # Handle deepclean option - removes all Claude artifacts including CLAUDE.md
+      files_to_remove << '.claude/' if Dir.exist?('.claude')
       if options[:deepclean]
         # Remove entire .claude directory
-        files_to_remove << '.claude/' if Dir.exist?('.claude')
-        
+
         # Remove entire .ruly directory (includes bin/)
         files_to_remove << '.ruly/' if Dir.exist?('.ruly')
-        
+
         # Remove all CLAUDE*.md files (including CLAUDE.md)
         files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
         files_to_remove << 'CLAUDE.md' if File.exist?('CLAUDE.md')
-        
+
         # Also remove metadata file
         files_to_remove << metadata_file if File.exist?(metadata_file)
-      else
+      elsif File.exist?(metadata_file) && !options[:output_file] && !recipe_name
         # Normal clean behavior - ALWAYS remove entire .claude directory
-        files_to_remove << '.claude/' if Dir.exist?('.claude')
-        
+
         # Use metadata or recipe for other files
-        if File.exist?(metadata_file) && !options[:output_file] && !recipe_name
-          metadata = YAML.load_file(metadata_file)
-          output_file = metadata['output_file']
-          agent = metadata['agent'] || 'claude'
+        metadata = YAML.load_file(metadata_file)
+        output_file = metadata['output_file']
+        metadata['agent'] || 'claude'
 
-          # Add output file from metadata
-          files_to_remove << output_file if File.exist?(output_file)
-          files_to_remove << metadata_file
-        else
-          # Clean based on recipe or fall back to defaults
-          output_file = options[:output_file] || "#{agent.upcase}.local.md"
+        # Add output file from metadata
+        files_to_remove << output_file if File.exist?(output_file)
+        files_to_remove << metadata_file
+      else
+        # Clean based on recipe or fall back to defaults
+        output_file = options[:output_file] || "#{agent.upcase}.local.md"
 
-          files_to_remove << output_file if File.exist?(output_file)
-          files_to_remove << metadata_file if File.exist?(metadata_file)
-        end
+        files_to_remove << output_file if File.exist?(output_file)
+        files_to_remove << metadata_file if File.exist?(metadata_file)
       end
 
       # Remove duplicates while preserving order
@@ -535,43 +528,6 @@ module Ruly
       # Extract command file references from cached content
       # This is a simplified version - you might need to adjust based on actual cache format
       []
-    end
-
-    def copy_bin_files(bin_files)
-      return if bin_files.empty?
-
-      ruly_bin_dir = '.ruly/bin'
-      FileUtils.mkdir_p(ruly_bin_dir)
-      
-      copied_count = 0
-      bin_files.each do |file|
-        source_path = file[:source_path]
-        relative_path = file[:relative_path]
-        
-        # Extract subdirectory structure from bin/ onwards
-        if relative_path.match?(%r{bin/(.+\.sh)$})
-          target_relative = Regexp.last_match(1)
-        else
-          # Fallback: just use the filename
-          target_relative = File.basename(source_path)
-        end
-        
-        target_path = File.join(ruly_bin_dir, target_relative)
-        target_dir = File.dirname(target_path)
-        
-        # Create subdirectories if needed
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-        
-        # Copy the file
-        FileUtils.cp(source_path, target_path)
-        
-        # Make it executable
-        File.chmod(0755, target_path)
-        
-        copied_count += 1
-      end
-      
-      puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
     end
 
     def save_command_files(command_files)
@@ -887,7 +843,7 @@ module Ruly
                         end
         sources << {path: relative_path, type: 'local'}
       end
-      
+
       # Also process bin/*.sh files
       Dir.glob(File.join(directory_path, 'bin', '**', '*.sh')).each do |file|
         # Store relative path from gem root or absolute path
@@ -933,6 +889,8 @@ module Ruly
       local_sources = []
       command_files = []
       bin_files = []
+      processed_files = Set.new
+      sources_to_process = sources.dup
 
       # Show total count
       puts "\n📚 Processing #{sources.length} sources..."
@@ -940,11 +898,27 @@ module Ruly
       # Prefetch remote files using GraphQL
       prefetched_content = prefetch_remote_files(sources)
 
-      # Process all sources in order for display
-      sources.each_with_index do |source, index|
-        result = process_single_source(source, index, sources.length, agent, prefetched_content)
+      # Process all sources including requires
+      index = 0
+      until sources_to_process.empty?
+        source = sources_to_process.shift
+
+        # Check if already processed (deduplication)
+        source_key = get_source_key(source)
+        next if processed_files.include?(source_key)
+
+        # Process the source
+        context = {
+          agent: agent, # rubocop:disable Style/HashSyntax
+          prefetched_content: prefetched_content, # rubocop:disable Style/HashSyntax
+          processed_files: processed_files, # rubocop:disable Style/HashSyntax
+          sources_to_process: sources_to_process # rubocop:disable Style/HashSyntax
+        }
+        result = process_single_source_with_requires(source, index, sources.length + index, context)
 
         if result
+          processed_files.add(source_key)
+
           if result[:is_bin]
             bin_files << result[:data]
           elsif result[:is_command]
@@ -953,6 +927,8 @@ module Ruly
             local_sources << result[:data]
           end
         end
+
+        index += 1
       end
 
       # Copy bin files to .ruly/bin if any exist
@@ -1077,6 +1053,47 @@ module Ruly
       results
     end
 
+    def get_source_key(source)
+      # Create a unique key for deduplication
+      # For local files, use the normalized path
+      # For remote files, use the full URL
+      if source[:type] == 'local'
+        full_path = find_rule_file(source[:path])
+        full_path || source[:path]
+      else
+        source[:path]
+      end
+    end
+
+    def process_single_source_with_requires(source, index, total, context)
+      # Extract context
+      agent = context[:agent]
+      prefetched_content = context[:prefetched_content]
+      processed_files = context[:processed_files]
+      sources_to_process = context[:sources_to_process]
+
+      # First process the source normally
+      result = process_single_source(source, index, total, agent, prefetched_content)
+
+      return nil unless result
+
+      # If it's a regular markdown file (not bin), check for requires
+      if !result[:is_bin] && result[:data][:content]
+        content = result[:data][:content]
+
+        # Resolve requires for this source
+        required_sources = resolve_requires_for_source(source, content, processed_files, sources_to_process)
+
+        # Add required sources to the front of the queue (depth-first processing)
+        unless required_sources.empty?
+          puts "    → Found #{required_sources.length} requires, adding to queue..."
+          sources_to_process.unshift(*required_sources)
+        end
+      end
+
+      result
+    end
+
     def process_single_source(source, index, total, agent, prefetched_content)
       if source[:type] == 'local'
         process_local_file_with_progress(source, index, total, agent)
@@ -1096,11 +1113,11 @@ module Ruly
       if file_path
         # Check if it's a bin/*.sh file
         is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
-        
+
         if is_bin
           # For bin files, we'll copy them directly
           puts ' ✅ (bin)'
-          {data: {source_path: file_path, relative_path: source[:path]}, is_bin: true}
+          {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
         else
           content = File.read(file_path)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
@@ -1250,6 +1267,179 @@ module Ruly
       end
     end
 
+    def resolve_requires_for_source(source, content, processed_files, _all_sources)
+      frontmatter, = parse_frontmatter(content)
+      requires = frontmatter['requires'] || []
+
+      return [] if requires.empty?
+
+      required_sources = []
+
+      requires.each do |required_path|
+        # Resolve the path based on the source context
+        resolved_source = resolve_required_path(source, required_path)
+
+        next unless resolved_source
+
+        # Check if already processed (deduplication)
+        source_key = get_source_key(resolved_source)
+        next if processed_files.include?(source_key)
+
+        # Add to required sources
+        required_sources << resolved_source
+      end
+
+      required_sources
+    end
+
+    def parse_frontmatter(content)
+      return [{}, content] unless content.start_with?('---')
+
+      # Ensure we have a mutable string
+      content = content.dup.force_encoding('UTF-8')
+      yaml_match = content.match(/^---\n(.+?)\n---\n?/m)
+      return [{}, content] unless yaml_match
+
+      begin
+        frontmatter = YAML.safe_load(yaml_match[1]) || {}
+        # Content without frontmatter (but we keep it for the output)
+        [frontmatter, content]
+      rescue StandardError => e
+        puts "⚠️  Warning: Failed to parse frontmatter: #{e.message}" if ENV['DEBUG']
+        [{}, content]
+      end
+    end
+
+    def resolve_required_path(source, required_path)
+      if source[:type] == 'local'
+        resolve_local_require(source[:path], required_path)
+      elsif source[:type] == 'remote'
+        resolve_remote_require(source[:path], required_path)
+      end
+    end
+
+    def resolve_local_require(source_path, required_path)
+      # Get the directory of the source file
+      source_full_path = find_rule_file(source_path)
+      return nil unless source_full_path
+
+      source_dir = File.dirname(source_full_path)
+
+      # Resolve the required path relative to the source directory
+      resolved_full_path = File.expand_path(required_path, source_dir)
+
+      # Check if file exists
+      return nil unless File.exist?(resolved_full_path)
+
+      # Convert back to relative path from gem root for consistency
+      relative_path = if resolved_full_path.start_with?(gem_root)
+                        resolved_full_path.sub("#{gem_root}/", '')
+                      else
+                        resolved_full_path
+                      end
+
+      {path: relative_path, type: 'local'}
+    end
+
+    def resolve_remote_require(source_url, required_path)
+      # Handle GitHub URLs
+      if source_url.include?('github.com') && source_url.include?('/blob/')
+        # Extract parts from GitHub URL
+        if source_url =~ %r{https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)}
+          owner = Regexp.last_match(1)
+          repo = Regexp.last_match(2)
+          branch = Regexp.last_match(3)
+          source_file_path = Regexp.last_match(4)
+          source_dir = File.dirname(source_file_path)
+
+          # Resolve the required path relative to the source directory
+          # Handle both relative and absolute (from repo root) paths
+          resolved_path = if required_path.start_with?('/')
+                            # Absolute from repo root
+                            required_path[1..]
+                          else
+                            # Relative to current file's directory
+                            normalize_path(File.join(source_dir, required_path))
+                          end
+
+          # Construct the full GitHub URL for the required file
+          resolved_url = "https://github.com/#{owner}/#{repo}/blob/#{branch}/#{resolved_path}"
+
+          return {path: resolved_url, type: 'remote'}
+        end
+      end
+
+      # For other remote URLs, try to resolve relative to base URL
+      begin
+        base_uri = URI.parse(source_url)
+        base_path = File.dirname(base_uri.path)
+        resolved_path = File.join(base_path, required_path)
+        resolved_uri = base_uri.dup
+        resolved_uri.path = resolved_path
+
+        {path: resolved_uri.to_s, type: 'remote'}
+      rescue StandardError
+        nil
+      end
+    end
+
+    def normalize_path(path)
+      # Normalize the path (remove ./, ../, etc)
+      path.split('/').each_with_object([]) do |part, parts|
+        if part == '..'
+          parts.pop
+        elsif part != '.' && !part.empty?
+          parts << part
+        end
+        parts
+      end.join('/')
+    end
+
+    def copy_bin_files(bin_files)
+      return if bin_files.empty?
+
+      ruly_bin_dir = '.ruly/bin'
+      FileUtils.mkdir_p(ruly_bin_dir)
+
+      copied_count = 0
+      bin_files.each do |file|
+        source_path = file[:source_path]
+        relative_path = file[:relative_path]
+
+        # Extract subdirectory structure from bin/ onwards
+        target_relative = if relative_path.match?(%r{bin/(.+\.sh)$})
+                            Regexp.last_match(1)
+                          else
+                            # Fallback: just use the filename
+                            File.basename(source_path)
+                          end
+
+        target_path = File.join(ruly_bin_dir, target_relative)
+        target_dir = File.dirname(target_path)
+
+        # Create subdirectories if needed
+        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+
+        # Copy the file
+        FileUtils.cp(source_path, target_path)
+
+        # Make it executable
+        File.chmod(0o755, target_path)
+
+        copied_count += 1
+      end
+
+      puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
+    end
+
+    def calculate_bin_target(relative_path)
+      if relative_path.match?(%r{bin/(.+\.sh)$})
+        Regexp.last_match(1)
+      else
+        File.basename(relative_path)
+      end
+    end
+
     def generate_toc_content(local_sources, command_files, agent)
       toc_lines = ['## Table of Contents', '']
 
@@ -1282,14 +1472,10 @@ module Ruly
     def extract_headers_from_content(content, source_path = nil)
       headers = []
       content = content.force_encoding('UTF-8')
-      
+
       # Generate file prefix from source path
-      file_prefix = if source_path
-                      generate_file_prefix(source_path)
-                    else
-                      nil
-                    end
-      
+      file_prefix = (generate_file_prefix(source_path) if source_path)
+
       content.each_line.with_index do |line, index|
         if line =~ /^(#+)\s+(.+)$/
           level = Regexp.last_match(1).length
@@ -1301,27 +1487,16 @@ module Ruly
       headers
     end
 
-    def generate_anchor(text, prefix = nil)
-      anchor = text.downcase
-                   .gsub(/[^\w\s-]/, '')
-                   .gsub(/\s+/, '-').squeeze('-')
-                   .gsub(/^-|-$/, '')
-      
-      prefix ? "#{prefix}-#{anchor}" : anchor
-    end
-    
     def generate_file_prefix(source_path)
       # Convert file path to a URL-safe prefix
       # Examples:
       #   "ruby/common.md" -> "ruby-common-md"
       #   "https://github.com/user/repo/blob/main/rules/test.md" -> "rules-test-md"
-      
+
       # Extract just the path portion if it's a URL
       path = if source_path.start_with?('http')
-               # Extract path after blob/branch/ for GitHub URLs
-               if source_path =~ %r{/blob/[^/]+/(.+)$}
-                 Regexp.last_match(1)
-               elsif source_path =~ %r{/tree/[^/]+/(.+)$}
+               # Extract path after blob/branch/ or tree/branch/ for GitHub URLs
+               if source_path =~ %r{/(?:blob|tree)/[^/]+/(.+)$}
                  Regexp.last_match(1)
                else
                  # Fallback: use last part of URL
@@ -1330,39 +1505,22 @@ module Ruly
              else
                source_path
              end
-      
+
       # Sanitize the path to create a valid anchor prefix
       path.downcase
           .gsub(/\.md$/, '') # Remove .md extension
-          .gsub(/[^\w\/-]/, '') # Keep only word chars, slashes, and hyphens
-          .gsub(/\/+/, '-') # Replace slashes with hyphens
+          .gsub(%r{[^\w/-]}, '') # Keep only word chars, slashes, and hyphens
+          .gsub(%r{/+}, '-') # Replace slashes with hyphens
           .gsub(/^-|-$/, '') # Remove leading/trailing hyphens
     end
-    
-    def add_anchor_ids_to_content(content, source_path)
-      # Add HTML anchor tags before headers to make them linkable
-      # This ensures the TOC links work correctly
-      
-      file_prefix = generate_file_prefix(source_path)
-      modified_content = []
-      
-      content.force_encoding('UTF-8').each_line do |line|
-        if line =~ /^(#+)\s+(.+)$/
-          level = Regexp.last_match(1)
-          text = Regexp.last_match(2).strip
-          anchor = generate_anchor(text, file_prefix)
-          
-          # Add the header with an anchor that matches what's in the TOC
-          # Using HTML comment style anchor that works in markdown
-          modified_content << "<a id=\"#{anchor}\"></a>"
-          modified_content << ""
-          modified_content << "#{level} #{text}"
-        else
-          modified_content << line.chomp
-        end
-      end
-      
-      modified_content.join("\n")
+
+    def generate_anchor(text, prefix = nil)
+      anchor = text.downcase
+                   .gsub(/[^\w\s-]/, '')
+                   .gsub(/\s+/, '-').squeeze('-')
+                   .gsub(/^-|-$/, '')
+
+      prefix ? "#{prefix}-#{anchor}" : anchor
     end
 
     def generate_toc_slash_commands(command_files)
@@ -1405,6 +1563,32 @@ module Ruly
       end
 
       'Command description not available'
+    end
+
+    def add_anchor_ids_to_content(content, source_path)
+      # Add HTML anchor tags before headers to make them linkable
+      # This ensures the TOC links work correctly
+
+      file_prefix = generate_file_prefix(source_path)
+      modified_content = []
+
+      content.force_encoding('UTF-8').each_line do |line|
+        if line =~ /^(#+)\s+(.+)$/
+          level = Regexp.last_match(1)
+          text = Regexp.last_match(2).strip
+          anchor = generate_anchor(text, file_prefix)
+
+          # Add the header with an anchor that matches what's in the TOC
+          # Using HTML comment style anchor that works in markdown
+          modified_content << "<a id=\"#{anchor}\"></a>"
+          modified_content << ''
+          modified_content << "#{level} #{text}"
+        else
+          modified_content << line.chomp
+        end
+      end
+
+      modified_content.join("\n")
     end
 
     def generate_ignore_patterns(output_file, agent, command_files)
