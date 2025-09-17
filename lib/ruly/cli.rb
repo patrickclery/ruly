@@ -46,6 +46,8 @@ module Ruly
 
       output_file = options[:output_file]
       agent = options[:agent]
+      # Normalize agent aliases
+      agent = 'shell_gpt' if agent == 'sgpt'
       # recipe_name is now a positional parameter
       dry_run = options[:dry_run]
       git_ignore = options[:git_ignore]
@@ -138,52 +140,60 @@ module Ruly
           return
         end
 
-        File.open(output_file, 'w') do |output|
-          output.puts '# Combined Ruly Documentation'
-          output.puts
-
-          # Generate TOC if requested
-          if options[:toc]
-            toc_content = generate_toc_content(local_sources, command_files, agent)
-            output.puts toc_content
-            output.puts
-          end
-
-          output.puts '---'
-
-          local_sources.each do |source|
-            output.puts
-            output.puts "## #{source[:path]}"
+        # Write output based on agent type
+        if agent == 'shell_gpt'
+          write_shell_gpt_json(output_file, local_sources)
+        else
+          # Standard markdown output
+          File.open(output_file, 'w') do |output|
+            output.puts '# Combined Ruly Documentation'
             output.puts
 
-            # If TOC is enabled, add anchor IDs to headers in content
+            # Generate TOC if requested
             if options[:toc]
-              output.puts add_anchor_ids_to_content(source[:content], source[:path])
-            else
-              output.puts source[:content]
+              toc_content = generate_toc_content(local_sources, command_files, agent)
+              output.puts toc_content
+              output.puts
             end
 
-            output.puts
             output.puts '---'
-            output.puts
+
+            local_sources.each do |source|
+              output.puts
+              output.puts "## #{source[:path]}"
+              output.puts
+
+              # If TOC is enabled, add anchor IDs to headers in content
+              if options[:toc]
+                output.puts add_anchor_ids_to_content(source[:content], source[:path])
+              else
+                output.puts source[:content]
+              end
+
+              output.puts
+              output.puts '---'
+              output.puts
+            end
           end
         end
 
-        # Save metadata file
-        metadata = {
-          'agent' => agent,
-          'command_files' => if agent == 'claude' && !command_files.empty?
-                               command_files.map { |f| ".claude/commands/#{File.basename(f[:path])}" }
-                             else
-                               []
-                             end,
-          'created_at' => Time.now.iso8601,
-          'files_count' => local_sources.size,
-          'output_file' => output_file,
-          'recipe' => recipe_name,
-          'version' => Ruly::VERSION
-        }
-        File.write(metadata_file, metadata.to_yaml)
+        # Save metadata file (skip for shell_gpt)
+        unless agent == 'shell_gpt'
+          metadata = {
+            'agent' => agent,
+            'command_files' => if agent == 'claude' && !command_files.empty?
+                                 command_files.map { |f| ".claude/commands/#{File.basename(f[:path])}" }
+                               else
+                                 []
+                               end,
+            'created_at' => Time.now.iso8601,
+            'files_count' => local_sources.size,
+            'output_file' => output_file,
+            'recipe' => recipe_name,
+            'version' => Ruly::VERSION
+          }
+          File.write(metadata_file, metadata.to_yaml)
+        end
 
         # Update git ignore files if requested
         if git_ignore || git_exclude
@@ -202,7 +212,9 @@ module Ruly
         update_claude_settings_with_mcp if agent == 'claude'
       end
 
-      mode_desc = if cache_used
+      mode_desc = if agent == 'shell_gpt'
+                    'shell_gpt role JSON'
+                  elsif cache_used
                     "cached squash mode with '#{recipe_name}' recipe"
                   elsif recipe_name
                     "squash mode with '#{recipe_name}' recipe"
@@ -1699,6 +1711,34 @@ module Ruly
     rescue StandardError
       # If we can't read the file for any reason, return 0
       0
+    end
+
+    def write_shell_gpt_json(output_file, local_sources)
+      require 'json'
+
+      # Extract role name from filename (remove .json extension)
+      role_name = File.basename(output_file, '.json')
+
+      # Combine all content into description
+      description_parts = local_sources.map do |source|
+        # Duplicate string to avoid frozen string error
+        content = source[:content].dup.force_encoding('UTF-8')
+        # Replace invalid UTF-8 sequences
+        content = content.scrub('?')
+        "## #{source[:path]}\n\n#{content}"
+      end
+
+      # Join all parts into single description string
+      description = description_parts.join("\n\n---\n\n")
+
+      # Create role JSON structure
+      role_json = {
+        'name' => role_name,
+        'description' => description
+      }
+
+      # Write JSON with proper escaping (JSON.pretty_generate handles all escaping)
+      File.write(output_file, JSON.pretty_generate(role_json))
     end
 
     def print_summary(mode, output_file, file_count)
