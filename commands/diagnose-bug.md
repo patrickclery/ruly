@@ -15,7 +15,7 @@ alwaysApply: true
 ## Description
 
 This command guides you through a systematic bug investigation process following the methodology in
-[@rules/core/debugging/bug-workflow.md].
+[@rules/core/bug/bug-workflow.md].
 
 It will:
 
@@ -35,9 +35,9 @@ When invoked, I will follow **Phase 1: Initial Investigation** from the bug work
    - Identify affected components
 
 2. **Create Debug Script**
-   - Location: `debug/` folder
+   - Location: `tmp/` folder
    - Naming: `WA-XXXX-NN-description.rb`
-   - Run with: `make rails-r T=debug/WA-XXXX-NN-description.rb`
+   - Run with: `make rails-r T=tmp/WA-XXXX-NN-description.rb`
 
 3. **Apply Debugging Patterns**
    - Policy debugging for authorization issues
@@ -73,8 +73,8 @@ Creates additional numbered debug scripts (02, 03, etc.) for deeper investigatio
 
 - **Diagnosis only** - No fix implementation
 - **References bug-workflow.md** - Full debugging methodology at
-  [@rules/core/debugging/bug-workflow.md]
-- **Debug scripts preserved** - All scripts remain in `debug/` folder
+  [@rules/core/bug/bug-workflow.md]
+- **Debug scripts preserved** - All scripts remain in `tmp/` folder
 - **Database operations** - Require explicit confirmation before running
 
 ## After Diagnosis
