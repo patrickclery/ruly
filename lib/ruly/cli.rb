@@ -952,7 +952,16 @@ module Ruly
     end
 
     def prefetch_remote_files(sources)
-      remote_sources = sources.select { |s| s[:type] == 'remote' }
+      # Convert sources to proper format if they're strings
+      normalized_sources = sources.map do |s|
+        if s.is_a?(String)
+          {path: s, type: 'local'}
+        else
+          s
+        end
+      end
+
+      remote_sources = normalized_sources.select { |s| s[:type] == 'remote' }
       return {} unless remote_sources.any?
 
       prefetched_content = {}
@@ -1067,11 +1076,21 @@ module Ruly
 
     def get_source_key(source)
       # Create a unique key for deduplication
-      # For local files, use the normalized path
+      # For local files, use the absolute canonical path
       # For remote files, use the full URL
       if source[:type] == 'local'
+        # Try to find the full path
         full_path = find_rule_file(source[:path])
-        full_path || source[:path]
+
+        # If found, use the real absolute path for deduplication
+        # This ensures that "rules/commands.md", "../commands.md", "../../commands.md"
+        # all resolve to the same key when they point to the same file
+        if full_path
+          File.realpath(full_path)
+        else
+          # If file not found, use the original path as-is
+          source[:path]
+        end
       else
         source[:path]
       end
@@ -1340,14 +1359,31 @@ module Ruly
       # Resolve the required path relative to the source directory
       resolved_full_path = File.expand_path(required_path, source_dir)
 
-      # Check if file exists
-      return nil unless File.exist?(resolved_full_path)
+      # Add .md extension if not present and file doesn't exist as-is
+      if !File.file?(resolved_full_path)
+        if !resolved_full_path.end_with?('.md')
+          md_path = resolved_full_path + '.md'
+          resolved_full_path = md_path if File.file?(md_path)
+        end
+      end
 
-      # Convert back to relative path from gem root for consistency
-      relative_path = if resolved_full_path.start_with?(gem_root)
-                        resolved_full_path.sub("#{gem_root}/", '')
+      # Check if file exists and is actually a file (not a directory)
+      return nil unless File.file?(resolved_full_path)
+
+      # Use realpath to get canonical path (resolves symlinks, etc.)
+      canonical_path = File.realpath(resolved_full_path)
+
+      # Try to make it relative to gem_root for consistency
+      root = gem_root
+      root_path = File.realpath(root) rescue root
+
+      relative_path = if canonical_path.start_with?(root_path + '/')
+                        canonical_path.sub("#{root_path}/", '')
+                      elsif canonical_path == root_path
+                        '.'
                       else
-                        resolved_full_path
+                        # If not under gem_root, return the canonical path
+                        canonical_path
                       end
 
       {path: relative_path, type: 'local'}
