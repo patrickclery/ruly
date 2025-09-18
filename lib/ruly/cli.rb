@@ -2417,8 +2417,26 @@ module Ruly
       # Ensure parent directory exists
       FileUtils.mkdir_p(File.dirname(output_file))
 
-      # Write updated config
-      File.write(output_file, existing_config.to_yaml)
+      # Write updated config with custom formatting for file paths
+      yaml_content = format_yaml_without_quotes(existing_config)
+      File.write(output_file, yaml_content)
+    end
+
+    def format_yaml_without_quotes(data)
+      # Convert to standard YAML first
+      yaml_str = data.to_yaml
+
+      # Remove quotes from file paths (paths that start with / or ~ or contain .md)
+      yaml_str.gsub(/(['"])(\/[^'"]*|~[^'"]*|[^'"]*\.md[c]?)\1/) do |match|
+        # Extract the path without quotes
+        path = match[1..-2]  # Remove first and last character (the quotes)
+        # Return the path without quotes if it's a valid file path
+        if path.match?(/^[\/~]/) || path.match?(/\.md[c]?$/)
+          path
+        else
+          match  # Keep the quotes for non-file paths
+        end
+      end
     end
   end # rubocop:enable Metrics/ClassLength
 end
