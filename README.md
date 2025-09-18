@@ -460,6 +460,11 @@ User recipes:
   optional and overrides metadata. Removes main output file and command files directory.
   Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
 
+- **Introspect** (`introspect [FILE_PATH]`): Analyzes a markdown file to extract its frontmatter
+  metadata and identify any `requires:` dependencies. Shows the YAML frontmatter, lists required
+  files, and displays their resolved paths. Useful for understanding file dependencies and debugging
+  the requires system. If no file path is provided, it will look for a file in the current directory.
+
 - **List Recipes** (`list-recipes`): Shows all available recipes with file counts and cache
   indicators.
 
@@ -521,6 +526,12 @@ ruly clean --deepclean
 # Clean specific output file
 ruly clean -o test/testing-rules.md
 
+# Introspect a markdown file to see its frontmatter and requires
+ruly introspect rules/ruby/ruby-practices.md
+
+# Introspect a file in the current directory
+ruly introspect README.md
+
 # List what recipes are available
 ruly list-recipes
 
@@ -531,6 +542,7 @@ ruly version
 ruly help
 ruly help squash
 ruly help clean
+ruly help introspect
 ```
 
 Ruly will automatically:
