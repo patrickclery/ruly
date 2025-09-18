@@ -1191,7 +1191,7 @@ module Ruly
       return nil unless result
 
       # If it's a regular markdown file (not bin), check for requires
-      if !result[:is_bin] && result[:data][:content]
+      if !result[:is_bin] && result[:data] && result[:data][:content]
         content = result[:data][:content]
 
         # Resolve requires for this source
@@ -1200,6 +1200,8 @@ module Ruly
         # Add required sources to the front of the queue (depth-first processing)
         unless required_sources.empty?
           puts "    → Found #{required_sources.length} requires, adding to queue..."
+          # Mark these sources as being from requires
+          required_sources.each { |rs| rs[:from_requires] = true }
           sources_to_process.unshift(*required_sources)
         end
       end
@@ -1220,7 +1222,9 @@ module Ruly
     end
 
     def process_local_file_with_progress(source, index, total, agent)
-      print "  [#{index + 1}/#{total}] 📁 Local: #{source[:path]}..."
+      # Check if this is from requires and adjust the message
+      prefix = source[:from_requires] ? "📚 Required" : "📁 Local"
+      print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..."
       file_path = find_rule_file(source[:path])
 
       if file_path
@@ -1234,7 +1238,13 @@ module Ruly
         else
           content = File.read(file_path)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
-          puts is_command ? ' ✅ (command)' : ' ✅'
+          if is_command
+            puts ' ✅ (command)'
+          elsif source[:from_requires]
+            puts ' ✅ (from requires)'
+          else
+            puts ' ✅'
+          end
           {data: {content:, path: source[:path]}, is_command:}
         end
       else
@@ -1250,17 +1260,24 @@ module Ruly
         repo = Regexp.last_match(2)
         file_path = Regexp.last_match(3)
         display_name = "#{owner}/#{repo}/#{file_path}"
-        icon = '🐙'
+        icon = source[:from_requires] ? '📚' : '🐙'
       else
         display_name = source[:path]
-        icon = '📦'
+        icon = source[:from_requires] ? '📚' : '📦'
       end
 
-      print "  [#{index + 1}/#{total}] #{icon} Processing: #{display_name}..."
+      prefix = source[:from_requires] ? "Required" : "Processing"
+      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
 
       # Check if remote file is a command file
       is_command = agent == 'claude' && source[:path].include?('/commands/')
-      puts is_command ? ' ✅ (command)' : ' ✅'
+      if is_command
+        puts ' ✅ (command)'
+      elsif source[:from_requires]
+        puts ' ✅ (from requires)'
+      else
+        puts ' ✅'
+      end
 
       {data: {content:, path: source[:path]}, is_command:}
     end
@@ -1272,22 +1289,29 @@ module Ruly
         repo = Regexp.last_match(2)
         file_path = Regexp.last_match(3)
         display_name = "#{owner}/#{repo}/#{file_path}"
-        icon = '🐙'
+        icon = source[:from_requires] ? '📚' : '🐙'
       elsif source[:path] =~ %r{https?://([^/]+)/(.+)}
         domain = Regexp.last_match(1)
         path = Regexp.last_match(2)
         display_name = "#{domain}/#{path}"
-        icon = '🌐'
+        icon = source[:from_requires] ? '📚' : '🌐'
       else
         display_name = source[:path]
-        icon = '🌐'
+        icon = source[:from_requires] ? '📚' : '🌐'
       end
-      print "  [#{index + 1}/#{total}] #{icon} Fetching: #{display_name}..."
+      prefix = source[:from_requires] ? "Required" : "Fetching"
+      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
       content = fetch_remote_content(source[:path])
       if content
         # Check if remote file is a command file (has /commands/ in path)
         is_command = agent == 'claude' && source[:path].include?('/commands/')
-        puts is_command ? ' ✅ (command)' : ' ✅'
+        if is_command
+          puts ' ✅ (command)'
+        elsif source[:from_requires]
+          puts ' ✅ (from requires)'
+        else
+          puts ' ✅'
+        end
         {data: {content:, path: source[:path]}, is_command:}
       else
         puts ' ❌ failed'
