@@ -369,43 +369,60 @@ Create a `~/.config/ruly/recipes.yml` file to define your own recipes or overrid
 
 ```yaml
 # ~/.config/ruly/recipes.yml
+---
+plan: claude_max
 recipes:
-  # Legacy format (still supported)
-  my-legacy-project:
-    - rules/core/core.md
-    - rules/core/sequel.md
-    - rules/workflow/pr-creation.md
+  # Complete development environment combining multiple sources
+  my_company_core:
+    description: Complete development environment with Ruby, testing, and workflow rules
+    plan: claude_max
+    sources:
+      # John's private rules repository
+      - github: john/private-rules
+        branch: main
+        rules:
+          - rules/commands/bug
+          - rules/commands/pr
+          - rules/bug
+          - rules/commands.md
+          - rules/core
+          - rules/core/debugging
+          - rules/pr
+          - rules/ruby
+          - rules/testing
+          - rules/commands/testing
+          - rules/commands/workflow
 
-  # New format: Local files with caching
-  enhanced-rails:
-    cache: true
-    source: local
-    files:
-      - rules/ruby/*.md
-      - rules/awesome-cursor.md
-    remote_sources:
-      # Individual files - use /blob/
-      - https://github.com/danielscholl/mvn-mcp-server/blob/main/.claude/commands/bug-fix.md
-      - https://github.com/example/repo/blob/main/rules/testing.md
-      # Directories - use /tree/ (expands to all .md files)
-      - https://github.com/example/repo/tree/main/rules/ruby
+      # Company's shared rules repository
+      - github: my_company/development-standards
+        branch: main
+        rules:
+          - rules/commands/jira/details.md
+          - rules/workflow
+          - rules/jira
 
-  # Minimal recipe with caching
-  minimal-cached:
-    cache: true
-    source: local
+  # Local files from various projects
+  development_local:
+    description: Auto-generated from local sources
     files:
-      - rules/awesome-cursor.md
-      - rules/core/core.md
-      - rules/core/specs.md
+      - /Users/john/Projects/my_app/rules/ruby/common.md
+      - /Users/john/Projects/my_app/rules/ruby/monads.md
+      - /Users/john/Projects/my_app/rules/ruby/rspec.md
+      - /Users/john/Projects/my_app/rules/ruby/sequel.md
+      - /Users/john/Projects/my_app/rules/testing/common.md
+      - /Users/john/Projects/my_app/rules/commands.md
+      - /Users/john/Projects/my_app/rules/commands/bug/diagnose.md
+      - /Users/john/Projects/my_app/rules/commands/bug/fix.md
+      - /Users/john/Projects/my_app/rules/commands/pr/create.md
+    plan: claude_max
 
-  # Without caching
-  docs-only:
-    cache: false
-    source: local
+  # Simple recipe for specific context
+  testing_only:
+    description: Testing and QA rules
+    plan: claude_max
     files:
-      - rules/workflow/*.md
-      - rules/gateway/*.md
+      - /Users/john/Projects/my_app/rules/testing/*.md
+      - /Users/john/Projects/my_app/rules/commands/testing/*.md
 ```
 
 **Remote Sources:**
