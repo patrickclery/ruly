@@ -330,7 +330,29 @@ module Ruly
         # Collect all files from different sources
         all_files = []
         all_files.concat(config['files']) if config['files']
-        all_files.concat(config['sources']) if config['sources']
+
+        # Handle new sources format (array of hashes for GitHub sources)
+        if config['sources']
+          config['sources'].each do |source|
+            if source.is_a?(Hash)
+              if source['github']
+                # GitHub source - add each rule as a remote file
+                if source['rules']
+                  source['rules'].each do |rule|
+                    all_files << "https://github.com/#{source['github']}/#{rule}"
+                  end
+                end
+              elsif source['local']
+                # Local source format
+                all_files.concat(source['local'])
+              end
+            else
+              # Legacy format - simple string
+              all_files << source
+            end
+          end
+        end
+
         all_files.concat(config['remote_sources']) if config['remote_sources']
 
         if all_files.empty?
@@ -358,6 +380,66 @@ module Ruly
         puts "   🎯 Plan: #{config['plan'] || 'default'}" if config['plan']
       end
       puts
+    end
+
+    desc 'introspect RECIPE SOURCE...', 'Scan directories or GitHub repos for markdown files and create/update recipe'
+    option :description, aliases: '-d', desc: 'Description for the recipe', type: :string
+    option :output, aliases: '-o', desc: 'Output file path', default: nil, type: :string
+    option :dry_run, desc: 'Show what would be done without modifying files', type: :boolean, default: false
+    option :relative, desc: 'Use relative paths instead of absolute for local files', type: :boolean, default: false
+    def introspect(recipe_name, *sources) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+      if sources.empty?
+        puts '❌ At least one source directory or GitHub URL is required'
+        exit 1
+      end
+
+      # Determine output file
+      output_file = options[:output] || user_recipes_file
+
+      puts "\n🔍 Introspecting #{sources.length} source#{'s' if sources.length > 1}..."
+
+      all_local_files = []
+      all_github_sources = []
+
+      sources.each do |source|
+        if source.start_with?('http') && source.include?('github.com')
+          # GitHub source
+          introspect_github_source(source, all_github_sources)
+        else
+          # Local directory
+          introspect_local_source(source, all_local_files, options[:relative])
+        end
+      end
+
+      # Build recipe structure
+      recipe_data = build_introspected_recipe(
+        all_local_files,
+        all_github_sources,
+        sources,
+        options[:description]
+      )
+
+      if options[:dry_run]
+        puts "\n🔍 Dry run mode - no files will be modified"
+        puts "\n📝 Would update recipe '#{recipe_name}' in #{output_file}:"
+        puts recipe_data.to_yaml
+      else
+        # Save or update recipe
+        save_introspected_recipe(recipe_name, recipe_data, output_file)
+
+        total_files = all_local_files.length
+        all_github_sources.each do |github_source|
+          total_files += github_source[:rules].length
+        end
+
+        puts "\n✅ Recipe '#{recipe_name}' updated in #{output_file}"
+        puts "   #{total_files} total files added to recipe:"
+        puts "   - #{all_local_files.length} local files" if all_local_files.any?
+        if all_github_sources.any?
+          github_file_count = all_github_sources.sum { |s| s[:rules].length }
+          puts "   - #{github_file_count} GitHub files"
+        end
+      end
     end
 
     no_commands do # rubocop:disable Metrics/BlockLength
@@ -2151,6 +2233,192 @@ module Ruly
           end
         end
       end
+    end
+
+    def user_recipes_file
+      # Use user's home config directory for recipes
+      config_dir = File.join(Dir.home, '.config', 'ruly')
+      FileUtils.mkdir_p(config_dir) unless File.exist?(config_dir)
+      File.join(config_dir, 'recipes.yml')
+    end
+
+    def introspect_local_source(path, all_files, use_relative)
+      expanded_path = File.expand_path(path)
+
+      unless File.directory?(expanded_path)
+        puts "  ⚠️  Skipping #{path} - not a directory"
+        return
+      end
+
+      puts "  📁 #{path}..."
+      found_count = 0
+
+      Find.find(expanded_path) do |file_path|
+        next unless file_path.end_with?('.md', '.mdc')
+
+        # Store as absolute path unless relative flag is set
+        stored_path = use_relative ? file_path.sub("#{Dir.pwd}/", '') : file_path
+        all_files << stored_path
+        found_count += 1
+      end
+
+      puts "     Found #{found_count} markdown files"
+    end
+
+    def introspect_github_source(url, all_github_sources)
+      # Parse GitHub URL
+      # Format: https://github.com/owner/repo/tree/branch/path
+      if url =~ %r{github\.com/([^/]+)/([^/]+)/tree/([^/]+)(?:/(.+))?}
+        owner = Regexp.last_match(1)
+        repo = Regexp.last_match(2)
+        branch = Regexp.last_match(3)
+        path = Regexp.last_match(4) || ''
+
+        puts "  🌐 github.com/#{owner}/#{repo}..."
+
+        # Fetch all markdown files from this GitHub location
+        github_files = fetch_github_markdown_files(owner, repo, branch, path)
+
+        if github_files.any?
+          puts "     Found #{github_files.length} markdown files"
+
+          # Check if we already have a source for this repo
+          existing_source = all_github_sources.find { |s| s[:github] == "#{owner}/#{repo}" && s[:branch] == branch }
+
+          if existing_source
+            # Add to existing source
+            existing_source[:rules].concat(github_files).uniq!.sort!
+          else
+            # Create new source entry
+            all_github_sources << {
+              github: "#{owner}/#{repo}",
+              branch: branch,
+              rules: github_files.sort
+            }
+          end
+        else
+          puts "     ⚠️ No markdown files found or failed to access"
+        end
+      else
+        puts "  ⚠️  Invalid GitHub URL format: #{url}"
+      end
+    end
+
+    def fetch_url(url)
+      uri = URI(url)
+      request = Net::HTTP::Get.new(uri)
+      request['Accept'] = 'application/vnd.github.v3+json' if url.include?('api.github.com')
+      request['User-Agent'] = 'Ruly CLI'
+
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
+        http.request(request)
+      end
+
+      response.body if response.code == '200'
+    rescue StandardError => e
+      puts "     ⚠️ Error fetching URL: #{e.message}" if ENV['DEBUG']
+      nil
+    end
+
+    def fetch_github_markdown_files(owner, repo, branch, path)
+      # Use GitHub API to fetch directory contents
+      api_url = "https://api.github.com/repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch}"
+      puts "     DEBUG: Fetching #{api_url}" if ENV['DEBUG']
+
+      begin
+        response = fetch_url(api_url)
+        unless response
+          puts "     DEBUG: No response from API" if ENV['DEBUG']
+          return []
+        end
+
+        files = []
+        items = JSON.parse(response)
+        puts "     DEBUG: Found #{items.length} items" if ENV['DEBUG']
+
+        items.each do |item|
+          if item['type'] == 'file' && (item['path'].end_with?('.md') || item['path'].end_with?('.mdc'))
+            files << item['path']
+          elsif item['type'] == 'dir'
+            # Recursively fetch subdirectory contents
+            subdir_files = fetch_github_markdown_files(owner, repo, branch, item['path'])
+            files.concat(subdir_files)
+          end
+        end
+
+        files
+      rescue StandardError => e
+        puts "     ⚠️ Error fetching GitHub files: #{e.message}" if ENV['DEBUG']
+        []
+      end
+    end
+
+    def build_introspected_recipe(local_files, github_sources, original_sources, description)
+      recipe = {}
+
+      # Add description
+      if description
+        recipe['description'] = description
+      else
+        # Auto-generate description
+        source_count = original_sources.length
+        if source_count == 1
+          recipe['description'] = "Auto-generated from #{original_sources.first}"
+        else
+          local_count = original_sources.count { |s| !s.start_with?('http') }
+          github_count = source_count - local_count
+
+          parts = []
+          parts << "#{local_count} local" if local_count > 0
+          parts << "#{github_count} GitHub" if github_count > 0
+          recipe['description'] = "Auto-generated from #{parts.join(' and ')} source#{'s' if source_count > 1}"
+        end
+      end
+
+      # Add local files if any
+      recipe['files'] = local_files.sort if local_files.any?
+
+      # Add GitHub sources if any
+      if github_sources.any?
+        recipe['sources'] = github_sources.map do |source|
+          {
+            'github' => source[:github],
+            'branch' => source[:branch],
+            'rules' => source[:rules]
+          }
+        end
+      end
+
+      recipe
+    end
+
+    def save_introspected_recipe(recipe_name, recipe_data, output_file)
+      # Load existing recipes or create new structure
+      existing_config = if File.exist?(output_file)
+                          YAML.safe_load_file(output_file, aliases: true) || {}
+                        else
+                          {}
+                        end
+
+      existing_config['recipes'] ||= {}
+
+      # Preserve existing recipe settings if updating
+      if existing_config['recipes'][recipe_name]
+        existing_recipe = existing_config['recipes'][recipe_name]
+        # Preserve plan if it exists
+        recipe_data['plan'] = existing_recipe['plan'] if existing_recipe['plan']
+        # Use provided description or preserve existing
+        recipe_data['description'] ||= existing_recipe['description']
+      end
+
+      # Update recipe
+      existing_config['recipes'][recipe_name] = recipe_data
+
+      # Ensure parent directory exists
+      FileUtils.mkdir_p(File.dirname(output_file))
+
+      # Write updated config
+      File.write(output_file, existing_config.to_yaml)
     end
   end # rubocop:enable Metrics/ClassLength
 end
