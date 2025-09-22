@@ -210,8 +210,8 @@ module Ruly
         # Save command files separately if agent is Claude
         save_command_files(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
 
-        # Update MCP settings for Claude agent
-        update_claude_settings_with_mcp(recipe_config) if agent == 'claude'
+        # Update MCP settings (JSON for Claude, YAML for others)
+        update_mcp_settings(recipe_config, agent)
       end
 
       mode_desc = if agent == 'shell_gpt'
@@ -245,7 +245,7 @@ module Ruly
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
     option :deepclean, default: false,
-                       desc: 'Remove all Claude artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml)',
+                       desc: 'Remove all generated artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml, .mcp.json, .mcp.yml)',
                        type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def clean(recipe_name = nil)
@@ -254,7 +254,7 @@ module Ruly
       files_to_remove = []
       agent = options[:agent] || 'claude'
 
-      # Handle deepclean option - removes all Claude artifacts including CLAUDE.md
+      # Handle deepclean option - removes all generated artifacts
       files_to_remove << '.claude/' if Dir.exist?('.claude')
       if options[:deepclean]
         # Remove entire .claude directory
@@ -265,6 +265,10 @@ module Ruly
         # Remove all CLAUDE*.md files (including CLAUDE.md)
         files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
         files_to_remove << 'CLAUDE.md' if File.exist?('CLAUDE.md')
+
+        # Remove MCP settings files (both JSON and YAML)
+        files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
+        files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
 
         # Also remove metadata file
         files_to_remove << metadata_file if File.exist?(metadata_file)
@@ -279,12 +283,25 @@ module Ruly
         # Add output file from metadata
         files_to_remove << output_file if File.exist?(output_file)
         files_to_remove << metadata_file
+        # Remove MCP settings based on agent
+        agent_from_metadata = metadata['agent'] || 'claude'
+        if agent_from_metadata == 'claude'
+          files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
+        else
+          files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
+        end
       else
         # Clean based on recipe or fall back to defaults
         output_file = options[:output_file] || "#{agent.upcase}.local.md"
 
         files_to_remove << output_file if File.exist?(output_file)
         files_to_remove << metadata_file if File.exist?(metadata_file)
+        # Remove MCP settings based on agent
+        if agent == 'claude'
+          files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
+        else
+          files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
+        end
       end
 
       # Remove duplicates while preserving order
@@ -660,8 +677,9 @@ module Ruly
         end
       end
 
-      # Update .claude/settings.local.json with mcpServers if mcp.yml exists or recipe has MCP servers
-      update_claude_settings_with_mcp(recipe_config)
+      # Update .mcp.json/.mcp.yml with mcpServers if legacy mcp.yml exists or recipe has MCP servers
+      # Pass 'claude' as default agent since this is in save_command_files which is Claude-specific
+      update_mcp_settings(recipe_config, 'claude')
     end
 
     def get_command_relative_path(file_path)
@@ -672,16 +690,16 @@ module Ruly
       end
     end
 
-    def update_claude_settings_with_mcp(recipe_config = nil)
+    def update_mcp_settings(recipe_config = nil, agent = 'claude')
       require 'yaml'
       require 'json'
 
       mcp_servers = {}
 
       # First, check for legacy mcp.yml file
-      mcp_file = 'mcp.yml'
-      if File.exist?(mcp_file)
-        mcp_config = YAML.safe_load_file(mcp_file, aliases: true)
+      legacy_mcp_file = 'mcp.yml'
+      if File.exist?(legacy_mcp_file)
+        mcp_config = YAML.safe_load_file(legacy_mcp_file, aliases: true)
         mcp_servers.merge!(mcp_config['mcpServers']) if mcp_config && mcp_config['mcpServers']
       end
 
@@ -693,25 +711,42 @@ module Ruly
 
       return if mcp_servers.empty?
 
-      # Ensure .claude directory exists
-      claude_dir = '.claude'
-      FileUtils.mkdir_p(claude_dir)
+      # Determine output format based on agent
+      if agent == 'claude'
+        # Output JSON for Claude
+        mcp_settings_file = '.mcp.json'
 
-      settings_file = File.join(claude_dir, 'settings.local.json')
+        # Load existing settings or create new
+        existing_settings = if File.exist?(mcp_settings_file)
+                             JSON.parse(File.read(mcp_settings_file))
+                           else
+                             {}
+                           end
 
-      # Load existing settings or create new
-      settings = if File.exist?(settings_file)
-                   JSON.parse(File.read(settings_file))
-                 else
-                   {}
-                 end
+        # Update or create mcpServers section
+        existing_settings['mcpServers'] = mcp_servers
 
-      # Update mcpServers
-      settings['mcpServers'] = mcp_servers
+        # Write back to .mcp.json file
+        File.write(mcp_settings_file, JSON.pretty_generate(existing_settings))
+        puts "🔌 Updated .mcp.json with MCP servers"
+      else
+        # Output YAML for other agents
+        mcp_settings_file = '.mcp.yml'
 
-      # Write back to settings file
-      File.write(settings_file, JSON.pretty_generate(settings))
-      puts '🔌 Updated .claude/settings.local.json with MCP servers'
+        # Load existing settings or create new
+        existing_settings = if File.exist?(mcp_settings_file)
+                             YAML.safe_load_file(mcp_settings_file, aliases: true) || {}
+                           else
+                             {}
+                           end
+
+        # Update or create mcpServers section
+        existing_settings['mcpServers'] = mcp_servers
+
+        # Write back to .mcp.yml file
+        File.write(mcp_settings_file, existing_settings.to_yaml)
+        puts "🔌 Updated .mcp.yml with MCP servers"
+      end
     rescue StandardError => e
       puts "⚠️  Warning: Could not update MCP settings: #{e.message}"
     end
@@ -728,7 +763,12 @@ module Ruly
 
       server_names.each do |name|
         if all_servers[name]
-          selected_servers[name] = all_servers[name]
+          # Copy server config but filter out fields starting with underscore (metadata/comments)
+          server_config = all_servers[name].dup
+          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
+          # Ensure 'type' field is present for stdio servers (required by Claude)
+          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
+          selected_servers[name] = server_config
         else
           puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
         end
