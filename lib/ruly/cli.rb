@@ -66,7 +66,9 @@ module Ruly
           # Still need to handle command files separately
           if agent == 'claude'
             command_files = extract_cached_command_files(cached_file, recipe_name, agent)
-            save_command_files(command_files) unless command_files.empty?
+            # Load recipe config for MCP servers
+            _, recipe_config = load_recipe_sources(recipe_name) if recipe_name
+            save_command_files(command_files, recipe_config) unless command_files.empty?
           end
         elsif options[:cache]
           puts "\n🔄 No cache found for recipe '#{recipe_name}', fetching fresh..."
@@ -206,10 +208,10 @@ module Ruly
         save_to_cache(output_file, recipe_name, agent) if recipe_name && should_use_cache?
 
         # Save command files separately if agent is Claude
-        save_command_files(command_files) if agent == 'claude' && !command_files.empty?
+        save_command_files(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
 
         # Update MCP settings for Claude agent
-        update_claude_settings_with_mcp if agent == 'claude'
+        update_claude_settings_with_mcp(recipe_config) if agent == 'claude'
       end
 
       mode_desc = if agent == 'shell_gpt'
@@ -624,7 +626,7 @@ module Ruly
       []
     end
 
-    def save_command_files(command_files)
+    def save_command_files(command_files, recipe_config = nil)
       return if command_files.empty?
 
       commands_dir = '.claude/commands'
@@ -658,8 +660,8 @@ module Ruly
         end
       end
 
-      # Update .claude/settings.local.json with mcpServers if mcp.yml exists
-      update_claude_settings_with_mcp
+      # Update .claude/settings.local.json with mcpServers if mcp.yml exists or recipe has MCP servers
+      update_claude_settings_with_mcp(recipe_config)
     end
 
     def get_command_relative_path(file_path)
@@ -670,15 +672,26 @@ module Ruly
       end
     end
 
-    def update_claude_settings_with_mcp
-      mcp_file = 'mcp.yml'
-      return unless File.exist?(mcp_file)
-
-      # Load mcpServers from mcp.yml
+    def update_claude_settings_with_mcp(recipe_config = nil)
       require 'yaml'
       require 'json'
-      mcp_config = YAML.safe_load_file(mcp_file, aliases: true)
-      return unless mcp_config && mcp_config['mcpServers']
+
+      mcp_servers = {}
+
+      # First, check for legacy mcp.yml file
+      mcp_file = 'mcp.yml'
+      if File.exist?(mcp_file)
+        mcp_config = YAML.safe_load_file(mcp_file, aliases: true)
+        mcp_servers.merge!(mcp_config['mcpServers']) if mcp_config && mcp_config['mcpServers']
+      end
+
+      # Then, load MCP servers from recipe configuration
+      if recipe_config && recipe_config['mcp_servers']
+        mcp_servers_from_recipe = load_mcp_servers_from_config(recipe_config['mcp_servers'])
+        mcp_servers.merge!(mcp_servers_from_recipe) if mcp_servers_from_recipe
+      end
+
+      return if mcp_servers.empty?
 
       # Ensure .claude directory exists
       claude_dir = '.claude'
@@ -694,13 +707,40 @@ module Ruly
                  end
 
       # Update mcpServers
-      settings['mcpServers'] = mcp_config['mcpServers']
+      settings['mcpServers'] = mcp_servers
 
       # Write back to settings file
       File.write(settings_file, JSON.pretty_generate(settings))
       puts '🔌 Updated .claude/settings.local.json with MCP servers'
     rescue StandardError => e
       puts "⚠️  Warning: Could not update MCP settings: #{e.message}"
+    end
+
+    def load_mcp_servers_from_config(server_names)
+      return nil unless server_names && server_names.any?
+
+      # Load MCP server definitions from ~/.config/ruly/mcp.json
+      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
+      return nil unless File.exist?(mcp_config_file)
+
+      all_servers = JSON.parse(File.read(mcp_config_file))
+      selected_servers = {}
+
+      server_names.each do |name|
+        if all_servers[name]
+          selected_servers[name] = all_servers[name]
+        else
+          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
+        end
+      end
+
+      selected_servers
+    rescue JSON::ParserError => e
+      puts "⚠️  Warning: Could not parse MCP configuration file: #{e.message}"
+      nil
+    rescue StandardError => e
+      puts "⚠️  Warning: Error loading MCP servers: #{e.message}"
+      nil
     end
 
     def ensure_parent_directory(file_path)

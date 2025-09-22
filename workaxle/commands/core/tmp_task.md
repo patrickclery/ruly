@@ -1,7 +1,7 @@
 ---
 description: Create a temporary rake task with operation, spec, and proper options
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 
 # /tmp-task Command
