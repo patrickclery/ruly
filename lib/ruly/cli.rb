@@ -677,9 +677,6 @@ module Ruly
         end
       end
 
-      # Update .mcp.json/.mcp.yml with mcpServers if legacy mcp.yml exists or recipe has MCP servers
-      # Pass 'claude' as default agent since this is in save_command_files which is Claude-specific
-      update_mcp_settings(recipe_config, 'claude')
     end
 
     def get_command_relative_path(file_path)
@@ -709,11 +706,9 @@ module Ruly
         mcp_servers.merge!(mcp_servers_from_recipe) if mcp_servers_from_recipe
       end
 
-      return if mcp_servers.empty?
-
       # Determine output format based on agent
       if agent == 'claude'
-        # Output JSON for Claude
+        # Always create .mcp.json for Claude, even if empty
         mcp_settings_file = '.mcp.json'
 
         # Load existing settings or create new
@@ -723,13 +718,20 @@ module Ruly
                              {}
                            end
 
-        # Update or create mcpServers section
+        # Update or create mcpServers section (can be empty object)
         existing_settings['mcpServers'] = mcp_servers
 
         # Write back to .mcp.json file
         File.write(mcp_settings_file, JSON.pretty_generate(existing_settings))
-        puts "🔌 Updated .mcp.json with MCP servers"
+
+        if mcp_servers.empty?
+          puts "🔌 Created empty .mcp.json (no MCP servers configured)"
+        else
+          puts "🔌 Updated .mcp.json with MCP servers"
+        end
       else
+        # Only create YAML file for other agents if there are servers
+        return if mcp_servers.empty?
         # Output YAML for other agents
         mcp_settings_file = '.mcp.yml'
 
