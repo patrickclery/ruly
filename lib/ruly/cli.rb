@@ -1325,12 +1325,17 @@ module Ruly
         else
           content = File.read(file_path)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
+
+          # Count tokens for the content
+          tokens = count_tokens(content)
+          formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+
           if is_command
-            puts ' ✅ (command)'
+            puts " ✅ (command, #{formatted_tokens} tokens)"
           elsif source[:from_requires]
-            puts ' ✅ (from requires)'
+            puts " ✅ (from requires, #{formatted_tokens} tokens)"
           else
-            puts ' ✅'
+            puts " ✅ (#{formatted_tokens} tokens)"
           end
           {data: {content:, path: source[:path]}, is_command:}
         end
@@ -1356,14 +1361,18 @@ module Ruly
       prefix = source[:from_requires] ? "Required" : "Processing"
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
 
+      # Count tokens in the content
+      tokens = count_tokens(content)
+      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+
       # Check if remote file is a command file
       is_command = agent == 'claude' && source[:path].include?('/commands/')
       if is_command
-        puts ' ✅ (command)'
+        puts " ✅ (command, #{formatted_tokens} tokens)"
       elsif source[:from_requires]
-        puts ' ✅ (from requires)'
+        puts " ✅ (from requires, #{formatted_tokens} tokens)"
       else
-        puts ' ✅'
+        puts " ✅ (#{formatted_tokens} tokens)"
       end
 
       {data: {content:, path: source[:path]}, is_command:}
@@ -1390,14 +1399,18 @@ module Ruly
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
       content = fetch_remote_content(source[:path])
       if content
+        # Count tokens in the content
+        tokens = count_tokens(content)
+        formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+
         # Check if remote file is a command file (has /commands/ in path)
         is_command = agent == 'claude' && source[:path].include?('/commands/')
         if is_command
-          puts ' ✅ (command)'
+          puts " ✅ (command, #{formatted_tokens} tokens)"
         elsif source[:from_requires]
-          puts ' ✅ (from requires)'
+          puts " ✅ (from requires, #{formatted_tokens} tokens)"
         else
-          puts ' ✅'
+          puts " ✅ (#{formatted_tokens} tokens)"
         end
         {data: {content:, path: source[:path]}, is_command:}
       else
