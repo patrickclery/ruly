@@ -48,6 +48,7 @@ module Ruly
       agent = options[:agent]
       # Normalize agent aliases
       agent = 'shell_gpt' if agent == 'sgpt'
+      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
       # recipe_name is now a positional parameter
       dry_run = options[:dry_run]
       git_ignore = options[:git_ignore]
@@ -253,6 +254,8 @@ module Ruly
       metadata_file = '.ruly.yml'
       files_to_remove = []
       agent = options[:agent] || 'claude'
+      # Normalize agent aliases
+      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
 
       # Handle deepclean option - removes all generated artifacts
       files_to_remove << '.claude/' if Dir.exist?('.claude')
@@ -285,6 +288,8 @@ module Ruly
         files_to_remove << metadata_file
         # Remove MCP settings based on agent
         agent_from_metadata = metadata['agent'] || 'claude'
+        # Normalize agent aliases
+        agent_from_metadata = 'claude' if agent_from_metadata&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
         if agent_from_metadata == 'claude'
           files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
         else
