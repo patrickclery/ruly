@@ -686,7 +686,41 @@ module Ruly
 
     def get_command_relative_path(file_path)
       if file_path.include?('/commands/')
-        file_path.split('/commands/').last
+        # Split on /commands/ to get everything before and after
+        parts = file_path.split('/commands/')
+        after_commands = parts.last
+        before_commands = parts.first
+
+        # Get the path between the last "rules" directory (or variant) and /commands/
+        # This handles paths like:
+        # - rules/core/commands/bug/fix.md -> core/bug/fix.md
+        # - rules/commands/fix.md -> fix.md
+        # - my-rules/core/commands/fix.md -> core/fix.md
+
+        # Find the last occurrence of a directory containing "rules"
+        path_components = before_commands.split('/')
+        last_rules_index = path_components.rindex { |dir| dir.downcase.include?('rules') }
+
+        if last_rules_index
+          # Get directories after the last "rules" directory
+          dirs_after_rules = path_components[(last_rules_index + 1)..-1]
+
+          if dirs_after_rules.any? && !dirs_after_rules.empty?
+            # Join the intermediate directories with the command path
+            File.join(*dirs_after_rules, after_commands)
+          else
+            # No directories between rules and commands
+            after_commands
+          end
+        else
+          # No "rules" directory found, just use the last directory before commands
+          parent_dir = path_components.last
+          if parent_dir && !parent_dir.empty?
+            File.join(parent_dir, after_commands)
+          else
+            after_commands
+          end
+        end
       else
         File.basename(file_path)
       end
