@@ -113,9 +113,10 @@ module Ruly
 
           if agent == 'claude' && !command_files.empty?
             puts "\nWould create command files in .claude/commands/:"
+            omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
             command_files.each do |file|
               # Show subdirectory structure if present
-              relative_path = get_command_relative_path(file[:path])
+              relative_path = get_command_relative_path(file[:path], omit_prefix)
               puts "  → #{relative_path}"
             end
           end
@@ -292,8 +293,8 @@ module Ruly
         agent_from_metadata = 'claude' if agent_from_metadata&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
         if agent_from_metadata == 'claude'
           files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
-        else
-          files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
+        elsif File.exist?('.mcp.yml')
+          files_to_remove << '.mcp.yml'
         end
       else
         # Clean based on recipe or fall back to defaults
@@ -304,8 +305,8 @@ module Ruly
         # Remove MCP settings based on agent
         if agent == 'claude'
           files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
-        else
-          files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
+        elsif File.exist?('.mcp.yml')
+          files_to_remove << '.mcp.yml'
         end
       end
 
@@ -356,24 +357,20 @@ module Ruly
         all_files.concat(config['files']) if config['files']
 
         # Handle new sources format (array of hashes for GitHub sources)
-        if config['sources']
-          config['sources'].each do |source|
-            if source.is_a?(Hash)
-              if source['github']
-                # GitHub source - add each rule as a remote file
-                if source['rules']
-                  source['rules'].each do |rule|
-                    all_files << "https://github.com/#{source['github']}/#{rule}"
-                  end
-                end
-              elsif source['local']
-                # Local source format
-                all_files.concat(source['local'])
+        config['sources']&.each do |source|
+          if source.is_a?(Hash)
+            if source['github']
+              # GitHub source - add each rule as a remote file
+              source['rules']&.each do |rule|
+                all_files << "https://github.com/#{source['github']}/#{rule}"
               end
-            else
-              # Legacy format - simple string
-              all_files << source
+            elsif source['local']
+              # Local source format
+              all_files.concat(source['local'])
             end
+          else
+            # Legacy format - simple string
+            all_files << source
           end
         end
 
@@ -408,9 +405,9 @@ module Ruly
 
     desc 'introspect RECIPE SOURCE...', 'Scan directories or GitHub repos for markdown files and create/update recipe'
     option :description, aliases: '-d', desc: 'Description for the recipe', type: :string
-    option :output, aliases: '-o', desc: 'Output file path', default: nil, type: :string
-    option :dry_run, desc: 'Show what would be done without modifying files', type: :boolean, default: false
-    option :relative, desc: 'Use relative paths instead of absolute for local files', type: :boolean, default: false
+    option :output, aliases: '-o', default: nil, desc: 'Output file path', type: :string
+    option :dry_run, default: false, desc: 'Show what would be done without modifying files', type: :boolean
+    option :relative, default: false, desc: 'Use relative paths instead of absolute for local files', type: :boolean
     def introspect(recipe_name, *sources) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
       if sources.empty?
         puts '❌ At least one source directory or GitHub URL is required'
@@ -442,6 +439,24 @@ module Ruly
         sources,
         options[:description]
       )
+
+      # Merge with existing recipe to preserve keys (for both dry-run and actual save)
+      if File.exist?(output_file)
+        existing_config = YAML.safe_load_file(output_file, aliases: true) || {}
+        if existing_config['recipes'] && existing_config['recipes'][recipe_name]
+          existing_recipe = existing_config['recipes'][recipe_name]
+
+          # Preserve all existing keys except those that introspect updates
+          existing_recipe.each do |key, value|
+            next if %w[files sources].include?(key)
+            next if key == 'description' && recipe_data['description']
+
+            recipe_data[key] = value
+          end
+
+          recipe_data['description'] ||= existing_recipe['description']
+        end
+      end
 
       if options[:dry_run]
         puts "\n🔍 Dry run mode - no files will be modified"
@@ -646,187 +661,6 @@ module Ruly
       # Extract command file references from cached content
       # This is a simplified version - you might need to adjust based on actual cache format
       []
-    end
-
-    def save_command_files(command_files, recipe_config = nil)
-      return if command_files.empty?
-
-      commands_dir = '.claude/commands'
-      FileUtils.mkdir_p(commands_dir)
-
-      command_files.each do |file|
-        if file.is_a?(Hash)
-          # From squash mode - has content
-          # Preserve subdirectory structure for commands
-          relative_path = get_command_relative_path(file[:path])
-
-          # Create subdirectories if needed
-          target_file = File.join(commands_dir, relative_path)
-          target_dir = File.dirname(target_file)
-          FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
-
-          File.write(target_file, file[:content])
-        else
-          # From import mode - just path
-          source_path = File.join(gem_root, file)
-          if File.exist?(source_path)
-            # Preserve subdirectory structure
-            relative_path = get_command_relative_path(file)
-
-            target_file = File.join(commands_dir, relative_path)
-            target_dir = File.dirname(target_file)
-            FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
-
-            FileUtils.cp(source_path, target_file)
-          end
-        end
-      end
-
-    end
-
-    def get_command_relative_path(file_path)
-      if file_path.include?('/commands/')
-        # Split on /commands/ to get everything before and after
-        parts = file_path.split('/commands/')
-        after_commands = parts.last
-        before_commands = parts.first
-
-        # Get the path between the last "rules" directory (or variant) and /commands/
-        # This handles paths like:
-        # - rules/core/commands/bug/fix.md -> core/bug/fix.md
-        # - rules/commands/fix.md -> fix.md
-        # - my-rules/core/commands/fix.md -> core/fix.md
-
-        # Find the last occurrence of a directory containing "rules"
-        path_components = before_commands.split('/')
-        last_rules_index = path_components.rindex { |dir| dir.downcase.include?('rules') }
-
-        if last_rules_index
-          # Get directories after the last "rules" directory
-          dirs_after_rules = path_components[(last_rules_index + 1)..-1]
-
-          if dirs_after_rules.any? && !dirs_after_rules.empty?
-            # Join the intermediate directories with the command path
-            File.join(*dirs_after_rules, after_commands)
-          else
-            # No directories between rules and commands
-            after_commands
-          end
-        else
-          # No "rules" directory found, just use the last directory before commands
-          parent_dir = path_components.last
-          if parent_dir && !parent_dir.empty?
-            File.join(parent_dir, after_commands)
-          else
-            after_commands
-          end
-        end
-      else
-        File.basename(file_path)
-      end
-    end
-
-    def update_mcp_settings(recipe_config = nil, agent = 'claude')
-      require 'yaml'
-      require 'json'
-
-      mcp_servers = {}
-
-      # First, check for legacy mcp.yml file
-      legacy_mcp_file = 'mcp.yml'
-      if File.exist?(legacy_mcp_file)
-        mcp_config = YAML.safe_load_file(legacy_mcp_file, aliases: true)
-        mcp_servers.merge!(mcp_config['mcpServers']) if mcp_config && mcp_config['mcpServers']
-      end
-
-      # Then, load MCP servers from recipe configuration
-      if recipe_config && recipe_config['mcp_servers']
-        mcp_servers_from_recipe = load_mcp_servers_from_config(recipe_config['mcp_servers'])
-        mcp_servers.merge!(mcp_servers_from_recipe) if mcp_servers_from_recipe
-      end
-
-      # Determine output format based on agent
-      if agent == 'claude'
-        # Always create .mcp.json for Claude, even if empty
-        mcp_settings_file = '.mcp.json'
-
-        # Load existing settings or create new
-        existing_settings = if File.exist?(mcp_settings_file)
-                             JSON.parse(File.read(mcp_settings_file))
-                           else
-                             {}
-                           end
-
-        # Update or create mcpServers section (can be empty object)
-        existing_settings['mcpServers'] = mcp_servers
-
-        # Write back to .mcp.json file
-        File.write(mcp_settings_file, JSON.pretty_generate(existing_settings))
-
-        if mcp_servers.empty?
-          puts "🔌 Created empty .mcp.json (no MCP servers configured)"
-        else
-          puts "🔌 Updated .mcp.json with MCP servers"
-        end
-      else
-        # Only create YAML file for other agents if there are servers
-        return if mcp_servers.empty?
-        # Output YAML for other agents
-        mcp_settings_file = '.mcp.yml'
-
-        # Load existing settings or create new
-        existing_settings = if File.exist?(mcp_settings_file)
-                             YAML.safe_load_file(mcp_settings_file, aliases: true) || {}
-                           else
-                             {}
-                           end
-
-        # Update or create mcpServers section
-        existing_settings['mcpServers'] = mcp_servers
-
-        # Write back to .mcp.yml file
-        File.write(mcp_settings_file, existing_settings.to_yaml)
-        puts "🔌 Updated .mcp.yml with MCP servers"
-      end
-    rescue StandardError => e
-      puts "⚠️  Warning: Could not update MCP settings: #{e.message}"
-    end
-
-    def load_mcp_servers_from_config(server_names)
-      return nil unless server_names && server_names.any?
-
-      # Load MCP server definitions from ~/.config/ruly/mcp.json
-      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
-      return nil unless File.exist?(mcp_config_file)
-
-      all_servers = JSON.parse(File.read(mcp_config_file))
-      selected_servers = {}
-
-      server_names.each do |name|
-        if all_servers[name]
-          # Copy server config but filter out fields starting with underscore (metadata/comments)
-          server_config = all_servers[name].dup
-          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
-          # Ensure 'type' field is present for stdio servers (required by Claude)
-          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
-          selected_servers[name] = server_config
-        else
-          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
-        end
-      end
-
-      selected_servers
-    rescue JSON::ParserError => e
-      puts "⚠️  Warning: Could not parse MCP configuration file: #{e.message}"
-      nil
-    rescue StandardError => e
-      puts "⚠️  Warning: Error loading MCP servers: #{e.message}"
-      nil
-    end
-
-    def ensure_parent_directory(file_path)
-      dir = File.dirname(file_path)
-      FileUtils.mkdir_p(dir) unless File.directory?(dir)
     end
 
     def load_recipe_sources(recipe_name)
@@ -1083,6 +917,102 @@ module Ruly
       recipe['remote_sources']&.each do |url|
         sources << {path: url, type: 'remote'}
       end
+    end
+
+    def save_command_files(command_files, recipe_config = nil)
+      return if command_files.empty?
+
+      commands_dir = '.claude/commands'
+      FileUtils.mkdir_p(commands_dir)
+
+      # Extract the omit_command_prefix from recipe config if present
+      omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
+
+      command_files.each do |file|
+        if file.is_a?(Hash)
+          # From squash mode - has content
+          # Preserve subdirectory structure for commands
+          relative_path = get_command_relative_path(file[:path], omit_prefix)
+
+          # Create subdirectories if needed
+          target_file = File.join(commands_dir, relative_path)
+          target_dir = File.dirname(target_file)
+          FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
+
+          File.write(target_file, file[:content])
+        else
+          # From import mode - just path
+          source_path = File.join(gem_root, file)
+          if File.exist?(source_path)
+            # Preserve subdirectory structure
+            relative_path = get_command_relative_path(file, omit_prefix)
+
+            target_file = File.join(commands_dir, relative_path)
+            target_dir = File.dirname(target_file)
+            FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
+
+            FileUtils.cp(source_path, target_file)
+          end
+        end
+      end
+    end
+
+    def get_command_relative_path(file_path, omit_prefix = nil)
+      if file_path.include?('/commands/')
+        # Split on /commands/ to get everything before and after
+        parts = file_path.split('/commands/')
+        after_commands = parts.last
+        before_commands = parts.first
+
+        # Get the path between the last "rules" directory (or variant) and /commands/
+        # This handles paths like:
+        # - rules/core/commands/bug/fix.md -> core/bug/fix.md
+        # - rules/commands/fix.md -> fix.md
+        # - my-rules/core/commands/fix.md -> core/fix.md
+
+        # Find the last occurrence of a directory containing "rules"
+        path_components = before_commands.split('/')
+        last_rules_index = path_components.rindex { |dir| dir.downcase.include?('rules') }
+
+        if last_rules_index
+          # Get directories after the last "rules" directory
+          dirs_after_rules = path_components[(last_rules_index + 1)..]
+
+          result_path = if dirs_after_rules.any? && !dirs_after_rules.empty?
+                          # Join the intermediate directories with the command path
+                          File.join(*dirs_after_rules, after_commands)
+                        else
+                          # No directories between rules and commands
+                          after_commands
+                        end
+        else
+          # No "rules" directory found, just use the last directory before commands
+          parent_dir = path_components.last
+          result_path = if parent_dir && !parent_dir.empty?
+                          File.join(parent_dir, after_commands)
+                        else
+                          after_commands
+                        end
+        end
+
+        # Apply omit_command_prefix if specified
+        if omit_prefix && result_path.start_with?("#{omit_prefix}/")
+          # Remove the prefix and the following slash
+          result_path = result_path[(omit_prefix.length + 1)..]
+        elsif omit_prefix && result_path == omit_prefix
+          # If the path exactly matches the prefix, return just the filename
+          result_path = File.basename(after_commands)
+        end
+
+        result_path
+      else
+        File.basename(file_path)
+      end
+    end
+
+    def ensure_parent_directory(file_path)
+      dir = File.dirname(file_path)
+      FileUtils.mkdir_p(dir) unless File.directory?(dir)
     end
 
     def collect_local_sources
@@ -1344,7 +1274,7 @@ module Ruly
 
     def process_local_file_with_progress(source, index, total, agent)
       # Check if this is from requires and adjust the message
-      prefix = source[:from_requires] ? "📚 Required" : "📁 Local"
+      prefix = source[:from_requires] ? '📚 Required' : '📁 Local'
       print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..."
       file_path = find_rule_file(source[:path])
 
@@ -1379,6 +1309,14 @@ module Ruly
       end
     end
 
+    def count_tokens(text)
+      # Use cl100k_base encoding (used by GPT-4, Claude, etc.)
+      encoder = Tiktoken.get_encoding('cl100k_base')
+      # Ensure text is UTF-8 encoded to avoid encoding errors
+      utf8_text = text.encode('UTF-8', invalid: :replace, replace: '?', undef: :replace)
+      encoder.encode(utf8_text).length
+    end
+
     def display_prefetched_remote(source, index, total, agent, content)
       # Extract domain and full path for display
       if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
@@ -1392,7 +1330,7 @@ module Ruly
         icon = source[:from_requires] ? '📚' : '📦'
       end
 
-      prefix = source[:from_requires] ? "Required" : "Processing"
+      prefix = source[:from_requires] ? 'Required' : 'Processing'
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
 
       # Count tokens in the content
@@ -1429,7 +1367,7 @@ module Ruly
         display_name = source[:path]
         icon = source[:from_requires] ? '📚' : '🌐'
       end
-      prefix = source[:from_requires] ? "Required" : "Fetching"
+      prefix = source[:from_requires] ? 'Required' : 'Fetching'
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
       content = fetch_remote_content(source[:path])
       if content
@@ -1600,9 +1538,9 @@ module Ruly
       resolved_full_path = File.expand_path(required_path, source_dir)
 
       # Add .md extension if not present and file doesn't exist as-is
-      if !File.file?(resolved_full_path)
-        if !resolved_full_path.end_with?('.md')
-          md_path = resolved_full_path + '.md'
+      unless File.file?(resolved_full_path)
+        unless resolved_full_path.end_with?('.md')
+          md_path = "#{resolved_full_path}.md"
           resolved_full_path = md_path if File.file?(md_path)
         end
       end
@@ -1615,9 +1553,13 @@ module Ruly
 
       # Try to make it relative to gem_root for consistency
       root = gem_root
-      root_path = File.realpath(root) rescue root
+      root_path = begin
+        File.realpath(root)
+      rescue StandardError
+        root
+      end
 
-      relative_path = if canonical_path.start_with?(root_path + '/')
+      relative_path = if canonical_path.start_with?("#{root_path}/")
                         canonical_path.sub("#{root_path}/", '')
                       elsif canonical_path == root_path
                         '.'
@@ -1726,6 +1668,34 @@ module Ruly
       else
         File.basename(relative_path)
       end
+    end
+
+    def write_shell_gpt_json(output_file, local_sources)
+      require 'json'
+
+      # Extract role name from filename (remove .json extension)
+      role_name = File.basename(output_file, '.json')
+
+      # Combine all content into description
+      description_parts = local_sources.map do |source|
+        # Duplicate string to avoid frozen string error
+        content = source[:content].dup.force_encoding('UTF-8')
+        # Replace invalid UTF-8 sequences
+        content = content.scrub('?')
+        "## #{source[:path]}\n\n#{content}"
+      end
+
+      # Join all parts into single description string
+      description = description_parts.join("\n\n---\n\n")
+
+      # Create role JSON structure
+      role_json = {
+        'description' => description,
+        'name' => role_name
+      }
+
+      # Write JSON with proper escaping (JSON.pretty_generate handles all escaping)
+      File.write(output_file, JSON.pretty_generate(role_json))
     end
 
     def generate_toc_content(local_sources, command_files, agent)
@@ -1978,6 +1948,105 @@ module Ruly
       FileUtils.cp(output_file, cache_file)
     end
 
+    def update_mcp_settings(recipe_config = nil, agent = 'claude')
+      require 'yaml'
+      require 'json'
+
+      mcp_servers = {}
+
+      # First, check for legacy mcp.yml file
+      legacy_mcp_file = 'mcp.yml'
+      if File.exist?(legacy_mcp_file)
+        mcp_config = YAML.safe_load_file(legacy_mcp_file, aliases: true)
+        mcp_servers.merge!(mcp_config['mcpServers']) if mcp_config && mcp_config['mcpServers']
+      end
+
+      # Then, load MCP servers from recipe configuration
+      if recipe_config && recipe_config['mcp_servers']
+        mcp_servers_from_recipe = load_mcp_servers_from_config(recipe_config['mcp_servers'])
+        mcp_servers.merge!(mcp_servers_from_recipe) if mcp_servers_from_recipe
+      end
+
+      # Determine output format based on agent
+      if agent == 'claude'
+        # Always create .mcp.json for Claude, even if empty
+        mcp_settings_file = '.mcp.json'
+
+        # Load existing settings or create new
+        existing_settings = if File.exist?(mcp_settings_file)
+                              JSON.parse(File.read(mcp_settings_file))
+                            else
+                              {}
+                            end
+
+        # Update or create mcpServers section (can be empty object)
+        existing_settings['mcpServers'] = mcp_servers
+
+        # Write back to .mcp.json file
+        File.write(mcp_settings_file, JSON.pretty_generate(existing_settings))
+
+        if mcp_servers.empty?
+          puts '🔌 Created empty .mcp.json (no MCP servers configured)'
+        else
+          puts '🔌 Updated .mcp.json with MCP servers'
+        end
+      else
+        # Only create YAML file for other agents if there are servers
+        return if mcp_servers.empty?
+
+        # Output YAML for other agents
+        mcp_settings_file = '.mcp.yml'
+
+        # Load existing settings or create new
+        existing_settings = if File.exist?(mcp_settings_file)
+                              YAML.safe_load_file(mcp_settings_file, aliases: true) || {}
+                            else
+                              {}
+                            end
+
+        # Update or create mcpServers section
+        existing_settings['mcpServers'] = mcp_servers
+
+        # Write back to .mcp.yml file
+        File.write(mcp_settings_file, existing_settings.to_yaml)
+        puts '🔌 Updated .mcp.yml with MCP servers'
+      end
+    rescue StandardError => e
+      puts "⚠️  Warning: Could not update MCP settings: #{e.message}"
+    end
+
+    def load_mcp_servers_from_config(server_names)
+      return nil unless server_names&.any?
+
+      # Load MCP server definitions from ~/.config/ruly/mcp.json
+      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
+      return nil unless File.exist?(mcp_config_file)
+
+      all_servers = JSON.parse(File.read(mcp_config_file))
+      selected_servers = {}
+
+      server_names.each do |name|
+        if all_servers[name]
+          # Copy server config but filter out fields starting with underscore (metadata/comments)
+          server_config = all_servers[name].dup
+          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
+          # Ensure 'type' field is present for stdio servers (required by Claude)
+          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
+          selected_servers[name] = server_config
+        else
+          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
+        end
+      end
+
+      selected_servers
+    rescue JSON::ParserError => e
+      puts "⚠️  Warning: Could not parse MCP configuration file: #{e.message}"
+      nil
+    rescue StandardError => e
+      puts "⚠️  Warning: Error loading MCP servers: #{e.message}"
+      nil
+    end
+
     def cached_file_count(output_file)
       # Count the number of sections in the output file
       return 0 unless File.exist?(output_file)
@@ -1987,34 +2056,6 @@ module Ruly
     rescue StandardError
       # If we can't read the file for any reason, return 0
       0
-    end
-
-    def write_shell_gpt_json(output_file, local_sources)
-      require 'json'
-
-      # Extract role name from filename (remove .json extension)
-      role_name = File.basename(output_file, '.json')
-
-      # Combine all content into description
-      description_parts = local_sources.map do |source|
-        # Duplicate string to avoid frozen string error
-        content = source[:content].dup.force_encoding('UTF-8')
-        # Replace invalid UTF-8 sequences
-        content = content.scrub('?')
-        "## #{source[:path]}\n\n#{content}"
-      end
-
-      # Join all parts into single description string
-      description = description_parts.join("\n\n---\n\n")
-
-      # Create role JSON structure
-      role_json = {
-        'name' => role_name,
-        'description' => description
-      }
-
-      # Write JSON with proper escaping (JSON.pretty_generate handles all escaping)
-      File.write(output_file, JSON.pretty_generate(role_json))
     end
 
     def print_summary(mode, output_file, file_count)
@@ -2060,14 +2101,6 @@ module Ruly
       puts "⚠️  Could not count tokens: #{e.message}"
     end
 
-    def count_tokens(text)
-      # Use cl100k_base encoding (used by GPT-4, Claude, etc.)
-      encoder = Tiktoken.get_encoding('cl100k_base')
-      # Ensure text is UTF-8 encoded to avoid encoding errors
-      utf8_text = text.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
-      encoder.encode(utf8_text).length
-    end
-
     def agent_context_limits
       {
         'aider' => 128_000,       # Aider (uses GPT-4)
@@ -2080,6 +2113,52 @@ module Ruly
         'gpt4' => 128_000,        # GPT-4 Turbo
         'windsurf' => 32_000      # Windsurf
       }
+    end
+
+    def user_recipes_file
+      # Use user's home config directory for recipes
+      config_dir = File.join(Dir.home, '.config', 'ruly')
+      FileUtils.mkdir_p(config_dir)
+      File.join(config_dir, 'recipes.yml')
+    end
+
+    def introspect_github_source(url, all_github_sources)
+      # Parse GitHub URL
+      # Format: https://github.com/owner/repo/tree/branch/path
+      if url =~ %r{github\.com/([^/]+)/([^/]+)/tree/([^/]+)(?:/(.+))?}
+        owner = Regexp.last_match(1)
+        repo = Regexp.last_match(2)
+        branch = Regexp.last_match(3)
+        path = Regexp.last_match(4) || ''
+
+        puts "  🌐 github.com/#{owner}/#{repo}..."
+
+        # Fetch all markdown files from this GitHub location
+        github_files = fetch_github_markdown_files(owner, repo, branch, path)
+
+        if github_files.any?
+          puts "     Found #{github_files.length} markdown files"
+
+          # Check if we already have a source for this repo
+          existing_source = all_github_sources.find { |s| s[:github] == "#{owner}/#{repo}" && s[:branch] == branch }
+
+          if existing_source
+            # Add to existing source
+            existing_source[:rules].concat(github_files).uniq!.sort!
+          else
+            # Create new source entry
+            all_github_sources << {
+              branch:,
+              github: "#{owner}/#{repo}",
+              rules: github_files.sort
+            }
+          end
+        else
+          puts '     ⚠️ No markdown files found or failed to access'
+        end
+      else
+        puts "  ⚠️  Invalid GitHub URL format: #{url}"
+      end
     end
 
     def add_agent_files_to_remove(agent, files_to_remove)
@@ -2395,13 +2474,6 @@ module Ruly
       end
     end
 
-    def user_recipes_file
-      # Use user's home config directory for recipes
-      config_dir = File.join(Dir.home, '.config', 'ruly')
-      FileUtils.mkdir_p(config_dir) unless File.exist?(config_dir)
-      File.join(config_dir, 'recipes.yml')
-    end
-
     def introspect_local_source(path, all_files, use_relative)
       expanded_path = File.expand_path(path)
 
@@ -2423,45 +2495,6 @@ module Ruly
       end
 
       puts "     Found #{found_count} markdown files"
-    end
-
-    def introspect_github_source(url, all_github_sources)
-      # Parse GitHub URL
-      # Format: https://github.com/owner/repo/tree/branch/path
-      if url =~ %r{github\.com/([^/]+)/([^/]+)/tree/([^/]+)(?:/(.+))?}
-        owner = Regexp.last_match(1)
-        repo = Regexp.last_match(2)
-        branch = Regexp.last_match(3)
-        path = Regexp.last_match(4) || ''
-
-        puts "  🌐 github.com/#{owner}/#{repo}..."
-
-        # Fetch all markdown files from this GitHub location
-        github_files = fetch_github_markdown_files(owner, repo, branch, path)
-
-        if github_files.any?
-          puts "     Found #{github_files.length} markdown files"
-
-          # Check if we already have a source for this repo
-          existing_source = all_github_sources.find { |s| s[:github] == "#{owner}/#{repo}" && s[:branch] == branch }
-
-          if existing_source
-            # Add to existing source
-            existing_source[:rules].concat(github_files).uniq!.sort!
-          else
-            # Create new source entry
-            all_github_sources << {
-              github: "#{owner}/#{repo}",
-              branch: branch,
-              rules: github_files.sort
-            }
-          end
-        else
-          puts "     ⚠️ No markdown files found or failed to access"
-        end
-      else
-        puts "  ⚠️  Invalid GitHub URL format: #{url}"
-      end
     end
 
     def fetch_url(url)
@@ -2488,7 +2521,7 @@ module Ruly
       begin
         response = fetch_url(api_url)
         unless response
-          puts "     DEBUG: No response from API" if ENV['DEBUG']
+          puts '     DEBUG: No response from API' if ENV['DEBUG']
           return []
         end
 
@@ -2497,7 +2530,7 @@ module Ruly
         puts "     DEBUG: Found #{items.length} items" if ENV['DEBUG']
 
         items.each do |item|
-          if item['type'] == 'file' && (item['path'].end_with?('.md') || item['path'].end_with?('.mdc'))
+          if item['type'] == 'file' && item['path'].end_with?('.md', '.mdc')
             files << item['path']
           elsif item['type'] == 'dir'
             # Recursively fetch subdirectory contents
@@ -2542,8 +2575,8 @@ module Ruly
       if github_sources.any?
         recipe['sources'] = github_sources.map do |source|
           {
-            'github' => source[:github],
             'branch' => source[:branch],
+            'github' => source[:github],
             'rules' => source[:rules]
           }
         end
@@ -2562,18 +2595,8 @@ module Ruly
 
       existing_config['recipes'] ||= {}
 
-      # Preserve existing recipe settings if updating
-      if existing_config['recipes'][recipe_name]
-        existing_recipe = existing_config['recipes'][recipe_name]
-        # Preserve plan if it exists
-        recipe_data['plan'] = existing_recipe['plan'] if existing_recipe['plan']
-        # Preserve mcp_servers if it exists
-        recipe_data['mcp_servers'] = existing_recipe['mcp_servers'] if existing_recipe['mcp_servers']
-        # Preserve remote_sources if it exists (legacy field)
-        recipe_data['remote_sources'] = existing_recipe['remote_sources'] if existing_recipe['remote_sources']
-        # Use provided description or preserve existing
-        recipe_data['description'] ||= existing_recipe['description']
-      end
+      # NOTE: Key preservation is now done in the introspect method before calling this
+      # so it works for both dry-run and actual save modes
 
       # Update recipe
       existing_config['recipes'][recipe_name] = recipe_data
@@ -2591,14 +2614,14 @@ module Ruly
       yaml_str = data.to_yaml
 
       # Remove quotes from file paths (paths that start with / or ~ or contain .md)
-      yaml_str.gsub(/(['"])(\/[^'"]*|~[^'"]*|[^'"]*\.md[c]?)\1/) do |match|
+      yaml_str.gsub(%r{(['"])(/[^'"]*|~[^'"]*|[^'"]*\.md[c]?)\1}) do |match|
         # Extract the path without quotes
-        path = match[1..-2]  # Remove first and last character (the quotes)
+        path = match[1..-2] # Remove first and last character (the quotes)
         # Return the path without quotes if it's a valid file path
-        if path.match?(/^[\/~]/) || path.match?(/\.md[c]?$/)
+        if path.match?(%r{^[/~]}) || path.match?(/\.md[c]?$/)
           path
         else
-          match  # Keep the quotes for non-file paths
+          match # Keep the quotes for non-file paths
         end
       end
     end

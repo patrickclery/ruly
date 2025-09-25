@@ -661,4 +661,155 @@ RSpec.describe Ruly::CLI do
       end
     end
   end
+
+  describe '#get_command_relative_path' do
+    it 'handles basic command paths' do
+      path = 'rules/commands/test.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('test.md')
+    end
+
+    it 'preserves subdirectories between rules and commands' do
+      path = 'rules/core/commands/bug/fix.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('core/bug/fix.md')
+    end
+
+    it 'handles paths without rules directory' do
+      path = 'some/dir/commands/test.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('dir/test.md')
+    end
+
+    context 'with omit_command_prefix' do
+      it 'removes the prefix when it matches the beginning of the path' do
+        path = 'rules/workaxle/core/commands/jira/details.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('jira/details.md')
+      end
+
+      it 'does not remove prefix if it does not match' do
+        path = 'rules/other/project/commands/test.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('other/project/test.md')
+      end
+
+      it 'handles prefix that exactly matches the path before filename' do
+        path = 'rules/workaxle/core/commands/test.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('test.md')
+      end
+
+      it 'handles nested subdirectories after prefix removal' do
+        path = 'rules/workaxle/core/commands/bug/fix/issue.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('bug/fix/issue.md')
+      end
+
+      it 'handles paths without the prefix' do
+        path = 'rules/commands/direct.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('direct.md')
+      end
+    end
+
+    it 'handles files without /commands/ in path' do
+      path = 'some/regular/file.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('file.md')
+    end
+  end
+
+  describe '#save_command_files with omit_command_prefix' do
+    let(:commands_dir) { '.claude/commands' }
+
+    before do
+      # Create a test command file
+      @test_command = {
+        path: 'rules/workaxle/core/commands/jira/details.md',
+        content: '# Test Command'
+      }
+    end
+
+    it 'saves commands with prefix omitted when recipe config has omit_command_prefix' do
+      recipe_config = { 'omit_command_prefix' => 'workaxle/core' }
+
+      cli.send(:save_command_files, [@test_command], recipe_config)
+
+      # Check file was saved to the correct location without the prefix
+      expected_file = File.join(commands_dir, 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+      expect(File.read(expected_file)).to eq('# Test Command')
+
+      # Check that the prefixed directory was NOT created
+      prefixed_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(prefixed_file)).to be(false)
+    end
+
+    it 'saves commands with full path when no omit_command_prefix is set' do
+      recipe_config = {}
+
+      cli.send(:save_command_files, [@test_command], recipe_config)
+
+      # Check file was saved to the correct location with the full path
+      expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+      expect(File.read(expected_file)).to eq('# Test Command')
+    end
+
+    it 'handles nil recipe_config' do
+      cli.send(:save_command_files, [@test_command], nil)
+
+      # Should save with full path when config is nil
+      expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+    end
+  end
+
+  describe '#introspect preserving custom keys' do
+    let(:user_recipes_file) { File.join(Dir.home, '.config', 'ruly', 'recipes.yml') }
+
+    before do
+      # Ensure the config directory exists
+      FileUtils.mkdir_p(File.dirname(user_recipes_file))
+
+      # Create initial recipe with custom keys
+      initial_config = {
+        'recipes' => {
+          'test_recipe' => {
+            'description' => 'Test recipe',
+            'files' => ['rules/test.md'],
+            'omit_command_prefix' => 'workaxle/core',
+            'mcp_servers' => ['github', 'atlassian'],
+            'custom_key' => 'custom_value',
+            'plan' => 'claude_max'
+          }
+        }
+      }
+      File.write(user_recipes_file, initial_config.to_yaml)
+
+      # Create test markdown files
+      FileUtils.mkdir_p(File.join(test_dir, 'rules'))
+      File.write(File.join(test_dir, 'rules', 'new.md'), '# New Rule')
+    end
+
+    after do
+      FileUtils.rm_f(user_recipes_file) if File.exist?(user_recipes_file)
+    end
+
+    it 'preserves all custom keys except files/sources when updating a recipe' do
+      # Run introspect to update the recipe
+      cli.invoke(:introspect, ['test_recipe', File.join(test_dir, 'rules')])
+
+      # Check that all custom keys were preserved
+      updated_config = YAML.safe_load_file(user_recipes_file)
+      recipe = updated_config['recipes']['test_recipe']
+
+      expect(recipe['omit_command_prefix']).to eq('workaxle/core')
+      expect(recipe['mcp_servers']).to eq(['github', 'atlassian'])
+      expect(recipe['custom_key']).to eq('custom_value')
+      expect(recipe['plan']).to eq('claude_max')
+      expect(recipe['files']).to include(File.join(test_dir, 'rules', 'new.md'))
+    end
+  end
 end
