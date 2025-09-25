@@ -996,12 +996,25 @@ module Ruly
         end
 
         # Apply omit_command_prefix if specified
-        if omit_prefix && result_path.start_with?("#{omit_prefix}/")
-          # Remove the prefix and the following slash
-          result_path = result_path[(omit_prefix.length + 1)..]
-        elsif omit_prefix && result_path == omit_prefix
-          # If the path exactly matches the prefix, return just the filename
-          result_path = File.basename(after_commands)
+        if omit_prefix
+          # Split the prefix into parts (e.g., "workaxle/core" -> ["workaxle", "core"])
+          prefix_parts = omit_prefix.split('/')
+          path_parts = result_path.split('/')
+
+          # Remove matching parts from the beginning of the path
+          # This handles both exact matches and partial matches
+          while prefix_parts.any? && path_parts.any? && prefix_parts.first == path_parts.first
+            prefix_parts.shift
+            path_parts.shift
+          end
+
+          # If we consumed the entire prefix (or part of it), use the remaining path
+          if path_parts.any?
+            result_path = File.join(*path_parts)
+          else
+            # If nothing left, just use the filename
+            result_path = File.basename(after_commands)
+          end
         end
 
         result_path

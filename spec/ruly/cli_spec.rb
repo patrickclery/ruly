@@ -682,19 +682,31 @@ RSpec.describe Ruly::CLI do
     end
 
     context 'with omit_command_prefix' do
-      it 'removes the prefix when it matches the beginning of the path' do
-        path = 'rules/workaxle/core/commands/jira/details.md'
+      it 'removes the full prefix when path starts with it' do
+        path = 'rules/workaxle/core/testing/commands/pre-commit.md'
         result = cli.send(:get_command_relative_path, path, 'workaxle/core')
-        expect(result).to eq('jira/details.md')
+        expect(result).to eq('testing/pre-commit.md')
       end
 
-      it 'does not remove prefix if it does not match' do
+      it 'removes partial prefix when path partially matches' do
+        path = 'rules/workaxle/pr/commands/create.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('pr/create.md')
+      end
+
+      it 'removes only matching parts of prefix' do
+        path = 'rules/workaxle/atlassian/jira/commands/details.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('atlassian/jira/details.md')
+      end
+
+      it 'does not remove prefix if it does not match at all' do
         path = 'rules/other/project/commands/test.md'
         result = cli.send(:get_command_relative_path, path, 'workaxle/core')
         expect(result).to eq('other/project/test.md')
       end
 
-      it 'handles prefix that exactly matches the path before filename' do
+      it 'handles prefix that exactly matches the entire path' do
         path = 'rules/workaxle/core/commands/test.md'
         result = cli.send(:get_command_relative_path, path, 'workaxle/core')
         expect(result).to eq('test.md')

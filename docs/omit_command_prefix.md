@@ -22,18 +22,20 @@ recipes:
 
 When `omit_command_prefix` is set:
 
-1. Command files whose path (after `rules/` and before `/commands/`) starts with the prefix will have that prefix removed
-2. Other command files retain their original structure
+1. Command files whose path (after `rules/` and before `/commands/`) starts with any part of the prefix will have the matching parts removed
+2. This handles both complete and partial prefix matches
+3. Other command files that don't match the prefix retain their original structure
 
 ### Example
 
 With `omit_command_prefix: workaxle/core`:
 
-- `rules/workaxle/core/testing/commands/pre-commit.md` → `.claude/commands/testing/pre-commit.md`
-- `rules/workaxle/core/testing/commands/require.md` → `.claude/commands/testing/require.md`
-- `rules/workaxle/atlassian/jira/commands/details.md` → `.claude/commands/workaxle/atlassian/jira/details.md`
+- `rules/workaxle/core/testing/commands/pre-commit.md` → `.claude/commands/testing/pre-commit.md` (full prefix matched and removed)
+- `rules/workaxle/pr/commands/create.md` → `.claude/commands/pr/create.md` (partial prefix "workaxle" matched and removed)
+- `rules/workaxle/atlassian/jira/commands/details.md` → `.claude/commands/atlassian/jira/details.md` (partial prefix "workaxle" matched and removed)
+- `rules/other/project/commands/tool.md` → `.claude/commands/other/project/tool.md` (no match, retains structure)
 
-The prefix is only removed from paths that match it exactly from the beginning.
+The prefix removal works by matching path components from the beginning, removing any parts that match the prefix components.
 
 ## Introspect Support
 
