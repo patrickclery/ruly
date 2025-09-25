@@ -1357,7 +1357,7 @@ module Ruly
           puts ' ✅ (bin)'
           {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
         else
-          content = File.read(file_path)
+          content = File.read(file_path, encoding: 'UTF-8')
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
 
           # Count tokens for the content
@@ -1522,7 +1522,7 @@ module Ruly
       return nil unless $CHILD_STATUS.success?
 
       file_path = File.join(temp_dir, path)
-      content = File.exist?(file_path) ? File.read(file_path) : nil
+      content = File.exist?(file_path) ? File.read(file_path, encoding: 'UTF-8') : nil
       FileUtils.rm_rf(temp_dir)
       content
     end
@@ -1898,7 +1898,7 @@ module Ruly
       gitignore_file = '.gitignore'
 
       # Read existing content or start fresh
-      existing_content = File.exist?(gitignore_file) ? File.read(gitignore_file) : ''
+      existing_content = File.exist?(gitignore_file) ? File.read(gitignore_file, encoding: 'UTF-8') : ''
       existing_lines = existing_content.split("\n")
 
       # Check if we already have a Ruly section
@@ -1939,7 +1939,7 @@ module Ruly
       end
 
       # Read existing content or start fresh
-      existing_content = File.exist?(exclude_file) ? File.read(exclude_file) : ''
+      existing_content = File.exist?(exclude_file) ? File.read(exclude_file, encoding: 'UTF-8') : ''
       existing_lines = existing_content.split("\n")
 
       # Check if we already have a Ruly section
@@ -2063,7 +2063,9 @@ module Ruly
     def count_tokens(text)
       # Use cl100k_base encoding (used by GPT-4, Claude, etc.)
       encoder = Tiktoken.get_encoding('cl100k_base')
-      encoder.encode(text).length
+      # Ensure text is UTF-8 encoded to avoid encoding errors
+      utf8_text = text.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
+      encoder.encode(utf8_text).length
     end
 
     def agent_context_limits
@@ -2565,6 +2567,10 @@ module Ruly
         existing_recipe = existing_config['recipes'][recipe_name]
         # Preserve plan if it exists
         recipe_data['plan'] = existing_recipe['plan'] if existing_recipe['plan']
+        # Preserve mcp_servers if it exists
+        recipe_data['mcp_servers'] = existing_recipe['mcp_servers'] if existing_recipe['mcp_servers']
+        # Preserve remote_sources if it exists (legacy field)
+        recipe_data['remote_sources'] = existing_recipe['remote_sources'] if existing_recipe['remote_sources']
         # Use provided description or preserve existing
         recipe_data['description'] ||= existing_recipe['description']
       end
