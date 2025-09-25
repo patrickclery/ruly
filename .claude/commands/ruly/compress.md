@@ -50,6 +50,7 @@ The command identifies:
 ### 2. Redundancy Types
 
 #### Content Duplication
+
 ```markdown
 # Found in 3 files:
 "Always use Make commands, never run commands directly"
@@ -57,6 +58,7 @@ The command identifies:
 ```
 
 #### Pattern Repetition
+
 ```ruby
 # Found in 5 files with slight variations:
 Employee.dataset.not_deleted.where(company:)
@@ -64,6 +66,7 @@ Employee.dataset.not_deleted.where(company:)
 ```
 
 #### Concept Re-explanation
+
 ```markdown
 # Soft-delete handling explained in:
 - essential/common.md (full explanation)
@@ -75,21 +78,25 @@ Employee.dataset.not_deleted.where(company:)
 ### 3. Compression Strategies
 
 #### Strategy 1: Extract Common Patterns
+
 - Create a central `patterns/` directory for reusable patterns
 - Reference patterns instead of duplicating them
 - Use YAML frontmatter `requires:` to include shared content
 
 #### Strategy 2: Use Template Files
+
 - Create template files for common structures
 - Reference templates with parameters
 - Reduce boilerplate across similar files
 
 #### Strategy 3: Consolidate Related Content
+
 - Merge closely related files with high overlap
 - Create subsections instead of separate files
 - Improve navigation with better structure
 
 #### Strategy 4: Create Reference Sheets
+
 - Extract all commands to a single reference
 - Create lookup tables for common patterns
 - Build quick reference guides
@@ -171,6 +178,7 @@ When compression opportunities are found, the command can offer to:
 ## Compression Rules
 
 ### DO Compress:
+
 - Exact duplicate paragraphs
 - Repeated code patterns with minor variations
 - Multiple explanations of the same concept
@@ -178,6 +186,7 @@ When compression opportunities are found, the command can offer to:
 - Common command sequences
 
 ### DON'T Compress:
+
 - Context-specific examples that aid understanding
 - Intentional repetition for emphasis
 - Quick reference sections designed for easy lookup
@@ -225,6 +234,7 @@ compression:
 ## Integration with Other Commands
 
 Works well with:
+
 - `/ruly:lint` - Check for style issues after compression
 - `/ruly:validate` - Ensure references still work
 - `/ruly:stats` - Compare before/after metrics

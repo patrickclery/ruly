@@ -16,6 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/patrickclery/ruly/main/setup.rb -o 
 ```
 
 This will:
+
 - Install Ruly to `~/ruly`
 - Add `ruly` command to your PATH
 - Set up initial configuration at `~/.config/ruly/recipes.yml`
@@ -494,6 +495,7 @@ Slash commands are special commands that can be defined in your rule files to pr
 For example, if you have a file `commands/bug/diagnose.md` in your rules, it would become available as `/bug:diagnose` when using the generated rules with Claude or other AI assistants.
 
 The `--toc` option will automatically generate:
+
 1. A table of contents with links to all headers in the combined document
 2. Unique anchors for headers (prefixed with the source file path) to handle duplicate header names across files
 3. A list of all available slash commands in your squashed output

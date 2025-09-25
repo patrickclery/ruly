@@ -18,6 +18,7 @@ When extracting scripts from a target repository:
 - **Installation Path:** Where scripts will be deployed in production environments (.ruly/bin/)
 
 This allows:
+
 - Scripts to be extracted and stored in the target repository
 - Documentation to reference the final installation paths
 - Flexible deployment strategies per project
@@ -66,17 +67,17 @@ This allows:
 
 The command searches for bash/sh code blocks in markdown:
 
-```ruby
+````ruby
 # Find all bash snippets in markdown files
 snippets = []
 Dir.glob(file_pattern).each do |file|
   content = File.read(file)
-  
+
   # Match bash code blocks
   content.scan(/^```(?:bash|sh|shell)\n(.*?)^```/m) do |match|
     code = match[0]
     line_num = content[0..content.index(match[0])].count("\n")
-    
+
     snippets << {
       file: file,
       line: line_num,
@@ -85,7 +86,7 @@ Dir.glob(file_pattern).each do |file|
     }
   end
 end
-```
+````
 
 ### Step 2: Analyze Snippets
 
@@ -95,13 +96,13 @@ Determine which snippets should become scripts:
 extractable = snippets.select do |snippet|
   # Skip if too short
   next false if snippet[:code].lines.count < min_lines
-  
+
   # Skip if it's just a single command
   next false if single_command?(snippet[:code])
-  
+
   # Skip if it's example usage/documentation
   next false if example_usage?(snippet[:code])
-  
+
   # Good candidates:
   # - Multi-step processes
   # - Reusable functions
@@ -119,7 +120,7 @@ Create meaningful script names from context:
 def generate_script_name(snippet)
   context = snippet[:context]
   file_path = snippet[:file]
-  
+
   # Extract from heading or description
   if context[:heading] =~ /Step \d+: (.+)/
     name = $1.downcase.gsub(/\s+/, '-')
@@ -129,7 +130,7 @@ def generate_script_name(snippet)
     # Generate from code purpose
     name = analyze_purpose(snippet[:code])
   end
-  
+
   # Ensure uniqueness
   "#{name}.sh"
 end
@@ -140,6 +141,7 @@ end
 Identify and extract common snippet patterns:
 
 #### Pattern: File Change Detection
+
 ```bash
 # Original snippet becomes a call to:
 source .ruly/bin/testing/detect-changed-files.sh
@@ -148,6 +150,7 @@ source .ruly/bin/testing/detect-changed-files.sh
 Script created at `[output-dir]/testing/detect-changed-files.sh`
 
 #### Pattern: Test Runner
+
 ```bash
 # Original snippet becomes a call to:
 .ruly/bin/testing/run-required-tests.sh
@@ -156,6 +159,7 @@ Script created at `[output-dir]/testing/detect-changed-files.sh`
 Script created at `[output-dir]/testing/run-required-tests.sh`
 
 #### Pattern: Countdown Timer
+
 ```bash
 # Original snippet becomes a call to:
 .ruly/bin/common/countdown-timer.sh 30 "Custom message"
@@ -167,35 +171,35 @@ Script created at `[output-dir]/common/countdown-timer.sh`
 
 Replace inline snippets with script references:
 
-```ruby
+````ruby
 def update_markdown_file(file, replacements)
   content = File.read(file)
-  
+
   replacements.each do |replacement|
     original = replacement[:original]
     output_path = replacement[:output_path]      # Where script is created
     reference_path = replacement[:reference_path] # Path used in documentation
     script_name = File.basename(reference_path)
-    
+
     # Create usage example with installation path
     usage_example = generate_usage_example(install_path)
-    
+
     # Replace with reference using installation path
     new_content = <<~MD
       ```bash
       # Run the #{script_name.sub('.sh', '')} script
       #{usage_example}
       ```
-      
+
       _See `#{install_path}` for implementation details._
     MD
-    
+
     content.sub!(original, new_content)
   end
-  
+
   File.write(file, content)
 end
-```
+````
 
 ### Step 6: Generate Script Documentation
 
@@ -261,6 +265,7 @@ Documentation will reference scripts using the reference path (e.g., `.ruly/bin/
 ## Script Templates
 
 ### Basic Script Template
+
 ```bash
 #!/bin/bash
 # Generated from: [source-file]#[line-range]
@@ -276,6 +281,7 @@ set -e  # Exit on error
 ```
 
 ### Function Library Template
+
 ```bash
 #!/bin/bash
 # Common functions extracted from multiple sources
@@ -315,7 +321,7 @@ extraction:
     - multi_step_process
     - error_handling
     - loops
-  
+
   ignore:
     - single_commands
     - examples
@@ -324,7 +330,7 @@ extraction:
 naming:
   style: kebab-case
   prefix_with_category: true
-  
+
 output:
   output_dir: bin            # Where to create scripts
   reference_path: .ruly/bin  # Path used in documentation
