@@ -3,7 +3,6 @@
 CLAUDE.local.md
 cache/
 .tmp/
-.claude/commands/
 /.idea/
 
 # Ruly generated files
