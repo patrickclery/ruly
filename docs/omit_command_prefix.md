@@ -48,3 +48,16 @@ This feature is particularly useful for:
 - Large monorepo projects where commands are deeply nested by team/project
 - Simplifying command access when a specific context is always assumed
 - Creating cleaner command structures without reorganizing source files
+
+## Important Notes
+
+### Reserved Directory Names
+
+**WARNING**: Avoid using `debug` as a directory name for commands. Claude Code reserves this keyword and commands in `.claude/commands/debug/` will not be recognized as slash commands.
+
+**Recommended alternatives:**
+- Use `bug` for bug-related commands (e.g., `/bug:diagnose`, `/bug:fix`)
+- Use `troubleshoot` for troubleshooting commands
+- Use `investigate` for investigation commands
+
+When Ruly detects a `debug` directory in command paths, it will display a warning during the squash process.

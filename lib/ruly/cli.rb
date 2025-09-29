@@ -928,11 +928,22 @@ module Ruly
       # Extract the omit_command_prefix from recipe config if present
       omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
 
+      # Track if we've seen 'debug' directory for warning
+      debug_warning_shown = false
+
       command_files.each do |file|
         if file.is_a?(Hash)
           # From squash mode - has content
           # Preserve subdirectory structure for commands
           relative_path = get_command_relative_path(file[:path], omit_prefix)
+
+          # Warn if 'debug' is used in command path (Claude Code reserved word)
+          if !debug_warning_shown && relative_path.split('/').include?('debug')
+            puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
+            puts "   Commands in .claude/commands/debug/ will not be recognized"
+            puts "   Consider renaming to 'bug' or another directory name\n\n"
+            debug_warning_shown = true
+          end
 
           # Create subdirectories if needed
           target_file = File.join(commands_dir, relative_path)
@@ -946,6 +957,14 @@ module Ruly
           if File.exist?(source_path)
             # Preserve subdirectory structure
             relative_path = get_command_relative_path(file, omit_prefix)
+
+            # Warn if 'debug' is used in command path (Claude Code reserved word)
+            if !debug_warning_shown && relative_path.split('/').include?('debug')
+              puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
+              puts "   Commands in .claude/commands/debug/ will not be recognized"
+              puts "   Consider renaming to 'bug' or another directory name\n\n"
+              debug_warning_shown = true
+            end
 
             target_file = File.join(commands_dir, relative_path)
             target_dir = File.dirname(target_file)
