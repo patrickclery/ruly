@@ -1320,6 +1320,8 @@ module Ruly
           {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
         else
           content = File.read(file_path, encoding: 'UTF-8')
+          # Strip requires field from YAML frontmatter
+          content = strip_requires_from_frontmatter(content)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
 
           # Count tokens for the content
@@ -1338,6 +1340,40 @@ module Ruly
       else
         puts ' ❌ not found'
         nil
+      end
+    end
+
+    def strip_requires_from_frontmatter(content)
+      # Check if content has YAML frontmatter
+      return content unless content.start_with?('---')
+
+      # Split content into frontmatter and body
+      parts = content.split(/^---\s*$/, 3)
+      return content if parts.length < 3
+
+      frontmatter = parts[1]
+      body = parts[2]
+
+      # Remove the requires field and its values
+      # This handles both:
+      # 1. Single line: "requires: value" or "requires: [value1, value2]"
+      # 2. Multi-line array format:
+      #    requires:
+      #      - item1
+      #      - item2
+      # Match 'requires:' and all indented lines that follow it
+      # Stop when we hit a line that starts with a letter (next YAML key) or end
+      frontmatter = frontmatter.gsub(/^requires:.*?(?=^\w|\z)/m, '')
+
+      # Clean up any extra blank lines
+      frontmatter = frontmatter.gsub(/\n\n+/, "\n").strip
+
+      # Reconstruct the content
+      if frontmatter.empty?
+        # If frontmatter is empty after removing requires, remove the frontmatter entirely
+        body
+      else
+        "---\n#{frontmatter}\n---#{body}"
       end
     end
 
@@ -1364,6 +1400,9 @@ module Ruly
 
       prefix = source[:from_requires] ? 'Required' : 'Processing'
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
+
+      # Strip requires field from YAML frontmatter
+      content = strip_requires_from_frontmatter(content)
 
       # Count tokens in the content
       tokens = count_tokens(content)
@@ -1403,6 +1442,9 @@ module Ruly
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
       content = fetch_remote_content(source[:path])
       if content
+        # Strip requires field from YAML frontmatter
+        content = strip_requires_from_frontmatter(content)
+
         # Count tokens in the content
         tokens = count_tokens(content)
         formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
