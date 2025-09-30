@@ -675,6 +675,15 @@ module Ruly
       process_recipe_sources(recipe, sources)
       process_legacy_remote_sources(recipe, sources)
 
+      # Scan for files with matching recipe tags in frontmatter
+      tagged_sources = scan_files_for_recipe_tags(recipe_name)
+
+      # Merge tagged sources with recipe sources, deduplicating by path
+      existing_paths = sources.map { |s| s[:path] }.to_set
+      tagged_sources.each do |tagged_source|
+        sources << tagged_source unless existing_paths.include?(tagged_source[:path])
+      end
+
       [sources, recipe]
     end
 
@@ -1062,6 +1071,31 @@ module Ruly
       @rules_dir ||= File.join(gem_root, 'rules')
     end
 
+    def scan_files_for_recipe_tags(recipe_name)
+      sources = []
+      return sources unless File.directory?(rules_dir)
+
+      Find.find(rules_dir) do |path|
+        next unless path.end_with?('.md', '.mdc')
+
+        begin
+          content = File.read(path, encoding: 'UTF-8')
+          frontmatter, = parse_frontmatter(content)
+
+          # Check if this file has a recipes field that includes our recipe
+          if frontmatter['recipes']&.include?(recipe_name)
+            relative_path = path.sub("#{rules_dir}/", 'rules/')
+            sources << {path: relative_path, type: 'local'}
+          end
+        rescue StandardError => e
+          # Skip files that can't be read or parsed
+          warn "Warning: Could not parse #{path}: #{e.message}" if ENV['DEBUG']
+        end
+      end
+
+      sources.sort_by { |s| s[:path] }
+    end
+
     def process_sources_for_squash(sources, agent, _recipe_config, _options)
       local_sources = []
       command_files = []
@@ -1321,7 +1355,7 @@ module Ruly
         else
           content = File.read(file_path, encoding: 'UTF-8')
           # Strip requires field from YAML frontmatter
-          content = strip_requires_from_frontmatter(content)
+          content = strip_metadata_from_frontmatter(content)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
 
           # Count tokens for the content
@@ -1343,7 +1377,7 @@ module Ruly
       end
     end
 
-    def strip_requires_from_frontmatter(content)
+    def strip_metadata_from_frontmatter(content)
       # Check if content has YAML frontmatter
       return content unless content.start_with?('---')
 
@@ -1365,12 +1399,15 @@ module Ruly
       # Stop when we hit a line that starts with a letter (next YAML key) or end
       frontmatter = frontmatter.gsub(/^requires:.*?(?=^\w|\z)/m, '')
 
+      # Remove the recipes field and its values (same format as requires)
+      frontmatter = frontmatter.gsub(/^recipes:.*?(?=^\w|\z)/m, '')
+
       # Clean up any extra blank lines
       frontmatter = frontmatter.gsub(/\n\n+/, "\n").strip
 
       # Reconstruct the content
       if frontmatter.empty?
-        # If frontmatter is empty after removing requires, remove the frontmatter entirely
+        # If frontmatter is empty after removing metadata, remove the frontmatter entirely
         body
       else
         "---\n#{frontmatter}\n---#{body}"
