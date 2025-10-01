@@ -35,6 +35,8 @@ module Ruly
     option :git_exclude, aliases: '-I', default: false, desc: 'Add generated files to .git/info/exclude', type: :boolean
     option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file',
                  type: :boolean
+    option :essential, aliases: '-e', default: false, desc: 'Only include files marked as essential: true in frontmatter',
+                 type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested (deepclean takes precedence over clean)
@@ -85,6 +87,12 @@ module Ruly
                                  else
                                    [collect_local_sources, {}]
                                  end
+
+        # Filter to only essential files if --essential flag is set
+        if options[:essential]
+          sources = filter_essential_sources(sources)
+          puts "📌 Essential mode: filtered to #{sources.length} essential files" unless dry_run
+        end
 
         # Process sources and separate command files and bin files
         local_sources, command_files, bin_files = process_sources_for_squash(sources, agent, recipe_config, options)
@@ -1096,6 +1104,33 @@ module Ruly
       sources.sort_by { |s| s[:path] }
     end
 
+    def filter_essential_sources(sources)
+      # Filter to only include sources marked as essential: true
+      essential_sources = []
+
+      sources.each do |source|
+        next unless source[:type] == 'local'
+
+        begin
+          file_path = find_rule_file(source[:path])
+          next unless file_path
+
+          content = File.read(file_path, encoding: 'UTF-8')
+          frontmatter, = parse_frontmatter(content)
+
+          # Include if marked as essential
+          if frontmatter['essential'] == true
+            essential_sources << source
+          end
+        rescue StandardError => e
+          # Skip files that can't be read or parsed
+          warn "Warning: Could not parse #{source[:path]}: #{e.message}" if ENV['DEBUG']
+        end
+      end
+
+      essential_sources
+    end
+
     def process_sources_for_squash(sources, agent, _recipe_config, _options)
       local_sources = []
       command_files = []
@@ -1309,10 +1344,11 @@ module Ruly
 
       # If it's a regular markdown file (not bin), check for requires
       if !result[:is_bin] && result[:data] && result[:data][:content]
-        content = result[:data][:content]
+        # Use original content (with requires intact) for dependency resolution
+        content_for_requires = result[:data][:original_content] || result[:data][:content]
 
         # Resolve requires for this source
-        required_sources = resolve_requires_for_source(source, content, processed_files, sources_to_process)
+        required_sources = resolve_requires_for_source(source, content_for_requires, processed_files, sources_to_process)
 
         # Add required sources to the front of the queue (depth-first processing)
         unless required_sources.empty?
@@ -1354,7 +1390,9 @@ module Ruly
           {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
         else
           content = File.read(file_path, encoding: 'UTF-8')
-          # Strip requires field from YAML frontmatter
+          # Store original content (with requires) for dependency resolution
+          original_content = content
+          # Strip metadata fields from YAML frontmatter for output
           content = strip_metadata_from_frontmatter(content)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
 
@@ -1369,7 +1407,7 @@ module Ruly
           else
             puts " ✅ (#{formatted_tokens} tokens)"
           end
-          {data: {content:, path: source[:path]}, is_command:}
+          {data: {content:, path: source[:path], original_content:}, is_command:}
         end
       else
         puts ' ❌ not found'
@@ -1401,6 +1439,9 @@ module Ruly
 
       # Remove the recipes field and its values (same format as requires)
       frontmatter = frontmatter.gsub(/^recipes:.*?(?=^\w|\z)/m, '')
+
+      # Remove the essential field (single line: "essential: true" or "essential: false")
+      frontmatter = frontmatter.gsub(/^essential:.*?(?=\n|\z)/m, '')
 
       # Clean up any extra blank lines
       frontmatter = frontmatter.gsub(/\n\n+/, "\n").strip
@@ -1438,8 +1479,10 @@ module Ruly
       prefix = source[:from_requires] ? 'Required' : 'Processing'
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
 
-      # Strip requires field from YAML frontmatter
-      content = strip_requires_from_frontmatter(content)
+      # Store original content for requires resolution
+      original_content = content
+      # Strip metadata fields from YAML frontmatter
+      content = strip_metadata_from_frontmatter(content)
 
       # Count tokens in the content
       tokens = count_tokens(content)
@@ -1455,7 +1498,7 @@ module Ruly
         puts " ✅ (#{formatted_tokens} tokens)"
       end
 
-      {data: {content:, path: source[:path]}, is_command:}
+      {data: {content:, path: source[:path], original_content:}, is_command:}
     end
 
     def process_remote_file_with_progress(source, index, total, agent)
@@ -1479,8 +1522,10 @@ module Ruly
       print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
       content = fetch_remote_content(source[:path])
       if content
-        # Strip requires field from YAML frontmatter
-        content = strip_requires_from_frontmatter(content)
+        # Store original content for requires resolution
+        original_content = content
+        # Strip metadata fields from YAML frontmatter
+        content = strip_metadata_from_frontmatter(content)
 
         # Count tokens in the content
         tokens = count_tokens(content)
@@ -1495,7 +1540,7 @@ module Ruly
         else
           puts " ✅ (#{formatted_tokens} tokens)"
         end
-        {data: {content:, path: source[:path]}, is_command:}
+        {data: {content:, path: source[:path], original_content:}, is_command:}
       else
         puts ' ❌ failed'
         nil
