@@ -35,15 +35,19 @@ module Ruly
     option :git_exclude, aliases: '-I', default: false, desc: 'Add generated files to .git/info/exclude', type: :boolean
     option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file',
                  type: :boolean
-    option :essential, aliases: '-e', default: false, desc: 'Only include files marked as essential: true in frontmatter',
-                 type: :boolean
+    option :essential, aliases: '-e', default: false,
+                       desc: 'Only include files marked as essential: true in frontmatter',
+                       type: :boolean
+    option :taskmaster_config, aliases: '-T', default: false,
+                               desc: 'Copy TaskMaster config to .taskmaster/config.json',
+                               type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested (deepclean takes precedence over clean)
       if options[:deepclean] && !options[:dry_run]
-        invoke :clean, [], {deepclean: true}
+        invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
       elsif options[:clean] && !options[:dry_run]
-        invoke :clean, [recipe_name], options.slice(:output_file, :agent)
+        invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
       end
 
       output_file = options[:output_file]
@@ -107,9 +111,11 @@ module Ruly
             puts '  → Remove CLAUDE.local.md'
             puts '  → Remove CLAUDE.md'
             puts '  → Remove .ruly.yml'
+            puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
             puts ''
           elsif options[:clean]
             puts 'Would clean existing files first'
+            puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
             puts ''
           end
 
@@ -121,7 +127,9 @@ module Ruly
 
           if agent == 'claude' && !command_files.empty?
             puts "\nWould create command files in .claude/commands/:"
+            # rubocop:disable Layout/LineLength, Metrics/BlockNesting
             omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
+            # rubocop:enable Layout/LineLength, Metrics/BlockNesting
             command_files.each do |file|
               # Show subdirectory structure if present
               relative_path = get_command_relative_path(file[:path], omit_prefix)
@@ -148,6 +156,8 @@ module Ruly
             puts "\nWould update: .git/info/exclude"
             puts '  → Add entries for generated files'
           end
+
+          copy_taskmaster_config if options[:taskmaster_config]
 
           return
         end
@@ -222,6 +232,9 @@ module Ruly
 
         # Update MCP settings (JSON for Claude, YAML for others)
         update_mcp_settings(recipe_config, agent)
+
+        # Copy TaskMaster config if requested
+        copy_taskmaster_config if options[:taskmaster_config]
       end
 
       mode_desc = if agent == 'shell_gpt'
@@ -255,8 +268,10 @@ module Ruly
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
     option :deepclean, default: false,
-                       desc: 'Remove all generated artifacts (.claude/, CLAUDE.local.md, CLAUDE.md, .ruly.yml, .mcp.json, .mcp.yml)',
+                       desc: 'Remove all generated artifacts (.claude/, CLAUDE files, .ruly.yml, MCP settings)',
                        type: :boolean
+    option :taskmaster_config, aliases: '-T', default: false, desc: 'Also remove .taskmaster/ directory',
+                               type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def clean(recipe_name = nil)
       dry_run = options[:dry_run]
@@ -284,6 +299,11 @@ module Ruly
 
         # Also remove metadata file
         files_to_remove << metadata_file if File.exist?(metadata_file)
+      end
+
+      # Handle TaskMaster config removal if -T flag is present
+      if options[:taskmaster_config]
+        files_to_remove << '.taskmaster/' if Dir.exist?('.taskmaster')
       elsif File.exist?(metadata_file) && !options[:output_file] && !recipe_name
         # Normal clean behavior - ALWAYS remove entire .claude directory
 
@@ -344,7 +364,7 @@ module Ruly
     # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
 
     desc 'list-recipes', 'List all available recipes'
-    def list_recipes # rubocop:disable Metrics/MethodLength
+    def list_recipes # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
       recipes_file = File.join(gem_root, 'recipes.yml')
       unless File.exist?(recipes_file)
         puts '❌ recipes.yml not found'
@@ -416,7 +436,7 @@ module Ruly
     option :output, aliases: '-o', default: nil, desc: 'Output file path', type: :string
     option :dry_run, default: false, desc: 'Show what would be done without modifying files', type: :boolean
     option :relative, default: false, desc: 'Use relative paths instead of absolute for local files', type: :boolean
-    def introspect(recipe_name, *sources) # rubocop:disable Metrics/MethodLength, Metrics/AbcSize
+    def introspect(recipe_name, *sources) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
       if sources.empty?
         puts '❌ At least one source directory or GitHub URL is required'
         exit 1
@@ -455,8 +475,9 @@ module Ruly
           existing_recipe = existing_config['recipes'][recipe_name]
 
           # Preserve all existing keys except those that introspect updates
+          introspect_keys = %w[files sources]
           existing_recipe.each do |key, value|
-            next if %w[files sources].include?(key)
+            next if introspect_keys.include?(key)
             next if key == 'description' && recipe_data['description']
 
             recipe_data[key] = value
@@ -687,7 +708,7 @@ module Ruly
       tagged_sources = scan_files_for_recipe_tags(recipe_name)
 
       # Merge tagged sources with recipe sources, deduplicating by path
-      existing_paths = sources.map { |s| s[:path] }.to_set
+      existing_paths = sources.to_set { |s| s[:path] }
       tagged_sources.each do |tagged_source|
         sources << tagged_source unless existing_paths.include?(tagged_source[:path])
       end
@@ -936,7 +957,54 @@ module Ruly
       end
     end
 
-    def save_command_files(command_files, recipe_config = nil)
+    def scan_files_for_recipe_tags(recipe_name)
+      sources = []
+      return sources unless File.directory?(rules_dir)
+
+      Find.find(rules_dir) do |path|
+        next unless path.end_with?('.md', '.mdc')
+
+        begin
+          content = File.read(path, encoding: 'UTF-8')
+          frontmatter, = parse_frontmatter(content)
+
+          # Check if this file has a recipes field that includes our recipe
+          if frontmatter['recipes']&.include?(recipe_name)
+            relative_path = path.sub("#{rules_dir}/", 'rules/')
+            sources << {path: relative_path, type: 'local'}
+          end
+        rescue StandardError => e
+          # Skip files that can't be read or parsed
+          warn "Warning: Could not parse #{path}: #{e.message}" if ENV['DEBUG']
+        end
+      end
+
+      sources.sort_by { |s| s[:path] }
+    end
+
+    def rules_dir
+      @rules_dir ||= File.join(gem_root, 'rules')
+    end
+
+    def parse_frontmatter(content)
+      return [{}, content] unless content.start_with?('---')
+
+      # Ensure we have a mutable string
+      content = content.dup.force_encoding('UTF-8')
+      yaml_match = content.match(/^---\n(.+?)\n---\n?/m)
+      return [{}, content] unless yaml_match
+
+      begin
+        frontmatter = YAML.safe_load(yaml_match[1]) || {}
+        # Content without frontmatter (but we keep it for the output)
+        [frontmatter, content]
+      rescue StandardError => e
+        puts "⚠️  Warning: Failed to parse frontmatter: #{e.message}" if ENV['DEBUG']
+        [{}, content]
+      end
+    end
+
+    def save_command_files(command_files, recipe_config = nil) # rubocop:disable Metrics/MethodLength
       return if command_files.empty?
 
       commands_dir = '.claude/commands'
@@ -948,7 +1016,7 @@ module Ruly
       # Track if we've seen 'debug' directory for warning
       debug_warning_shown = false
 
-      command_files.each do |file|
+      command_files.each do |file| # rubocop:disable Metrics/BlockLength
         if file.is_a?(Hash)
           # From squash mode - has content
           # Preserve subdirectory structure for commands
@@ -957,7 +1025,7 @@ module Ruly
           # Warn if 'debug' is used in command path (Claude Code reserved word)
           if !debug_warning_shown && relative_path.split('/').include?('debug')
             puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
-            puts "   Commands in .claude/commands/debug/ will not be recognized"
+            puts '   Commands in .claude/commands/debug/ will not be recognized'
             puts "   Consider renaming to 'bug' or another directory name\n\n"
             debug_warning_shown = true
           end
@@ -978,7 +1046,7 @@ module Ruly
             # Warn if 'debug' is used in command path (Claude Code reserved word)
             if !debug_warning_shown && relative_path.split('/').include?('debug')
               puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
-              puts "   Commands in .claude/commands/debug/ will not be recognized"
+              puts '   Commands in .claude/commands/debug/ will not be recognized'
               puts "   Consider renaming to 'bug' or another directory name\n\n"
               debug_warning_shown = true
             end
@@ -993,7 +1061,7 @@ module Ruly
       end
     end
 
-    def get_command_relative_path(file_path, omit_prefix = nil)
+    def get_command_relative_path(file_path, omit_prefix = nil) # rubocop:disable Metrics/MethodLength
       if file_path.include?('/commands/')
         # Split on /commands/ to get everything before and after
         parts = file_path.split('/commands/')
@@ -1045,12 +1113,12 @@ module Ruly
           end
 
           # If we consumed the entire prefix (or part of it), use the remaining path
-          if path_parts.any?
-            result_path = File.join(*path_parts)
-          else
-            # If nothing left, just use the filename
-            result_path = File.basename(after_commands)
-          end
+          result_path = if path_parts.any?
+                          File.join(*path_parts)
+                        else
+                          # If nothing left, just use the filename
+                          File.basename(after_commands)
+                        end
         end
 
         result_path
@@ -1075,35 +1143,6 @@ module Ruly
       sources.sort_by { |s| s[:path] }
     end
 
-    def rules_dir
-      @rules_dir ||= File.join(gem_root, 'rules')
-    end
-
-    def scan_files_for_recipe_tags(recipe_name)
-      sources = []
-      return sources unless File.directory?(rules_dir)
-
-      Find.find(rules_dir) do |path|
-        next unless path.end_with?('.md', '.mdc')
-
-        begin
-          content = File.read(path, encoding: 'UTF-8')
-          frontmatter, = parse_frontmatter(content)
-
-          # Check if this file has a recipes field that includes our recipe
-          if frontmatter['recipes']&.include?(recipe_name)
-            relative_path = path.sub("#{rules_dir}/", 'rules/')
-            sources << {path: relative_path, type: 'local'}
-          end
-        rescue StandardError => e
-          # Skip files that can't be read or parsed
-          warn "Warning: Could not parse #{path}: #{e.message}" if ENV['DEBUG']
-        end
-      end
-
-      sources.sort_by { |s| s[:path] }
-    end
-
     def filter_essential_sources(sources)
       # Filter to only include sources marked as essential: true
       essential_sources = []
@@ -1119,9 +1158,7 @@ module Ruly
           frontmatter, = parse_frontmatter(content)
 
           # Include if marked as essential
-          if frontmatter['essential'] == true
-            essential_sources << source
-          end
+          essential_sources << source if frontmatter['essential'] == true
         rescue StandardError => e
           # Skip files that can't be read or parsed
           warn "Warning: Could not parse #{source[:path]}: #{e.message}" if ENV['DEBUG']
@@ -1131,7 +1168,7 @@ module Ruly
       essential_sources
     end
 
-    def process_sources_for_squash(sources, agent, _recipe_config, _options)
+    def process_sources_for_squash(sources, agent, _recipe_config, _options) # rubocop:disable Metrics/MethodLength
       local_sources = []
       command_files = []
       bin_files = []
@@ -1348,7 +1385,8 @@ module Ruly
         content_for_requires = result[:data][:original_content] || result[:data][:content]
 
         # Resolve requires for this source
-        required_sources = resolve_requires_for_source(source, content_for_requires, processed_files, sources_to_process)
+        required_sources = resolve_requires_for_source(source, content_for_requires, processed_files,
+                                                       sources_to_process)
 
         # Add required sources to the front of the queue (depth-first processing)
         unless required_sources.empty?
@@ -1407,7 +1445,7 @@ module Ruly
           else
             puts " ✅ (#{formatted_tokens} tokens)"
           end
-          {data: {content:, path: source[:path], original_content:}, is_command:}
+          {data: {content:, original_content:, path: source[:path]}, is_command:}
         end
       else
         puts ' ❌ not found'
@@ -1498,10 +1536,10 @@ module Ruly
         puts " ✅ (#{formatted_tokens} tokens)"
       end
 
-      {data: {content:, path: source[:path], original_content:}, is_command:}
+      {data: {content:, original_content:, path: source[:path]}, is_command:}
     end
 
-    def process_remote_file_with_progress(source, index, total, agent)
+    def process_remote_file_with_progress(source, index, total, agent) # rubocop:disable Metrics/MethodLength
       # Extract domain and full path for display
       if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
         owner = Regexp.last_match(1)
@@ -1540,7 +1578,7 @@ module Ruly
         else
           puts " ✅ (#{formatted_tokens} tokens)"
         end
-        {data: {content:, path: source[:path], original_content:}, is_command:}
+        {data: {content:, original_content:, path: source[:path]}, is_command:}
       else
         puts ' ❌ failed'
         nil
@@ -1655,24 +1693,6 @@ module Ruly
       end
 
       required_sources
-    end
-
-    def parse_frontmatter(content)
-      return [{}, content] unless content.start_with?('---')
-
-      # Ensure we have a mutable string
-      content = content.dup.force_encoding('UTF-8')
-      yaml_match = content.match(/^---\n(.+?)\n---\n?/m)
-      return [{}, content] unless yaml_match
-
-      begin
-        frontmatter = YAML.safe_load(yaml_match[1]) || {}
-        # Content without frontmatter (but we keep it for the output)
-        [frontmatter, content]
-      rescue StandardError => e
-        puts "⚠️  Warning: Failed to parse frontmatter: #{e.message}" if ENV['DEBUG']
-        [{}, content]
-      end
     end
 
     def resolve_required_path(source, required_path)
@@ -1824,6 +1844,33 @@ module Ruly
       else
         File.basename(relative_path)
       end
+    end
+
+    def copy_taskmaster_config
+      source_config = File.expand_path('~/.config/ruly/taskmaster/config.json')
+      target_dir = '.taskmaster'
+      target_config = File.join(target_dir, 'config.json')
+
+      unless File.exist?(source_config)
+        puts "⚠️  Warning: #{source_config} not found"
+        return
+      end
+
+      if options[:dry_run]
+        puts "\nWould copy TaskMaster config:"
+        puts "  → From: #{source_config}"
+        puts "  → To: #{target_config}"
+        return
+      end
+
+      # Create target directory if it doesn't exist
+      FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+
+      # Copy the config file
+      FileUtils.cp(source_config, target_config)
+      puts "🎯 Copied TaskMaster config to #{target_config}"
+    rescue StandardError => e
+      puts "⚠️  Warning: Could not copy TaskMaster config: #{e.message}"
     end
 
     def write_shell_gpt_json(output_file, local_sources)
@@ -2104,7 +2151,7 @@ module Ruly
       FileUtils.cp(output_file, cache_file)
     end
 
-    def update_mcp_settings(recipe_config = nil, agent = 'claude')
+    def update_mcp_settings(recipe_config = nil, agent = 'claude') # rubocop:disable Metrics/MethodLength
       require 'yaml'
       require 'json'
 
@@ -2314,6 +2361,158 @@ module Ruly
         end
       else
         puts "  ⚠️  Invalid GitHub URL format: #{url}"
+      end
+    end
+
+    def fetch_github_markdown_files(owner, repo, branch, path)
+      # Use GitHub API to fetch directory contents
+      api_url = "https://api.github.com/repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch}"
+      puts "     DEBUG: Fetching #{api_url}" if ENV['DEBUG']
+
+      begin
+        response = fetch_url(api_url)
+        unless response
+          puts '     DEBUG: No response from API' if ENV['DEBUG']
+          return []
+        end
+
+        files = []
+        items = JSON.parse(response)
+        puts "     DEBUG: Found #{items.length} items" if ENV['DEBUG']
+
+        items.each do |item|
+          if item['type'] == 'file' && item['path'].end_with?('.md', '.mdc')
+            files << item['path']
+          elsif item['type'] == 'dir'
+            # Recursively fetch subdirectory contents
+            subdir_files = fetch_github_markdown_files(owner, repo, branch, item['path'])
+            files.concat(subdir_files)
+          end
+        end
+
+        files
+      rescue StandardError => e
+        puts "     ⚠️ Error fetching GitHub files: #{e.message}" if ENV['DEBUG']
+        []
+      end
+    end
+
+    def fetch_url(url)
+      uri = URI(url)
+      request = Net::HTTP::Get.new(uri)
+      request['Accept'] = 'application/vnd.github.v3+json' if url.include?('api.github.com')
+      request['User-Agent'] = 'Ruly CLI'
+
+      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
+        http.request(request)
+      end
+
+      response.body if response.code == '200'
+    rescue StandardError => e
+      puts "     ⚠️ Error fetching URL: #{e.message}" if ENV['DEBUG']
+      nil
+    end
+
+    def introspect_local_source(path, all_files, use_relative)
+      expanded_path = File.expand_path(path)
+
+      unless File.directory?(expanded_path)
+        puts "  ⚠️  Skipping #{path} - not a directory"
+        return
+      end
+
+      puts "  📁 #{path}..."
+      found_count = 0
+
+      Find.find(expanded_path) do |file_path|
+        next unless file_path.end_with?('.md', '.mdc')
+
+        # Store as absolute path unless relative flag is set
+        stored_path = use_relative ? file_path.sub("#{Dir.pwd}/", '') : file_path
+        all_files << stored_path
+        found_count += 1
+      end
+
+      puts "     Found #{found_count} markdown files"
+    end
+
+    def build_introspected_recipe(local_files, github_sources, original_sources, description)
+      recipe = {}
+
+      # Add description
+      if description
+        recipe['description'] = description
+      else
+        # Auto-generate description
+        source_count = original_sources.length
+        if source_count == 1
+          recipe['description'] = "Auto-generated from #{original_sources.first}"
+        else
+          local_count = original_sources.count { |s| !s.start_with?('http') }
+          github_count = source_count - local_count
+
+          parts = []
+          parts << "#{local_count} local" if local_count > 0
+          parts << "#{github_count} GitHub" if github_count > 0
+          recipe['description'] = "Auto-generated from #{parts.join(' and ')} source#{'s' if source_count > 1}"
+        end
+      end
+
+      # Add local files if any
+      recipe['files'] = local_files.sort if local_files.any?
+
+      # Add GitHub sources if any
+      if github_sources.any?
+        recipe['sources'] = github_sources.map do |source|
+          {
+            'branch' => source[:branch],
+            'github' => source[:github],
+            'rules' => source[:rules]
+          }
+        end
+      end
+
+      recipe
+    end
+
+    def save_introspected_recipe(recipe_name, recipe_data, output_file)
+      # Load existing recipes or create new structure
+      existing_config = if File.exist?(output_file)
+                          YAML.safe_load_file(output_file, aliases: true) || {}
+                        else
+                          {}
+                        end
+
+      existing_config['recipes'] ||= {}
+
+      # NOTE: Key preservation is now done in the introspect method before calling this
+      # so it works for both dry-run and actual save modes
+
+      # Update recipe
+      existing_config['recipes'][recipe_name] = recipe_data
+
+      # Ensure parent directory exists
+      FileUtils.mkdir_p(File.dirname(output_file))
+
+      # Write updated config with custom formatting for file paths
+      yaml_content = format_yaml_without_quotes(existing_config)
+      File.write(output_file, yaml_content)
+    end
+
+    def format_yaml_without_quotes(data)
+      # Convert to standard YAML first
+      yaml_str = data.to_yaml
+
+      # Remove quotes from file paths (paths that start with / or ~ or contain .md)
+      yaml_str.gsub(%r{(['"])(/[^'"]*|~[^'"]*|[^'"]*\.md[c]?)\1}) do |match|
+        # Extract the path without quotes
+        path = match[1..-2] # Remove first and last character (the quotes)
+        # Return the path without quotes if it's a valid file path
+        if path.match?(%r{^[/~]}) || path.match?(/\.md[c]?$/)
+          path
+        else
+          match # Keep the quotes for non-file paths
+        end
       end
     end
 
@@ -2626,158 +2825,6 @@ module Ruly
             new_prefix = prefix + (is_last_item ? '    ' : '│   ')
             display_file_tree(value, is_root: false, prefix: new_prefix)
           end
-        end
-      end
-    end
-
-    def introspect_local_source(path, all_files, use_relative)
-      expanded_path = File.expand_path(path)
-
-      unless File.directory?(expanded_path)
-        puts "  ⚠️  Skipping #{path} - not a directory"
-        return
-      end
-
-      puts "  📁 #{path}..."
-      found_count = 0
-
-      Find.find(expanded_path) do |file_path|
-        next unless file_path.end_with?('.md', '.mdc')
-
-        # Store as absolute path unless relative flag is set
-        stored_path = use_relative ? file_path.sub("#{Dir.pwd}/", '') : file_path
-        all_files << stored_path
-        found_count += 1
-      end
-
-      puts "     Found #{found_count} markdown files"
-    end
-
-    def fetch_url(url)
-      uri = URI(url)
-      request = Net::HTTP::Get.new(uri)
-      request['Accept'] = 'application/vnd.github.v3+json' if url.include?('api.github.com')
-      request['User-Agent'] = 'Ruly CLI'
-
-      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
-        http.request(request)
-      end
-
-      response.body if response.code == '200'
-    rescue StandardError => e
-      puts "     ⚠️ Error fetching URL: #{e.message}" if ENV['DEBUG']
-      nil
-    end
-
-    def fetch_github_markdown_files(owner, repo, branch, path)
-      # Use GitHub API to fetch directory contents
-      api_url = "https://api.github.com/repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch}"
-      puts "     DEBUG: Fetching #{api_url}" if ENV['DEBUG']
-
-      begin
-        response = fetch_url(api_url)
-        unless response
-          puts '     DEBUG: No response from API' if ENV['DEBUG']
-          return []
-        end
-
-        files = []
-        items = JSON.parse(response)
-        puts "     DEBUG: Found #{items.length} items" if ENV['DEBUG']
-
-        items.each do |item|
-          if item['type'] == 'file' && item['path'].end_with?('.md', '.mdc')
-            files << item['path']
-          elsif item['type'] == 'dir'
-            # Recursively fetch subdirectory contents
-            subdir_files = fetch_github_markdown_files(owner, repo, branch, item['path'])
-            files.concat(subdir_files)
-          end
-        end
-
-        files
-      rescue StandardError => e
-        puts "     ⚠️ Error fetching GitHub files: #{e.message}" if ENV['DEBUG']
-        []
-      end
-    end
-
-    def build_introspected_recipe(local_files, github_sources, original_sources, description)
-      recipe = {}
-
-      # Add description
-      if description
-        recipe['description'] = description
-      else
-        # Auto-generate description
-        source_count = original_sources.length
-        if source_count == 1
-          recipe['description'] = "Auto-generated from #{original_sources.first}"
-        else
-          local_count = original_sources.count { |s| !s.start_with?('http') }
-          github_count = source_count - local_count
-
-          parts = []
-          parts << "#{local_count} local" if local_count > 0
-          parts << "#{github_count} GitHub" if github_count > 0
-          recipe['description'] = "Auto-generated from #{parts.join(' and ')} source#{'s' if source_count > 1}"
-        end
-      end
-
-      # Add local files if any
-      recipe['files'] = local_files.sort if local_files.any?
-
-      # Add GitHub sources if any
-      if github_sources.any?
-        recipe['sources'] = github_sources.map do |source|
-          {
-            'branch' => source[:branch],
-            'github' => source[:github],
-            'rules' => source[:rules]
-          }
-        end
-      end
-
-      recipe
-    end
-
-    def save_introspected_recipe(recipe_name, recipe_data, output_file)
-      # Load existing recipes or create new structure
-      existing_config = if File.exist?(output_file)
-                          YAML.safe_load_file(output_file, aliases: true) || {}
-                        else
-                          {}
-                        end
-
-      existing_config['recipes'] ||= {}
-
-      # NOTE: Key preservation is now done in the introspect method before calling this
-      # so it works for both dry-run and actual save modes
-
-      # Update recipe
-      existing_config['recipes'][recipe_name] = recipe_data
-
-      # Ensure parent directory exists
-      FileUtils.mkdir_p(File.dirname(output_file))
-
-      # Write updated config with custom formatting for file paths
-      yaml_content = format_yaml_without_quotes(existing_config)
-      File.write(output_file, yaml_content)
-    end
-
-    def format_yaml_without_quotes(data)
-      # Convert to standard YAML first
-      yaml_str = data.to_yaml
-
-      # Remove quotes from file paths (paths that start with / or ~ or contain .md)
-      yaml_str.gsub(%r{(['"])(/[^'"]*|~[^'"]*|[^'"]*\.md[c]?)\1}) do |match|
-        # Extract the path without quotes
-        path = match[1..-2] # Remove first and last character (the quotes)
-        # Return the path without quotes if it's a valid file path
-        if path.match?(%r{^[/~]}) || path.match?(/\.md[c]?$/)
-          path
-        else
-          match # Keep the quotes for non-file paths
         end
       end
     end
