@@ -56,6 +56,7 @@ This feature is particularly useful for:
 **WARNING**: Avoid using `debug` as a directory name for commands. Claude Code reserves this keyword and commands in `.claude/commands/debug/` will not be recognized as slash commands.
 
 **Recommended alternatives:**
+
 - Use `bug` for bug-related commands (e.g., `/bug:diagnose`, `/bug:fix`)
 - Use `troubleshoot` for troubleshooting commands
 - Use `investigate` for investigation commands
