@@ -50,7 +50,6 @@ module Ruly
         invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
       end
 
-      output_file = options[:output_file]
       agent = options[:agent]
       # Normalize agent aliases
       agent = 'shell_gpt' if agent == 'sgpt'
@@ -60,6 +59,20 @@ module Ruly
       git_ignore = options[:git_ignore]
       git_exclude = options[:git_exclude]
       metadata_file = '.ruly.yml'
+
+      # Load recipe early to determine output file path based on recipe type
+      sources, recipe_config = if recipe_name
+                                 load_recipe_sources(recipe_name)
+                               else
+                                 [collect_local_sources, {}]
+                               end
+
+      # Determine output file based on recipe type (Array = agent, Hash = standard)
+      output_file = if recipe_name
+                      determine_output_file(recipe_name, recipe_config, options)
+                    else
+                      options[:output_file]
+                    end
 
       # Check for cached version
       cache_used = false
@@ -73,8 +86,6 @@ module Ruly
           # Still need to handle command files separately
           if agent == 'claude'
             command_files = extract_cached_command_files(cached_file, recipe_name, agent)
-            # Load recipe config for MCP servers
-            _, recipe_config = load_recipe_sources(recipe_name) if recipe_name
             save_command_files(command_files, recipe_config) unless command_files.empty?
           end
         elsif options[:cache]
@@ -85,12 +96,6 @@ module Ruly
       unless cache_used
         ensure_parent_directory(output_file) unless dry_run
         FileUtils.rm_f(output_file) unless dry_run
-
-        sources, recipe_config = if recipe_name
-                                   load_recipe_sources(recipe_name)
-                                 else
-                                   [collect_local_sources, {}]
-                                 end
 
         # Filter to only essential files if --essential flag is set
         if options[:essential]
@@ -242,7 +247,12 @@ module Ruly
                   elsif cache_used
                     "cached squash mode with '#{recipe_name}' recipe"
                   elsif recipe_name
-                    "squash mode with '#{recipe_name}' recipe"
+                    # Check if this is an agent file (array recipe)
+                    if recipe_config.is_a?(Array)
+                      "agent generation mode with '#{recipe_name}' recipe"
+                    else
+                      "squash mode with '#{recipe_name}' recipe"
+                    end
                   else
                     'squash mode (combined content)'
                   end
@@ -662,36 +672,6 @@ module Ruly
 
     private
 
-    def check_cache(recipe_name, agent)
-      cache_file = File.join(cache_dir, agent, "#{recipe_name}.md")
-      File.exist?(cache_file) ? cache_file : nil
-    end
-
-    def cache_dir
-      # Use ~/.cache/ruly for standalone mode, otherwise use gem's cache directory
-      @cache_dir ||= if ENV['RULY_HOME']
-                       File.expand_path('~/.cache/ruly')
-                     else
-                       File.join(gem_root, 'cache')
-                     end
-    end
-
-    def gem_root
-      # Use RULY_HOME environment variable if set (standalone mode)
-      # Otherwise fall back to gem installation path
-      @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
-    end
-
-    def should_use_cache?
-      options[:cache] == true
-    end
-
-    def extract_cached_command_files(_cached_file, _recipe_name, _agent)
-      # Extract command file references from cached content
-      # This is a simplified version - you might need to adjust based on actual cache format
-      []
-    end
-
     def load_recipe_sources(recipe_name)
       validate_recipes_file!
 
@@ -727,6 +707,12 @@ module Ruly
       @recipes_file ||= File.join(gem_root, 'recipes.yml')
     end
 
+    def gem_root
+      # Use RULY_HOME environment variable if set (standalone mode)
+      # Otherwise fall back to gem installation path
+      @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
+    end
+
     def load_all_recipes
       recipes = {}
 
@@ -756,7 +742,11 @@ module Ruly
     end
 
     def process_recipe_files(recipe, sources)
-      recipe['files']&.each do |file|
+      # For agent recipes (arrays), the recipe itself is the list of files
+      # For standard recipes (hashes), the files are in recipe['files']
+      files = recipe.is_a?(Array) ? recipe : recipe['files']
+
+      files&.each do |file|
         full_path = find_rule_file(file)
 
         if full_path
@@ -788,6 +778,9 @@ module Ruly
     end
 
     def process_recipe_sources(recipe, sources)
+      # Agent recipes (arrays) don't have sources, only files
+      return if recipe.is_a?(Array)
+
       sources_list = recipe['sources'] || []
       sources_list.each do |source_spec|
         process_source_spec(source_spec, sources)
@@ -952,6 +945,9 @@ module Ruly
     end
 
     def process_legacy_remote_sources(recipe, sources)
+      # Agent recipes (arrays) don't have remote_sources
+      return if recipe.is_a?(Array)
+
       recipe['remote_sources']&.each do |url|
         sources << {path: url, type: 'remote'}
       end
@@ -1001,6 +997,75 @@ module Ruly
       rescue StandardError => e
         puts "⚠️  Warning: Failed to parse frontmatter: #{e.message}" if ENV['DEBUG']
         [{}, content]
+      end
+    end
+
+    def collect_local_sources
+      sources = []
+      Find.find(rules_dir) do |path|
+        if path.end_with?('.md', '.mdc')
+          relative_path = path.sub("#{rules_dir}/", 'rules/')
+          sources << {path: relative_path, type: 'local'}
+        end
+      end
+      sources.sort_by { |s| s[:path] }
+    end
+
+    # Determine output file path based on recipe type and options
+    # @param recipe_name [String] Name of the recipe being squashed
+    # @param recipe_value [Hash, Array] The recipe value
+    # @param options [Hash] CLI options including :output_file
+    # @return [String] Path to output file
+    def determine_output_file(recipe_name, recipe_value, options)
+      default_output = 'CLAUDE.local.md'
+
+      # User explicitly specified output file - use it (takes precedence)
+      return options[:output_file] if options[:output_file] && options[:output_file] != default_output
+
+      # Auto-detect based on recipe type
+      if recipe_value.is_a?(Array)
+        # Array recipe = agent file goes to .claude/agents/
+        ".claude/agents/#{recipe_name}.md"
+      else
+        # Hash recipe = default behavior
+        default_output
+      end
+    end
+
+    def check_cache(recipe_name, agent)
+      cache_file = File.join(cache_dir, agent, "#{recipe_name}.md")
+      File.exist?(cache_file) ? cache_file : nil
+    end
+
+    def cache_dir
+      # Use ~/.cache/ruly for standalone mode, otherwise use gem's cache directory
+      @cache_dir ||= if ENV['RULY_HOME']
+                       File.expand_path('~/.cache/ruly')
+                     else
+                       File.join(gem_root, 'cache')
+                     end
+    end
+
+    def should_use_cache?
+      options[:cache] == true
+    end
+
+    def extract_cached_command_files(_cached_file, _recipe_name, _agent)
+      # Extract command file references from cached content
+      # This is a simplified version - you might need to adjust based on actual cache format
+      []
+    end
+
+    # Detect recipe type based on its structure
+    # @param recipe_value [Hash, Array, Object] The recipe value from recipes.yml
+    # @return [Symbol] :agent for Array recipes, :standard for Hash recipes, :invalid otherwise
+    def recipe_type(recipe_value)
+      if recipe_value.is_a?(Array)
+        :agent # Array = agent file (subagent format)
+      elsif recipe_value.is_a?(Hash)
+        :standard # Hash = traditional recipe
+      else
+        :invalid
       end
     end
 
@@ -1130,17 +1195,6 @@ module Ruly
     def ensure_parent_directory(file_path)
       dir = File.dirname(file_path)
       FileUtils.mkdir_p(dir) unless File.directory?(dir)
-    end
-
-    def collect_local_sources
-      sources = []
-      Find.find(rules_dir) do |path|
-        if path.end_with?('.md', '.mdc')
-          relative_path = path.sub("#{rules_dir}/", 'rules/')
-          sources << {path: relative_path, type: 'local'}
-        end
-      end
-      sources.sort_by { |s| s[:path] }
     end
 
     def filter_essential_sources(sources)
