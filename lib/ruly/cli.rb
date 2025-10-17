@@ -240,6 +240,9 @@ module Ruly
 
         # Copy TaskMaster config if requested
         copy_taskmaster_config if options[:taskmaster_config]
+
+        # Process subagents if defined in recipe
+        process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
       end
 
       mode_desc = if agent == 'shell_gpt'
@@ -2302,6 +2305,157 @@ module Ruly
     rescue StandardError => e
       puts "⚠️  Warning: Error loading MCP servers: #{e.message}"
       nil
+    end
+
+    def process_subagents(recipe_config, parent_recipe_name)
+      return unless recipe_config['subagents'].is_a?(Array)
+
+      puts "\n🤖 Processing subagents..."
+
+      # Ensure .claude/agents directory exists
+      agents_dir = '.claude/agents'
+      FileUtils.mkdir_p(agents_dir)
+
+      recipe_config['subagents'].each do |subagent|
+        agent_name = subagent['name']
+        recipe_name = subagent['recipe']
+
+        next unless agent_name && recipe_name
+
+        puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
+
+        # Load the referenced recipe
+        recipes = load_all_recipes
+        subagent_recipe = recipes[recipe_name]
+
+        unless subagent_recipe
+          puts "    ⚠️  Warning: Recipe '#{recipe_name}' not found, skipping"
+          next
+        end
+
+        # Generate the agent file
+        generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name)
+      end
+
+      puts "✅ Generated #{recipe_config['subagents'].size} subagent(s)"
+    rescue StandardError => e
+      puts "⚠️  Warning: Could not process subagents: #{e.message}"
+    end
+
+    def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name)
+      agent_file = ".claude/agents/#{agent_name}.md"
+      local_sources, command_files = load_agent_sources(recipe_name, recipe_config)
+
+      context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources)
+      write_agent_file(agent_file, context)
+      save_subagent_commands(command_files, agent_name, recipe_config) unless command_files.empty?
+    rescue StandardError => e
+      puts "    ⚠️  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
+    end
+
+    def load_agent_sources(recipe_name, recipe_config)
+      sources, = load_recipe_sources(recipe_name)
+      local_sources, command_files, = process_sources_for_squash(sources, 'claude', recipe_config, {})
+      [local_sources, command_files]
+    end
+
+    def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources)
+      {
+        agent_name:,
+        description: recipe_config['description'] || "Subagent for #{recipe_name}",
+        local_sources:,
+        parent_recipe_name:,
+        recipe_config:,
+        recipe_name:,
+        timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
+      }
+    end
+
+    def write_agent_file(agent_file, context)
+      File.open(agent_file, 'w') do |output|
+        write_agent_frontmatter(output, context)
+        write_agent_content(output, context)
+        write_agent_mcp_servers(output, context[:recipe_config])
+        write_agent_footer(output, context[:timestamp], context[:recipe_name])
+      end
+    end
+
+    def write_agent_frontmatter(output, context)
+      output.puts <<~YAML
+        ---
+        name: #{context[:agent_name]}
+        description: #{context[:description]}
+        tools: inherit
+        model: inherit
+        # Auto-generated from recipe: #{context[:recipe_name]}
+        # Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'
+        ---
+
+      YAML
+    end
+
+    def write_agent_content(output, context)
+      output.puts "# #{context[:agent_name].split('_').map(&:capitalize).join(' ')}"
+      output.puts
+      output.puts context[:description]
+      output.puts
+      output.puts '## Recipe Content'
+      output.puts
+
+      context[:local_sources].each do |source|
+        next if source[:content].nil? || source[:content].strip.empty?
+
+        output.puts source[:content]
+        output.puts
+        output.puts '---'
+        output.puts
+      end
+    end
+
+    def write_agent_mcp_servers(output, recipe_config)
+      return unless recipe_config['mcp_servers']&.any?
+
+      output.puts '## MCP Servers'
+      output.puts
+      output.puts 'This subagent has access to the following MCP servers:'
+      recipe_config['mcp_servers'].each do |server|
+        output.puts "- #{server}"
+      end
+      output.puts
+    end
+
+    def write_agent_footer(output, timestamp, recipe_name)
+      output.puts '---'
+      output.puts "*Last generated: #{timestamp}*"
+      output.puts "*Source recipe: #{recipe_name}*"
+    end
+
+    def save_subagent_commands(command_files, agent_name, recipe_config = nil)
+      return if command_files.empty?
+
+      # Save commands to .claude/commands/{agent_name}/
+      commands_dir = ".claude/commands/#{agent_name}"
+      FileUtils.mkdir_p(commands_dir)
+
+      omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
+
+      command_files.each do |file|
+        next unless file.is_a?(Hash)
+
+        # Get the command relative path (without omit_prefix if specified)
+        relative_path = get_command_relative_path(file[:path], omit_prefix)
+
+        # Save to .claude/commands/{agent_name}/{relative_path}
+        target_file = File.join(commands_dir, relative_path)
+        target_dir = File.dirname(target_file)
+        FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
+
+        File.write(target_file, file[:content])
+      end
+
+      puts "    📁 Saved #{command_files.size} command file(s) to .claude/commands/#{agent_name}/"
+    rescue StandardError => e
+      puts "    ⚠️  Warning: Could not save commands for '#{agent_name}': #{e.message}"
     end
 
     def cached_file_count(output_file)
