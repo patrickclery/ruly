@@ -753,7 +753,23 @@ module Ruly
         full_path = find_rule_file(file)
 
         if full_path
-          sources << {path: file, type: 'local'}
+          # Check if the path is a directory
+          if File.directory?(full_path)
+            # If it's a directory, recursively find all .md files
+            md_files = find_markdown_files_recursively(full_path)
+            if md_files.any?
+              # Add each markdown file as a separate source
+              md_files.each do |md_file|
+                # Use the relative path from the original file spec
+                sources << {path: md_file, type: 'local'}
+              end
+            else
+              puts "⚠️  Warning: No markdown files found in directory: #{file}"
+            end
+          else
+            # It's a regular file, add it as before
+            sources << {path: file, type: 'local'}
+          end
         else
           puts "⚠️  Warning: File not found: #{file}"
         end
@@ -778,6 +794,14 @@ module Ruly
       end
 
       nil # File or directory not found in any location
+    end
+
+    def find_markdown_files_recursively(directory)
+      # Find all .md files recursively in the given directory
+      md_files = Dir.glob(File.join(directory, '**', '*.md')).map do |file|
+        file
+      end
+      md_files.sort
     end
 
     def process_recipe_sources(recipe, sources)
