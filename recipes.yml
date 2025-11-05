@@ -122,6 +122,21 @@ recipes:
       - playwright # UI testing
       - circleci # CI/CD pipeline management
       - Ref # Documentation lookup
+
+  workaxle-review:
+    description: "WorkAxle final review and QA stage"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-comments.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-review-feedback.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+    mcp_servers:
+      - github # Essential for PR management and reviews
+      - atlassian # For Jira ticket updates and status changes
+      - playwright # For UI testing, screenshots, and demos
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
