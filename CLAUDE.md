@@ -4,6 +4,11 @@
 
 # Claude Code Instructions
 
+## Ruly Recipe and MCP Configuration Patterns
+
+**Import Ruly recipe configuration patterns and MCP server guidelines.**
+@./.claude/ruly-recipes-mcp-patterns.md
+
 ## Task Master AI Instructions
 
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
