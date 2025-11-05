@@ -15,6 +15,76 @@ recipes:
       - rules/ruby/sequel.md
       - rules/ruby/monads.md
       - rules/ruby/rspec.md
+
+  # WorkAxle recipes - Dynamic loading based on current task
+  workaxle-core:
+    description: "WorkAxle essential patterns only"
+    files:
+      - rules/workaxle/core.md
+
+  workaxle-bug:
+    description: "WorkAxle bug investigation and fixing"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/profiles/bug-investigation.md
+      - rules/workaxle/core/bug/*.md
+      - rules/workaxle/commands/bug-*.md
+
+  workaxle-testing:
+    description: "WorkAxle RSpec testing and TDD"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/profiles/testing.md
+      - rules/workaxle/core/frameworks/rspec-*.md
+      - rules/workaxle/core/testing/*.md
+      - rules/workaxle/commands/pre-commit.md
+      - rules/workaxle/commands/require.md
+
+  workaxle-migration:
+    description: "WorkAxle database migrations"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/profiles/migration.md
+      - rules/workaxle/core/migrations/*.md
+
+  workaxle-grpc:
+    description: "WorkAxle gRPC service development"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/profiles/grpc.md
+      - rules/workaxle/core/services/grpc/*.md
+      - rules/workaxle/commands/debug-grpc.md
+
+  workaxle-pr:
+    description: "WorkAxle PR creation and management"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/pr/*.md
+      - rules/workaxle/commands/pr-*.md
+      - rules/workaxle/commands/git-*.md
+
+  workaxle-feature:
+    description: "WorkAxle new feature development"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/core/standards/code-patterns.md
+      - rules/workaxle/core/standards/architecture-patterns.md
+      - rules/workaxle/core/frameworks/sequel.md
+      - rules/workaxle/core/frameworks/monads.md
+      - rules/workaxle/core/testing/*.md
+
+  workaxle-refactor:
+    description: "WorkAxle code refactoring"
+    files:
+      - rules/workaxle/core.md
+      - rules/workaxle/core/standards/*.md
+      - rules/workaxle/core/frameworks/common.md
+      - rules/workaxle/core/frameworks/ruby-practices.md
+
+  workaxle-full:
+    description: "Complete WorkAxle documentation"
+    files:
+      - rules/workaxle/**/*.md
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
