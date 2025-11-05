@@ -110,7 +110,14 @@ recipes:
   workaxle-full:
     description: "Complete WorkAxle documentation"
     files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/
+      - /Users/patrick/Projects/ruly/rules/workaxle/archive/
+      - /Users/patrick/Projects/ruly/rules/workaxle/user-svc/
     mcp_servers:
       - atlassian # Full Jira integration
       - github # Full GitHub integration
@@ -163,6 +170,17 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - github # For linking PRs to tickets
+
+  workaxle-orchestrator:
+    description: "WorkAxle multi-service development and E2E testing"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+    mcp_servers:
+      - github # For code context
+      - playwright # For E2E testing
+      - Ref # For documentation lookup
+
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
