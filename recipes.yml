@@ -27,9 +27,10 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/bug/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-diagnose.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-fix.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
@@ -47,8 +48,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pre-commit.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/require.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/commands/pre-commit.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
     mcp_servers:
       - github # For code context
       - playwright # For UI/integration testing
@@ -68,7 +69,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/debug-grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
     mcp_servers:
       - github # For code context
       - Ref # For API documentation lookup
@@ -78,11 +79,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-comments.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-review-feedback.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-reply-and-hide.md
     mcp_servers:
       - github # Essential for PR management
       - atlassian # For linking to Jira tickets
@@ -128,10 +124,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-comments.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-review-feedback.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
     mcp_servers:
       - github # Essential for PR management and reviews
