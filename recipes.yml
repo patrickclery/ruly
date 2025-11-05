@@ -20,15 +20,16 @@ recipes:
   workaxle-core:
     description: "WorkAxle essential patterns only"
     files:
-      - rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
 
   workaxle-bug:
     description: "WorkAxle bug investigation and fixing"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/profiles/bug-investigation.md
-      - rules/workaxle/core/bug/*.md
-      - rules/workaxle/commands/bug-*.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/bug/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-fix.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
@@ -37,12 +38,17 @@ recipes:
   workaxle-testing:
     description: "WorkAxle RSpec testing and TDD"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/profiles/testing.md
-      - rules/workaxle/core/frameworks/rspec-*.md
-      - rules/workaxle/core/testing/*.md
-      - rules/workaxle/commands/pre-commit.md
-      - rules/workaxle/commands/require.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pre-commit.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/require.md
     mcp_servers:
       - github # For code context
       - playwright # For UI/integration testing
@@ -50,19 +56,19 @@ recipes:
   workaxle-migration:
     description: "WorkAxle database migrations"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/profiles/migration.md
-      - rules/workaxle/core/migrations/*.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
     mcp_servers:
       - github # For code/PR context
 
   workaxle-grpc:
     description: "WorkAxle gRPC service development"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/profiles/grpc.md
-      - rules/workaxle/core/services/grpc/*.md
-      - rules/workaxle/commands/debug-grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/debug-grpc.md
     mcp_servers:
       - github # For code context
       - Ref # For API documentation lookup
@@ -70,10 +76,13 @@ recipes:
   workaxle-pr:
     description: "WorkAxle PR creation and management"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/pr/*.md
-      - rules/workaxle/commands/pr-*.md
-      - rules/workaxle/commands/git-*.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-comments.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-review-feedback.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/git-reply-and-hide.md
     mcp_servers:
       - github # Essential for PR management
       - atlassian # For linking to Jira tickets
@@ -81,12 +90,12 @@ recipes:
   workaxle-feature:
     description: "WorkAxle new feature development"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/core/standards/code-patterns.md
-      - rules/workaxle/core/standards/architecture-patterns.md
-      - rules/workaxle/core/frameworks/sequel.md
-      - rules/workaxle/core/frameworks/monads.md
-      - rules/workaxle/core/testing/*.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
     mcp_servers:
       - github # For code context
       - atlassian # For requirements from Jira
@@ -95,17 +104,17 @@ recipes:
   workaxle-refactor:
     description: "WorkAxle code refactoring"
     files:
-      - rules/workaxle/core.md
-      - rules/workaxle/core/standards/*.md
-      - rules/workaxle/core/frameworks/common.md
-      - rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
     mcp_servers:
       - github # For code context
 
   workaxle-full:
     description: "Complete WorkAxle documentation"
     files:
-      - rules/workaxle/**/*.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/
     mcp_servers:
       - atlassian # Full Jira integration
       - github # Full GitHub integration
