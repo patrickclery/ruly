@@ -1,0 +1,23 @@
+---
+agent: claude
+command_files:
+  - ".claude/commands/diagnose.md"
+  - ".claude/commands/fix.md"
+  - ".claude/commands/grpc.md"
+  - ".claude/commands/just-do-it.md"
+  - ".claude/commands/start-server.md"
+  - ".claude/commands/pre-commit.md"
+  - ".claude/commands/require.md"
+  - ".claude/commands/create-branch.md"
+  - ".claude/commands/create.md"
+  - ".claude/commands/make-tests-green.md"
+  - ".claude/commands/request-review.md"
+  - ".claude/commands/draft.md"
+  - ".claude/commands/resolve-outdated-comments.md"
+  - ".claude/commands/review-feedback-loop.md"
+  - ".claude/commands/just-do-it.md"
+created_at: "2025-10-17T10:31:10-04:00"
+files_count: 39
+output_file: CLAUDE.local.md
+recipe: workaxle_core_local
+version: 0.1.0

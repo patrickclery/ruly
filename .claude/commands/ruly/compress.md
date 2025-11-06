@@ -194,22 +194,6 @@ When compression opportunities are found, the command can offer to:
 
 ## Advanced Features
 
-### Custom Patterns
-
-Define custom patterns to detect in `.ruly.yml`:
-
-```yaml
-compression:
-  patterns:
-    - name: "make_command"
-      regex: "make [a-z-]+"
-      suggest: "reference:commands-reference.md"
-
-    - name: "sequel_dataset"
-      regex: "\.dataset\.(not_deleted|active)"
-      suggest: "pattern:sequel-queries.md"
-```
-
 ### Similarity Threshold
 
 Configure how similar content must be to be considered duplicate:

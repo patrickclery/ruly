@@ -176,14 +176,6 @@ RSpec.describe Ruly::CLI, type: :cli do
 
         expect(output).to include("agent generation mode with 'test_agent' recipe")
       end
-
-      it 'creates metadata file with correct output_file' do
-        cli.invoke(:squash, ['test_agent'])
-
-        expect(File.exist?('.ruly.yml')).to be(true)
-        metadata = YAML.load_file('.ruly.yml')
-        expect(metadata['output_file']).to eq('.claude/agents/test_agent.md')
-      end
     end
 
     context 'with --output-file override on array recipe' do
@@ -255,13 +247,6 @@ RSpec.describe Ruly::CLI, type: :cli do
 
         expect(output).to include("squash mode with 'test_recipe' recipe")
         expect(output).not_to include('agent generation mode')
-      end
-
-      it 'creates metadata with correct output_file' do
-        cli.invoke(:squash, ['test_recipe'])
-
-        metadata = YAML.load_file('.ruly.yml')
-        expect(metadata['output_file']).to eq('CLAUDE.local.md')
       end
 
       it 'includes content from recipe files' do

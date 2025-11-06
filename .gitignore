@@ -7,7 +7,6 @@ cache/
 
 # Ruly generated files
 test.md
-.ruly.yml
 vendor/bundle
 *.gem
 .bundle

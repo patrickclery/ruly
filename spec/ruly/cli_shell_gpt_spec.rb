@@ -10,12 +10,11 @@ RSpec.describe Ruly::CLI do
 
     describe 'agent normalization' do
       it 'normalizes sgpt to shell_gpt' do
-        cli.options = { agent: 'sgpt', output_file: 'role.json' }
+        cli.options = {agent: 'sgpt', output_file: 'role.json'}
 
         # We need to access the normalized agent value
         # This happens in the squash method, so we'll test it through behavior
-        allow(cli).to receive(:collect_local_sources).and_return([])
-        allow(cli).to receive(:process_sources_for_squash).and_return([[], [], []])
+        allow(cli).to receive_messages(collect_local_sources: [], process_sources_for_squash: [[], [], []])
         allow(cli).to receive(:write_shell_gpt_json)
         allow(cli).to receive(:print_summary)
 
@@ -29,19 +28,19 @@ RSpec.describe Ruly::CLI do
       let(:output_file) { 'test_role.json' }
       let(:local_sources) do
         [
-          { path: 'rules/test1.md', content: 'Test content 1' },
-          { path: 'rules/test2.md', content: 'Test content 2' }
+          {content: 'Test content 1', path: 'rules/test1.md'},
+          {content: 'Test content 2', path: 'rules/test2.md'}
         ]
       end
 
       after do
-        File.delete(output_file) if File.exist?(output_file)
+        FileUtils.rm_f(output_file)
       end
 
       it 'creates a valid JSON file' do
         cli.send(:write_shell_gpt_json, output_file, local_sources)
 
-        expect(File.exist?(output_file)).to be true
+        expect(File.exist?(output_file)).to be(true)
 
         content = File.read(output_file)
         json = JSON.parse(content)
@@ -74,8 +73,8 @@ RSpec.describe Ruly::CLI do
       it 'properly escapes special characters in JSON' do
         sources_with_special = [
           {
-            path: 'rules/special.md',
-            content: 'Content with "quotes" and \\backslashes\\ and newlines\nand tabs\t'
+            content: 'Content with "quotes" and \\backslashes\\ and newlines\nand tabs\t',
+            path: 'rules/special.md'
           }
         ]
 
@@ -94,13 +93,13 @@ RSpec.describe Ruly::CLI do
       it 'handles invalid UTF-8 sequences' do
         invalid_content = "Valid text \xC3\x28 invalid UTF-8"
         sources_with_invalid = [
-          { path: 'rules/invalid.md', content: invalid_content }
+          {content: invalid_content, path: 'rules/invalid.md'}
         ]
 
         # Should not raise an error
-        expect {
+        expect do
           cli.send(:write_shell_gpt_json, output_file, sources_with_invalid)
-        }.not_to raise_error
+        end.not_to raise_error
 
         json = JSON.parse(File.read(output_file, encoding: 'UTF-8'))
         expect(json['description']).to include('Valid text')
@@ -119,7 +118,7 @@ RSpec.describe Ruly::CLI do
           Use `backticks` for inline code.
         MD
 
-        sources = [{ path: 'rules/code.md', content: markdown_content }]
+        sources = [{content: markdown_content, path: 'rules/code.md'}]
 
         cli.send(:write_shell_gpt_json, output_file, sources)
 
@@ -162,8 +161,8 @@ RSpec.describe Ruly::CLI do
         # Need to change directory for local source collection
         allow(Dir).to receive(:pwd).and_return(temp_dir)
         allow(Dir).to receive(:glob).with('rules/**/*.md').and_return([
-          "rules/test1.md",
-          "rules/test2.md"
+          'rules/test1.md',
+          'rules/test2.md'
         ])
       end
 
@@ -174,8 +173,8 @@ RSpec.describe Ruly::CLI do
       it 'generates JSON output for shell_gpt agent' do
         cli.options = {
           agent: 'shell_gpt',
-          output_file: output_file,
-          dry_run: false
+          dry_run: false,
+          output_file:
         }
 
         # Mock file reading
@@ -186,7 +185,7 @@ RSpec.describe Ruly::CLI do
         cli.squash
 
         # Verify JSON was created
-        expect(File.exist?(output_file)).to be true
+        expect(File.exist?(output_file)).to be(true)
 
         json = JSON.parse(File.read(output_file, encoding: 'UTF-8'))
         expect(json['name']).to eq('role')
@@ -195,29 +194,16 @@ RSpec.describe Ruly::CLI do
         expect(json['description'].length).to be > 100
       end
 
-      it 'skips metadata file creation for shell_gpt' do
-        cli.options = {
-          agent: 'shell_gpt',
-          output_file: output_file,
-          dry_run: false
-        }
-
-        cli.squash
-
-        metadata_file = File.join(temp_dir, '.ruly.yml')
-        expect(File.exist?(metadata_file)).to be false
-      end
-
       it 'works with sgpt alias' do
         cli.options = {
           agent: 'sgpt',
-          output_file: output_file,
-          dry_run: false
+          dry_run: false,
+          output_file:
         }
 
         cli.squash
 
-        expect(File.exist?(output_file)).to be true
+        expect(File.exist?(output_file)).to be(true)
         json = JSON.parse(File.read(output_file, encoding: 'UTF-8'))
         expect(json).to have_key('name')
         expect(json).to have_key('description')
@@ -228,12 +214,11 @@ RSpec.describe Ruly::CLI do
       it 'shows appropriate message for shell_gpt agent' do
         cli.options = {
           agent: 'shell_gpt',
-          output_file: 'test.json',
-          dry_run: false
+          dry_run: false,
+          output_file: 'test.json'
         }
 
-        allow(cli).to receive(:collect_local_sources).and_return([])
-        allow(cli).to receive(:process_sources_for_squash).and_return([[], [], []])
+        allow(cli).to receive_messages(collect_local_sources: [], process_sources_for_squash: [[], [], []])
         allow(cli).to receive(:write_shell_gpt_json)
 
         expect(cli).to receive(:print_summary).with('shell_gpt role JSON', 'test.json', anything)

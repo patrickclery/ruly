@@ -41,6 +41,9 @@ module Ruly
     option :taskmaster_config, aliases: '-T', default: false,
                                desc: 'Copy TaskMaster config to .taskmaster/config.json',
                                type: :boolean
+    option :keep_taskmaster, default: false,
+                             desc: 'When used with --clean or --deepclean, append Task Master import to output file',
+                             type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested (deepclean takes precedence over clean)
@@ -58,7 +61,6 @@ module Ruly
       dry_run = options[:dry_run]
       git_ignore = options[:git_ignore]
       git_exclude = options[:git_exclude]
-      metadata_file = '.ruly.yml'
 
       # Load recipe early to determine output file path based on recipe type
       sources, recipe_config = if recipe_name
@@ -115,7 +117,6 @@ module Ruly
             puts '  → Remove .claude/ directory'
             puts '  → Remove CLAUDE.local.md'
             puts '  → Remove CLAUDE.md'
-            puts '  → Remove .ruly.yml'
             puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
             puts ''
           elsif options[:clean]
@@ -127,8 +128,6 @@ module Ruly
           puts "Would create: #{output_file}"
           puts "  → #{local_sources.size} rule files combined"
           puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
-          puts "\nWould create: #{metadata_file}"
-          puts '  → Metadata for clean command'
 
           if agent == 'claude' && !command_files.empty?
             puts "\nWould create command files in .claude/commands/:"
@@ -202,24 +201,16 @@ module Ruly
               output.puts
             end
           end
-        end
 
-        # Save metadata file (skip for shell_gpt)
-        unless agent == 'shell_gpt'
-          metadata = {
-            'agent' => agent,
-            'command_files' => if agent == 'claude' && !command_files.empty?
-                                 command_files.map { |f| ".claude/commands/#{File.basename(f[:path])}" }
-                               else
-                                 []
-                               end,
-            'created_at' => Time.now.iso8601,
-            'files_count' => local_sources.size,
-            'output_file' => output_file,
-            'recipe' => recipe_name,
-            'version' => Ruly::VERSION
-          }
-          File.write(metadata_file, metadata.to_yaml)
+          # Append Task Master import if requested (when using --clean or --deepclean with --keep-taskmaster)
+          if (options[:clean] || options[:deepclean]) && options[:keep_taskmaster] && agent != 'shell_gpt'
+            File.open(output_file, 'a') do |file|
+              file.puts
+              file.puts '## Task Master AI Instructions'
+              file.puts '**Import Task Master\'s development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**'
+              file.puts '@./.taskmaster/CLAUDE.md'
+            end
+          end
         end
 
         # Update git ignore files if requested
@@ -281,14 +272,13 @@ module Ruly
                      type: :boolean
     option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
     option :deepclean, default: false,
-                       desc: 'Remove all generated artifacts (.claude/, CLAUDE files, .ruly.yml, MCP settings)',
+                       desc: 'Remove all generated artifacts (.claude/, CLAUDE files, MCP settings)',
                        type: :boolean
     option :taskmaster_config, aliases: '-T', default: false, desc: 'Also remove .taskmaster/ directory',
                                type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
-    def clean(recipe_name = nil)
+    def clean(_recipe_name = nil)
       dry_run = options[:dry_run]
-      metadata_file = '.ruly.yml'
       files_to_remove = []
       agent = options[:agent] || 'claude'
       # Normalize agent aliases
@@ -309,46 +299,24 @@ module Ruly
         # Remove MCP settings files (both JSON and YAML)
         files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
         files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
-
-        # Also remove metadata file
-        files_to_remove << metadata_file if File.exist?(metadata_file)
-      end
-
-      # Handle TaskMaster config removal if -T flag is present
-      if options[:taskmaster_config]
-        files_to_remove << '.taskmaster/' if Dir.exist?('.taskmaster')
-      elsif File.exist?(metadata_file) && !options[:output_file] && !recipe_name
+      else
         # Normal clean behavior - ALWAYS remove entire .claude directory
 
-        # Use metadata or recipe for other files
-        metadata = YAML.load_file(metadata_file)
-        output_file = metadata['output_file']
-        metadata['agent'] || 'claude'
-
-        # Add output file from metadata
-        files_to_remove << output_file if File.exist?(output_file)
-        files_to_remove << metadata_file
-        # Remove MCP settings based on agent
-        agent_from_metadata = metadata['agent'] || 'claude'
-        # Normalize agent aliases
-        agent_from_metadata = 'claude' if agent_from_metadata&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
-        if agent_from_metadata == 'claude'
-          files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
-        elsif File.exist?('.mcp.yml')
-          files_to_remove << '.mcp.yml'
-        end
-      else
         # Clean based on recipe or fall back to defaults
         output_file = options[:output_file] || "#{agent.upcase}.local.md"
 
         files_to_remove << output_file if File.exist?(output_file)
-        files_to_remove << metadata_file if File.exist?(metadata_file)
         # Remove MCP settings based on agent
         if agent == 'claude'
           files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
         elsif File.exist?('.mcp.yml')
           files_to_remove << '.mcp.yml'
         end
+      end
+
+      # Handle TaskMaster config removal if -T flag is present
+      if options[:taskmaster_config]
+        files_to_remove << '.taskmaster/' if Dir.exist?('.taskmaster')
       end
 
       # Remove duplicates while preserving order
@@ -2138,9 +2106,6 @@ module Ruly
 
       # Add main output file
       patterns << output_file
-
-      # Add metadata file
-      patterns << '.ruly.yml'
 
       # Add command files directory for Claude
       patterns << '.claude/commands/' if agent == 'claude' && !command_files.empty?
