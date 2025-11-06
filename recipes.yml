@@ -21,6 +21,8 @@ recipes:
     description: "WorkAxle essential patterns only"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+    mcp_servers:
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-bug:
     description: "WorkAxle bug investigation and fixing"
@@ -35,6 +37,7 @@ recipes:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
       - grafana # For metrics and monitoring
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-testing:
     description: "WorkAxle RSpec testing and TDD"
@@ -53,6 +56,7 @@ recipes:
     mcp_servers:
       - github # For code context
       - playwright # For UI/integration testing
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-migration:
     description: "WorkAxle database migrations"
@@ -62,6 +66,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
     mcp_servers:
       - github # For code/PR context
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-grpc:
     description: "WorkAxle gRPC service development"
@@ -73,6 +78,7 @@ recipes:
     mcp_servers:
       - github # For code context
       - Ref # For API documentation lookup
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-pr:
     description: "WorkAxle PR creation and management"
@@ -82,6 +88,7 @@ recipes:
     mcp_servers:
       - github # Essential for PR management
       - atlassian # For linking to Jira tickets
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-feature:
     description: "WorkAxle new feature development"
@@ -96,6 +103,7 @@ recipes:
       - github # For code context
       - atlassian # For requirements from Jira
       - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-refactor:
     description: "WorkAxle code refactoring"
@@ -106,6 +114,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
     mcp_servers:
       - github # For code context
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-full:
     description: "Complete WorkAxle documentation"
@@ -124,6 +133,7 @@ recipes:
       - grafana # Monitoring and metrics
       - playwright # UI testing
       - Ref # Documentation lookup
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-finalize:
     description: "WorkAxle final testing and cleanup phase"
@@ -140,6 +150,7 @@ recipes:
     mcp_servers:
       - github # For CI/CD checks and test status
       - playwright # For UI/integration testing
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-review:
     description: "WorkAxle final review and QA stage"
@@ -153,6 +164,7 @@ recipes:
       - github # Essential for PR management and reviews
       - atlassian # For Jira ticket updates and status changes
       - playwright # For UI testing, screenshots, and demos
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-atlassian:
     description: "WorkAxle Jira and Confluence operations"
@@ -162,6 +174,7 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - github # For linking PRs to tickets
+      - task-master-ai # Task management and workflow tracking
 
   jira:
     description: "Jira and Confluence operations (alias for workaxle-atlassian)"
@@ -171,6 +184,7 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - github # For linking PRs to tickets
+      - task-master-ai # Task management and workflow tracking
 
   workaxle-orchestrator:
     description: "WorkAxle multi-service development and E2E testing"
@@ -181,6 +195,7 @@ recipes:
       - github # For code context
       - playwright # For E2E testing
       - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
 
   # Example recipe with multiple source types
   example_mixed:
