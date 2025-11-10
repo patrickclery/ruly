@@ -99,6 +99,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/story.md
     mcp_servers:
       - github # For code context
       - atlassian # For requirements from Jira
