@@ -199,6 +199,24 @@ recipes:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
+  workaxle-spike:
+    description: "WorkAxle spike investigation and research for Jira tasks"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+    mcp_servers:
+      - atlassian # For Jira ticket investigation and research
+      - Ref # For documentation lookup and external research
+      - task-master-ai # Task management and spike tracking
+
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
