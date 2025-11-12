@@ -217,6 +217,15 @@ recipes:
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
+  local:
+    description: "Local development with all MCP servers, no rule files"
+    files: []
+    mcp_servers:
+      - github # GitHub API and PR management
+      - playwright # Browser automation and UI testing
+      - Ref # Documentation reference lookup
+      - task-master-ai # Task management and workflow tracking
+
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
