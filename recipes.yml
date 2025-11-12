@@ -32,6 +32,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/pr-create.md
     mcp_servers:
