@@ -1,0 +1,176 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 16,
+        "title": "Create extract_scripts_from_frontmatter method",
+        "description": "Implement a method to parse frontmatter and extract script declarations in both structured and simplified formats",
+        "details": "Create a new method `extract_scripts_from_frontmatter` in `lib/ruly/cli.rb` that:\n\n1. Accepts content and source_path parameters\n2. Parses YAML frontmatter from the content\n3. Extracts scripts section in both formats:\n   - Structured format with `files:` and `remote:` keys\n   - Simplified format (array of strings)\n4. Returns a hash with `:files` and `:remote` keys\n5. Handles error cases gracefully:\n   - Missing frontmatter\n   - Invalid YAML\n   - Missing scripts section\n   - Invalid scripts format\n\n```ruby\ndef extract_scripts_from_frontmatter(content, source_path)\n  return {files: [], remote: []} unless content.start_with?('---')\n\n  parts = content.split(/^---\\s*$/, 3)\n  return {files: [], remote: []} if parts.length < 3\n\n  frontmatter = YAML.safe_load(parts[1])\n  scripts = frontmatter['scripts']\n  return {files: [], remote: []} unless scripts\n\n  # Handle both structured and simplified formats\n  if scripts.is_a?(Hash)\n    # Structured format: { files: [...], remote: [...] }\n    {\n      files: scripts['files'] || [],\n      remote: scripts['remote'] || []\n    }\n  elsif scripts.is_a?(Array)\n    # Simplified format: treat as files\n    {\n      files: scripts,\n      remote: []\n    }\n  else\n    warn \"Warning: Invalid scripts format in #{source_path}\"\n    {files: [], remote: []}\n  end\nrescue StandardError => e\n  warn \"Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}\"\n  {files: [], remote: []}\nend\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Successful parsing of structured format with both files and remote scripts\n2. Successful parsing of simplified format (array)\n3. Proper handling of empty/missing scripts frontmatter\n4. Error handling for invalid frontmatter formats\n5. Error handling for malformed YAML\n6. Proper warning messages for errors",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Implement normalize_github_url method",
+        "description": "Create a helper method to normalize GitHub URLs from both full URLs and shorthand syntax",
+        "details": "Implement the `normalize_github_url` method in `lib/ruly/cli.rb` that:\n\n1. Accepts a URL string parameter\n2. Converts shorthand syntax (`github:org/repo/path`) to full GitHub URLs\n3. Passes through full URLs unchanged\n4. Handles edge cases gracefully\n\n```ruby\ndef normalize_github_url(url)\n  # Convert shorthand github:org/repo/path to full URL\n  if url.start_with?('github:')\n    path = url.sub('github:', '')\n    \"https://github.com/#{path}\"\n  else\n    url\n  end\nend\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Conversion of shorthand syntax to full URLs\n2. Passing through of already-full URLs\n3. Handling of edge cases (missing parts, invalid formats)",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Create collect_scripts_from_sources method",
+        "description": "Implement a method to collect script declarations from multiple rule sources",
+        "details": "Create a new method `collect_scripts_from_sources` in `lib/ruly/cli.rb` that:\n\n1. Accepts an array of source objects\n2. For each local source, reads the file content and extracts script declarations\n3. Resolves relative paths from the rules directory\n4. Handles absolute paths\n5. Collects both local and remote script references\n6. Returns a hash with `:local` and `:remote` arrays containing script metadata\n\n```ruby\ndef collect_scripts_from_sources(sources)\n  script_files = {local: [], remote: []}\n\n  sources.each do |source|\n    next unless source[:type] == 'local'\n\n    file_path = find_rule_file(source[:path])\n    next unless file_path\n\n    content = File.read(file_path, encoding: 'UTF-8')\n    scripts = extract_scripts_from_frontmatter(content, source[:path])\n\n    # Collect local script files\n    scripts[:files].each do |script_path|\n      resolved_path = if script_path.start_with?('/')\n                        # Absolute path - use as-is\n                        script_path\n                      else\n                        # Relative path - resolve from rules directory\n                        find_rule_file(script_path)\n                      end\n\n      if resolved_path && File.exist?(resolved_path)\n        script_files[:local] << {\n          source_path: resolved_path,\n          relative_path: File.basename(script_path),\n          from_rule: source[:path]\n        }\n      else\n        warn \"Warning: Script not found: #{script_path} (from #{source[:path]})\"\n      end\n    end\n\n    # Collect remote script URLs\n    scripts[:remote].each do |script_url|\n      normalized_url = normalize_github_url(script_url)\n      script_files[:remote] << {\n        url: normalized_url,\n        filename: File.basename(script_url),\n        from_rule: source[:path]\n      }\n    end\n  end\n\n  script_files\nend\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Collection of local scripts with relative paths\n2. Collection of local scripts with absolute paths\n3. Collection of remote scripts\n4. Handling of mixed local and remote scripts\n5. Error handling for missing script files\n6. Handling of duplicate script references\n7. Mock file system operations for testing",
+        "priority": "high",
+        "dependencies": [16, 17],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Implement fetch_remote_scripts method",
+        "description": "Create a method to fetch remote scripts from GitHub URLs",
+        "details": "Implement the `fetch_remote_scripts` method in `lib/ruly/cli.rb` that:\n\n1. Accepts an array of remote script metadata\n2. For each remote script:\n   - Converts GitHub blob URLs to raw content URLs\n   - Fetches the script content using Net::HTTP\n   - Saves the content to a temporary file\n   - Returns metadata including the temp file path\n3. Handles network errors and HTTP error codes gracefully\n4. Provides user feedback on fetch progress\n\n```ruby\ndef fetch_remote_scripts(remote_scripts)\n  return [] if remote_scripts.empty?\n\n  puts '🔄 Fetching remote scripts...'\n  fetched_scripts = []\n\n  remote_scripts.each do |script|\n    begin\n      # Convert blob URL to raw content URL\n      raw_url = script[:url]\n                  .gsub('github.com', 'raw.githubusercontent.com')\n                  .gsub('/blob/', '/')\n\n      # Fetch the script content\n      uri = URI(raw_url)\n      response = Net::HTTP.get_response(uri)\n\n      if response.code == '200'\n        # Save to temp location\n        temp_file = Tempfile.new(['script', File.extname(script[:filename])])\n        temp_file.write(response.body)\n        temp_file.close\n\n        fetched_scripts << {\n          source_path: temp_file.path,\n          relative_path: script[:filename],\n          from_rule: script[:from_rule],\n          remote: true\n        }\n\n        puts \"  ✓ #{script[:filename]} (from #{URI(script[:url]).host})\"\n      else\n        warn \"  ✗ Failed to fetch #{script[:filename]}: HTTP #{response.code}\"\n      end\n    rescue StandardError => e\n      warn \"  ✗ Error fetching #{script[:filename]}: #{e.message}\"\n    end\n  end\n\n  fetched_scripts\nend\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Successful fetching of remote scripts\n2. Conversion of GitHub blob URLs to raw content URLs\n3. Proper handling of HTTP error codes\n4. Error handling for network failures\n5. Proper creation of temporary files\n6. Mock HTTP responses for testing",
+        "priority": "high",
+        "dependencies": [17],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Implement copy_scripts method",
+        "description": "Create a method to copy scripts to the ~/.claude/scripts/ directory and make them executable",
+        "details": "Implement the `copy_scripts` method in `lib/ruly/cli.rb` (repurposing the existing `copy_bin_files` method) that:\n\n1. Accepts script_files hash and optional destination_dir parameters\n2. Combines local and fetched remote scripts\n3. Creates the destination directory if it doesn't exist\n4. Preserves subdirectory structure when copying\n5. Makes all copied scripts executable (chmod 0755)\n6. Provides user feedback on copy progress\n\n```ruby\ndef copy_scripts(script_files, destination_dir = nil)\n  local_scripts = script_files[:local] || []\n  remote_scripts = script_files[:remote] || []\n\n  return if local_scripts.empty? && remote_scripts.empty?\n\n  # Fetch remote scripts first\n  fetched_remote = fetch_remote_scripts(remote_scripts)\n\n  # Combine local and fetched remote scripts\n  all_scripts = local_scripts + fetched_remote\n  return if all_scripts.empty?\n\n  # Default to Claude Code standard directory\n  scripts_dir = destination_dir || File.expand_path('~/.claude/scripts')\n  FileUtils.mkdir_p(scripts_dir)\n\n  puts \"🔧 Copying #{all_scripts.size} scripts to #{scripts_dir}...\"\n  \n  copied_count = 0\n  all_scripts.each do |file|\n    source_path = file[:source_path]\n    relative_path = file[:relative_path]\n\n    # Preserve subdirectory structure from script path\n    target_path = File.join(scripts_dir, relative_path)\n    target_dir = File.dirname(target_path)\n\n    # Create subdirectories if needed\n    FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)\n\n    # Copy the file\n    FileUtils.cp(source_path, target_path)\n\n    # Make it executable\n    File.chmod(0o755, target_path)\n\n    type_label = file[:remote] ? 'remote' : 'local'\n    puts \"  ✓ #{relative_path} (#{type_label})\"\n\n    copied_count += 1\n  end\n\n  puts \"🔧 Copied #{copied_count} scripts to #{scripts_dir} (made executable)\"\nend\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Copying of local scripts to the destination directory\n2. Copying of remote scripts to the destination directory\n3. Preservation of subdirectory structure\n4. Setting of executable permissions (0755)\n5. Creation of destination directory if it doesn't exist\n6. Proper handling of dry-run mode (no copying)\n7. Mock file system operations for testing",
+        "priority": "high",
+        "dependencies": [19],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Integrate script management with squash command",
+        "description": "Update the squash command to collect and copy scripts from frontmatter",
+        "details": "Modify the `squash` method in `lib/ruly/cli.rb` to:\n\n1. Call `collect_scripts_from_sources` to gather script declarations from all sources\n2. Call `copy_scripts` to copy the scripts to the Claude Code directory\n3. Skip script copying in dry-run mode\n4. Maintain backward compatibility with existing functionality\n\n```ruby\n# In the squash method, after collecting sources but before generating output\n# Collect scripts from all sources\nscript_files = collect_scripts_from_sources(sources)\n\n# Copy scripts to Claude Code directory unless dry run\nunless options[:dry_run]\n  copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?\nend\n```",
+        "testStrategy": "Create integration tests in `spec/ruly/cli_integration_spec.rb` that verify:\n1. Scripts are collected and copied during squash operation\n2. Scripts are not copied in dry-run mode\n3. Proper handling of mixed local and remote scripts\n4. Backward compatibility with existing squash functionality\n5. Mock file system operations for testing",
+        "priority": "high",
+        "dependencies": [18, 20],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Integrate script management with import command",
+        "description": "Update the import command to collect and copy scripts from frontmatter",
+        "details": "Modify the `import` method in `lib/ruly/cli.rb` to:\n\n1. Call `collect_scripts_from_sources` to gather script declarations from all sources\n2. Call `copy_scripts` to copy the scripts to the Claude Code directory\n3. Skip script copying in dry-run mode\n4. Maintain backward compatibility with existing functionality\n\n```ruby\n# In the import method, after loading recipe sources\nscript_files = collect_scripts_from_sources(sources)\n\n# Copy scripts\ncopy_scripts(script_files) unless options[:dry_run]\n```",
+        "testStrategy": "Create integration tests in `spec/ruly/cli_integration_spec.rb` that verify:\n1. Scripts are collected and copied during import operation\n2. Scripts are not copied in dry-run mode\n3. Proper handling of mixed local and remote scripts\n4. Backward compatibility with existing import functionality\n5. Mock file system operations for testing",
+        "priority": "high",
+        "dependencies": [18, 20],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Implement script subdirectory preservation",
+        "description": "Enhance the copy_scripts method to preserve subdirectory structure when copying scripts",
+        "details": "Modify the `copy_scripts` method in `lib/ruly/cli.rb` to:\n\n1. Extract directory structure from the relative_path\n2. Create subdirectories in the destination as needed\n3. Maintain the same directory structure in the destination\n\n```ruby\n# In the copy_scripts method, for each script\n# Preserve subdirectory structure from script path\ntarget_path = File.join(scripts_dir, relative_path)\ntarget_dir = File.dirname(target_path)\n\n# Create subdirectories if needed\nFileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)\n\n# Copy the file\nFileUtils.cp(source_path, target_path)\n```",
+        "testStrategy": "Create unit tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Scripts with subdirectories are copied with their structure preserved\n2. Nested subdirectories are created as needed\n3. Scripts without subdirectories are copied to the root destination\n4. Mock file system operations for testing",
+        "priority": "medium",
+        "dependencies": [20],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Create TDD test suite for script management",
+        "description": "Create a comprehensive test suite following Test-Driven Development principles",
+        "details": "Create a new test file `spec/ruly/cli_scripts_spec.rb` that includes:\n\n1. Unit tests for all new methods:\n   - `extract_scripts_from_frontmatter`\n   - `normalize_github_url`\n   - `collect_scripts_from_sources`\n   - `fetch_remote_scripts`\n   - `copy_scripts`\n2. Integration tests for command integration:\n   - `squash` command with scripts\n   - `import` command with scripts\n3. Test fixtures for various frontmatter formats\n4. Mocks for file system and network operations\n5. Tests for error handling and edge cases\n\nFollow the TDD workflow:\n1. Write failing tests first (Red)\n2. Implement minimal code to pass tests (Green)\n3. Refactor while keeping tests green",
+        "testStrategy": "Ensure test coverage for:\n1. All new methods and code paths\n2. Both success and failure scenarios\n3. Edge cases and error handling\n4. Integration with existing functionality\n5. Use RSpec mocks and stubs for external dependencies\n6. Use temporary directories for file system tests",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Maintain backward compatibility with bin/*.sh pattern",
+        "description": "Temporarily maintain backward compatibility with the existing bin/*.sh auto-detection pattern",
+        "details": "Modify the existing bin file detection logic to:\n\n1. Keep the current bin/*.sh pattern detection\n2. Add a deprecation warning when bin files are auto-detected\n3. Suggest using the new frontmatter approach\n4. Copy auto-detected bin files to both .ruly/bin/ and ~/.claude/scripts/\n\n```ruby\n# In the existing bin file detection method\nif bin_files.any?\n  warn \"\\nWARNING: Auto-detection of bin/*.sh files is deprecated.\"\n  warn \"Please use the 'scripts:' frontmatter key to explicitly declare scripts.\"\n  warn \"See documentation for details.\\n\"\n  \n  # Copy to both locations for backward compatibility\n  copy_bin_files(bin_files, '.ruly/bin')\n  copy_scripts({local: bin_files.map { |f| {source_path: f, relative_path: File.basename(f)} }})\nend\n```",
+        "testStrategy": "Create tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Auto-detected bin/*.sh files still work\n2. Deprecation warning is displayed\n3. Files are copied to both .ruly/bin/ and ~/.claude/scripts/\n4. Mock file system operations for testing",
+        "priority": "medium",
+        "dependencies": [20],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Create migration guide documentation",
+        "description": "Create documentation to guide users in migrating from the old bin/*.sh pattern to the new frontmatter approach",
+        "details": "Create a migration guide document that includes:\n\n1. Explanation of the changes and benefits\n2. Step-by-step migration instructions:\n   - Create scripts directory\n   - Move existing scripts\n   - Update rule files with frontmatter\n   - Test the changes\n3. Examples of before and after for both structured and simplified formats\n4. Troubleshooting tips\n5. Timeline for deprecation of the old approach\n\nThe guide should be added to the project documentation and referenced in the README.",
+        "testStrategy": "Review the documentation for:\n1. Clarity and completeness\n2. Accuracy of examples\n3. Coverage of all migration scenarios\n4. Alignment with implemented functionality\n5. Have team members review and provide feedback",
+        "priority": "medium",
+        "dependencies": [25],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Update README with script management documentation",
+        "description": "Update the project README to document the new script management functionality",
+        "details": "Update the README.md file to include:\n\n1. Overview of the script management feature\n2. Examples of frontmatter syntax for both structured and simplified formats\n3. Explanation of script resolution (local vs remote)\n4. Description of the destination directory (~/.claude/scripts/)\n5. Link to the migration guide\n6. Best practices for script management\n7. Security considerations for remote scripts\n\nEnsure the documentation is clear, concise, and includes practical examples.",
+        "testStrategy": "Review the documentation for:\n1. Clarity and completeness\n2. Accuracy of examples\n3. Coverage of all feature aspects\n4. Alignment with implemented functionality\n5. Have team members review and provide feedback",
+        "priority": "medium",
+        "dependencies": [26],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 28,
+        "title": "Implement error handling for script operations",
+        "description": "Enhance error handling for script-related operations to provide clear feedback to users",
+        "details": "Improve error handling throughout the script management code to:\n\n1. Provide clear, actionable error messages\n2. Handle common failure scenarios gracefully:\n   - Missing script files\n   - Permission issues\n   - Network failures for remote scripts\n   - Invalid URLs\n   - Destination directory not writable\n3. Include context in error messages (file paths, URLs)\n4. Continue processing when possible (skip failed scripts)\n5. Use consistent warning/error formatting\n\n```ruby\n# Example error handling improvements\n\n# For missing script files\nif !File.exist?(resolved_path)\n  warn \"Warning: Script not found: #{script_path} (from #{source[:path]})\"\n  next\nend\n\n# For permission issues\nbegin\n  File.chmod(0o755, target_path)\nrescue Errno::EACCES => e\n  warn \"Warning: Could not set executable permission on #{target_path}: #{e.message}\"\nend\n\n# For destination directory issues\nbegin\n  FileUtils.mkdir_p(scripts_dir)\nrescue StandardError => e\n  warn \"Error: Could not create scripts directory #{scripts_dir}: #{e.message}\"\n  return\nend\n```",
+        "testStrategy": "Create tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Proper error messages for various failure scenarios\n2. Graceful handling of missing files\n3. Proper handling of permission issues\n4. Appropriate handling of network failures\n5. Continuation of processing after non-fatal errors\n6. Mock various error conditions for testing",
+        "priority": "medium",
+        "dependencies": [20],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Create example recipes with script declarations",
+        "description": "Update existing example recipes to use the new frontmatter script declarations",
+        "details": "Modify example recipes in the project to:\n\n1. Add `scripts:` frontmatter to relevant rules\n2. Move existing bin scripts to appropriate locations\n3. Use both structured and simplified formats for demonstration\n4. Include examples of remote scripts\n5. Add comments explaining the script declarations\n\n```yaml\n# Example updated frontmatter for workaxle recipe\n---\ndescription: WorkAxle bug diagnosis\nscripts:\n  files:\n    - scripts/setup-env.sh\n    - scripts/database/migrate.sh\n  remote:\n    - github:org/shared-scripts/monitoring.sh\n---\n```\n\nEnsure all examples follow best practices and demonstrate the feature effectively.",
+        "testStrategy": "Verify the example recipes by:\n1. Testing them with the actual implementation\n2. Ensuring scripts are correctly copied to ~/.claude/scripts/\n3. Checking that subdirectory structure is preserved\n4. Verifying that remote scripts are fetched correctly\n5. Confirming that scripts are made executable",
+        "priority": "low",
+        "dependencies": [21, 22],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Implement security best practices for remote scripts",
+        "description": "Implement security measures for handling remote scripts",
+        "details": "Enhance the remote script handling to include security best practices:\n\n1. Add warnings about security risks of remote scripts\n2. Implement basic script content validation:\n   - Check file size (warn on large files)\n   - Scan for suspicious patterns (optional)\n3. Support for GitHub authentication for private repositories\n4. Add documentation about security considerations\n5. Log script sources for audit purposes\n\n```ruby\n# Example security enhancements\n\n# Warning for remote scripts\nif remote_scripts.any?\n  puts \"\\nSecurity Notice: Remote scripts may pose security risks.\"\n  puts \"Always review scripts from untrusted sources before running them.\\n\"\nend\n\n# File size check\nif response.body.size > 1_000_000 # 1MB\n  warn \"  ⚠️ Warning: Large script file (#{response.body.size / 1024}KB): #{script[:filename]}\"\nend\n\n# Log script sources\nlog_file = File.expand_path('~/.claude/logs/scripts.log')\nFileUtils.mkdir_p(File.dirname(log_file))\nFile.open(log_file, 'a') do |f|\n  f.puts \"#{Time.now} - Copied script: #{script[:filename]} from #{script[:url] || script[:source_path]}\"\nend\n```",
+        "testStrategy": "Create tests in `spec/ruly/cli_scripts_spec.rb` that verify:\n1. Security warnings are displayed for remote scripts\n2. Large files trigger appropriate warnings\n3. Script sources are properly logged\n4. GitHub authentication is used when available\n5. Mock various security scenarios for testing",
+        "priority": "medium",
+        "dependencies": [19],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-11-13T18:39:58.640Z",
+      "updated": "2025-11-13T18:53:41.847Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
