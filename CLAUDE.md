@@ -9,10 +9,5 @@
 **Import Ruly recipe configuration patterns and MCP server guidelines.**
 @./.claude/ruly-recipes-mcp-patterns.md
 
-## Task Master AI Instructions
-
-**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
-@./.taskmaster/CLAUDE.md
-
 - When testing out `ruly squash ...`, always run it from a `mktmpdir` and not the main project directory
 - always update ruly after any changes. for instance, /Users/patrick/.local/share/mise/installs/ruby/3.3.3/bin/ruly is out of sync right now
