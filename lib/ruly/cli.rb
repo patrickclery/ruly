@@ -286,6 +286,44 @@ module Ruly
     end
     # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
 
+    desc 'import RECIPE', 'Import a recipe and copy its scripts to ~/.claude/scripts/'
+    option :dry_run, aliases: '-d', default: false, desc: 'Show what would be copied without actually copying',
+                     type: :boolean
+    def import(recipe_name)
+      dry_run = options[:dry_run]
+
+      # Load recipe sources
+      sources, _recipe_config = load_recipe_sources(recipe_name)
+
+      puts "\n🔄 Processing recipe: #{recipe_name}"
+
+      # Collect scripts from all sources
+      script_files = collect_scripts_from_sources(sources)
+
+      if dry_run
+        puts "\n🔍 Dry run mode - no files will be copied\n\n"
+
+        if script_files[:local].any? || script_files[:remote].any?
+          total_scripts = script_files[:local].size + script_files[:remote].size
+          puts "Would copy #{total_scripts} scripts to ~/.claude/scripts/:"
+          script_files[:local].each do |script|
+            puts "  → #{script[:relative_path]} (local)"
+          end
+          script_files[:remote].each do |script|
+            puts "  → #{script[:filename]} (remote from GitHub)"
+          end
+        else
+          puts "No scripts found in recipe '#{recipe_name}'"
+        end
+      elsif script_files[:local].any? || script_files[:remote].any?
+        # Copy scripts
+        copy_scripts(script_files)
+        puts "\n✨ Recipe imported successfully"
+      else
+        puts "No scripts found in recipe '#{recipe_name}'"
+      end
+    end
+
     desc 'clean [RECIPE]', 'Remove generated files (recipe optional, overrides metadata)'
     option :output_file, aliases: '-o', desc: 'Output file to clean (overrides metadata)', type: :string
     option :dry_run, aliases: '-d', default: false, desc: 'Show what would be deleted without actually deleting',
