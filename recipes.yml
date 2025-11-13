@@ -53,7 +53,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/commands/pre-commit.md
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
     mcp_servers:
       - github # For code context
@@ -198,6 +197,20 @@ recipes:
       - github # For code context
       - playwright # For E2E testing
       - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-playwright:
+    description: "WorkAxle Playwright E2E testing and browser automation"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+    mcp_servers:
+      - playwright # For browser automation and E2E testing
+      - atlassian # For Jira ticket context
+      - github # For code context
       - task-master-ai # Task management and workflow tracking
 
   workaxle-spike:
