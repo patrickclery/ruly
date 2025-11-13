@@ -1,0 +1,922 @@
+# PRD: Script Management via Frontmatter
+
+## Overview
+
+Add the ability to specify `scripts:` keys in the frontmatter of rules files to reference script files that should be copied into the `~/.claude/scripts/` directory, made executable, and ready for use by Claude Code agent.
+
+## Motivation
+
+### Current State
+- Scripts are automatically detected via pattern matching (`bin/*.sh`)
+- Scripts are copied to `.ruly/bin/` directory
+- No explicit control over which scripts are included
+- Scripts tied to file location rather than declared dependencies
+- `.ruly/bin` is Ruly-specific and not aligned with Claude Code conventions
+
+### Problems
+1. **Implicit script discovery**: Scripts are discovered by path patterns rather than explicit declaration
+2. **Wrong destination**: Scripts go to `.ruly/bin` instead of Claude Code's standard `~/.claude/scripts/`
+3. **Limited flexibility**: Can't reference scripts from arbitrary locations
+4. **Recipe-specific needs**: Different recipes may need different scripts without including all bin files
+5. **Convention mismatch**: Not following Claude Code's standard directory structure
+
+### Goals
+1. Enable explicit script declarations in frontmatter
+2. Align with Claude Code conventions (`~/.claude/scripts/`)
+3. Support recipe-specific script sets
+4. Maintain backward compatibility during migration
+5. Simplify script management and discoverability
+6. Use Test-Driven Development (TDD) to ensure quality and maintainability
+
+## Proposed Solution
+
+### Frontmatter Syntax
+
+The `scripts:` frontmatter supports the same structure as recipes, with both `files:` and `remote:` sections:
+
+```yaml
+---
+description: Example rule with scripts
+scripts:
+  files:
+    - scripts/setup-env.sh              # Relative to rules directory
+    - scripts/database/migrate.sh       # Relative path with subdirs
+    - /abs/path/to/shared/utils.sh      # Absolute path
+  remote:
+    - https://github.com/org/repo/blob/main/scripts/deploy.sh    # Full URL
+    - github:org/repo/scripts/monitoring.sh                       # Short format
+---
+```
+
+**Simplified Syntax** (backward compatible):
+```yaml
+---
+description: Example rule with simple scripts
+scripts:
+  - scripts/setup-env.sh              # Defaults to files:
+  - /abs/path/to/script.sh            # Absolute paths also work
+---
+```
+
+### Behavior
+
+1. **Script Resolution**:
+   - **Local files**: Relative paths resolved from rules directory, absolute paths used as-is
+   - **Remote files**: Fetched from GitHub (supports blob URLs and shorthand syntax)
+   - **Simplified syntax**: Array of strings treated as `files:` entries
+2. **Destination**: Scripts are copied to `~/.claude/scripts/` (user home, not project-local)
+3. **Execution Permissions**: All copied scripts are made executable (0755)
+4. **Directory Structure**: Script subdirectories are preserved in destination
+5. **Recipe Aggregation**: When using recipes, all scripts from included rules are collected and copied
+6. **Remote Caching**: Remote scripts are cached locally to avoid repeated downloads
+
+### User Experience
+
+```bash
+# Import a recipe that includes script declarations
+$ ruly import --recipe workaxle-bug
+
+🔄 Processing recipe: workaxle-bug
+  📁 Loading: rules/workaxle/core.md... ✅ (1,234 tokens)
+  📁 Loading: rules/workaxle/commands/bug-diagnose.md... ✅ (567 tokens)
+  🔄 Fetching remote scripts...
+    ✓ deploy.sh (from github.com/org/scripts)
+  🔧 Copying 4 scripts to ~/.claude/scripts/... ✅
+    ✓ setup-env.sh (local)
+    ✓ database/migrate.sh (local)
+    ✓ utils.sh (absolute path)
+    ✓ deploy.sh (remote)
+
+✨ Recipe imported successfully
+
+# Scripts are now available in ~/.claude/scripts/
+$ ls -la ~/.claude/scripts/
+drwxr-xr-x  6 user  staff   192 Nov 13 10:00 .
+drwxr-xr-x  8 user  staff   256 Nov 13 09:55 ..
+-rwxr-xr-x  1 user  staff  1234 Nov 13 10:00 setup-env.sh
+-rwxr-xr-x  1 user  staff  2345 Nov 13 10:00 deploy.sh
+drwxr-xr-x  2 user  staff    64 Nov 13 10:00 database
+-rwxr-xr-x  1 user  staff  3456 Nov 13 10:00 utils.sh
+```
+
+## Technical Specification
+
+### Frontmatter Schema
+
+```yaml
+scripts:
+  oneOf:
+    # Structured format (preferred)
+    - type: object
+      properties:
+        files:
+          type: array
+          items:
+            type: string
+            description: |
+              Local script paths (relative to rules dir or absolute).
+              Examples: scripts/setup.sh, /abs/path/script.sh
+        remote:
+          type: array
+          items:
+            type: string
+            pattern: "^(https://github\\.com/|github:)"
+            description: |
+              Remote script URLs from GitHub.
+              Formats:
+                - Full URL: https://github.com/org/repo/blob/main/scripts/deploy.sh
+                - Shorthand: github:org/repo/scripts/deploy.sh
+
+    # Simplified format (backward compatible)
+    - type: array
+      items:
+        type: string
+        description: |
+          Simple array of script paths (treated as files:).
+          Examples: scripts/setup.sh, /abs/path/script.sh
+
+  description: |
+    Scripts to copy to ~/.claude/scripts/ and make executable.
+    Supports local files (relative/absolute) and remote GitHub URLs.
+```
+
+### Implementation Components
+
+#### 1. Script Detection (`lib/ruly/cli.rb`)
+
+**New method**: `extract_scripts_from_frontmatter`
+```ruby
+def extract_scripts_from_frontmatter(content, source_path)
+  return {files: [], remote: []} unless content.start_with?('---')
+
+  parts = content.split(/^---\s*$/, 3)
+  return {files: [], remote: []} if parts.length < 3
+
+  frontmatter = YAML.safe_load(parts[1])
+  scripts = frontmatter['scripts']
+  return {files: [], remote: []} unless scripts
+
+  # Handle both structured and simplified formats
+  if scripts.is_a?(Hash)
+    # Structured format: { files: [...], remote: [...] }
+    {
+      files: scripts['files'] || [],
+      remote: scripts['remote'] || []
+    }
+  elsif scripts.is_a?(Array)
+    # Simplified format: treat as files
+    {
+      files: scripts,
+      remote: []
+    }
+  else
+    warn "Warning: Invalid scripts format in #{source_path}"
+    {files: [], remote: []}
+  end
+rescue StandardError => e
+  warn "Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}"
+  {files: [], remote: []}
+end
+```
+
+#### 2. Script Collection
+
+**New method**: `collect_scripts_from_sources`
+```ruby
+def collect_scripts_from_sources(sources)
+  script_files = {local: [], remote: []}
+
+  sources.each do |source|
+    next unless source[:type] == 'local'
+
+    file_path = find_rule_file(source[:path])
+    next unless file_path
+
+    content = File.read(file_path, encoding: 'UTF-8')
+    scripts = extract_scripts_from_frontmatter(content, source[:path])
+
+    # Collect local script files
+    scripts[:files].each do |script_path|
+      resolved_path = if script_path.start_with?('/')
+                        # Absolute path - use as-is
+                        script_path
+                      else
+                        # Relative path - resolve from rules directory
+                        find_rule_file(script_path)
+                      end
+
+      if resolved_path && File.exist?(resolved_path)
+        script_files[:local] << {
+          source_path: resolved_path,
+          relative_path: File.basename(script_path),
+          from_rule: source[:path]
+        }
+      else
+        warn "Warning: Script not found: #{script_path} (from #{source[:path]})"
+      end
+    end
+
+    # Collect remote script URLs
+    scripts[:remote].each do |script_url|
+      normalized_url = normalize_github_url(script_url)
+      script_files[:remote] << {
+        url: normalized_url,
+        filename: File.basename(script_url),
+        from_rule: source[:path]
+      }
+    end
+  end
+
+  script_files
+end
+```
+
+**New method**: `normalize_github_url`
+```ruby
+def normalize_github_url(url)
+  # Convert shorthand github:org/repo/path to full URL
+  if url.start_with?('github:')
+    path = url.sub('github:', '')
+    "https://github.com/#{path}"
+  else
+    url
+  end
+end
+```
+
+#### 3. Script Copying
+
+**New method**: `fetch_remote_scripts`
+```ruby
+def fetch_remote_scripts(remote_scripts)
+  return [] if remote_scripts.empty?
+
+  puts '🔄 Fetching remote scripts...'
+  fetched_scripts = []
+
+  remote_scripts.each do |script|
+    begin
+      # Convert blob URL to raw content URL
+      raw_url = script[:url]
+                  .gsub('github.com', 'raw.githubusercontent.com')
+                  .gsub('/blob/', '/')
+
+      # Fetch the script content
+      uri = URI(raw_url)
+      response = Net::HTTP.get_response(uri)
+
+      if response.code == '200'
+        # Save to temp location
+        temp_file = Tempfile.new(['script', File.extname(script[:filename])])
+        temp_file.write(response.body)
+        temp_file.close
+
+        fetched_scripts << {
+          source_path: temp_file.path,
+          relative_path: script[:filename],
+          from_rule: script[:from_rule],
+          remote: true
+        }
+
+        puts "  ✓ #{script[:filename]} (from #{URI(script[:url]).host})"
+      else
+        warn "  ✗ Failed to fetch #{script[:filename]}: HTTP #{response.code}"
+      end
+    rescue StandardError => e
+      warn "  ✗ Error fetching #{script[:filename]}: #{e.message}"
+    end
+  end
+
+  fetched_scripts
+end
+```
+
+**Repurpose**: `copy_bin_files` → `copy_scripts`
+```ruby
+def copy_scripts(script_files, destination_dir = nil)
+  local_scripts = script_files[:local] || []
+  remote_scripts = script_files[:remote] || []
+
+  return if local_scripts.empty? && remote_scripts.empty?
+
+  # Fetch remote scripts first
+  fetched_remote = fetch_remote_scripts(remote_scripts)
+
+  # Combine local and fetched remote scripts
+  all_scripts = local_scripts + fetched_remote
+  return if all_scripts.empty?
+
+  # Default to Claude Code standard directory
+  scripts_dir = destination_dir || File.expand_path('~/.claude/scripts')
+  FileUtils.mkdir_p(scripts_dir)
+
+  copied_count = 0
+  all_scripts.each do |file|
+    source_path = file[:source_path]
+    relative_path = file[:relative_path]
+
+    # Preserve subdirectory structure from script path
+    target_path = File.join(scripts_dir, relative_path)
+    target_dir = File.dirname(target_path)
+
+    # Create subdirectories if needed
+    FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+
+    # Copy the file
+    FileUtils.cp(source_path, target_path)
+
+    # Make it executable
+    File.chmod(0o755, target_path)
+
+    type_label = file[:remote] ? 'remote' : 'local'
+    puts "  ✓ #{relative_path} (#{type_label})"
+
+    copied_count += 1
+  end
+
+  puts "🔧 Copied #{copied_count} scripts to #{scripts_dir} (made executable)"
+end
+```
+
+#### 4. Integration Points
+
+**In `squash` method**:
+```ruby
+# Collect scripts from all sources
+script_files = collect_scripts_from_sources(sources)
+
+# Copy scripts to Claude Code directory unless dry run
+unless options[:dry_run]
+  copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+end
+```
+
+**In `import` command** (similar pattern):
+```ruby
+# After loading recipe sources
+script_files = collect_scripts_from_sources(sources)
+
+# Copy scripts
+copy_scripts(script_files) unless options[:dry_run]
+```
+
+### File Structure Examples
+
+#### Before (Current State)
+```
+rules/
+  workaxle/
+    bin/
+      setup-env.sh          # Auto-detected by path pattern
+      deploy.sh             # Auto-detected by path pattern
+    core.md
+```
+
+```bash
+# Results in:
+.ruly/bin/
+  setup-env.sh
+  deploy.sh
+```
+
+#### After (Proposed State)
+
+**Example 1: Local Scripts Only**
+```
+rules/
+  workaxle/
+    scripts/
+      setup-env.sh
+      database/
+        migrate.sh
+    core.md
+```
+
+```yaml
+# rules/workaxle/core.md
+---
+description: WorkAxle core patterns
+scripts:
+  files:
+    - scripts/setup-env.sh
+    - scripts/database/migrate.sh
+---
+```
+
+```bash
+# Results in:
+~/.claude/scripts/
+  setup-env.sh
+  database/
+    migrate.sh
+```
+
+**Example 2: Mixed Local and Remote Scripts**
+```
+rules/
+  workaxle/
+    scripts/
+      local-helper.sh
+    commands/
+      deploy.md
+```
+
+```yaml
+# rules/workaxle/commands/deploy.md
+---
+description: Deployment commands
+scripts:
+  files:
+    - scripts/local-helper.sh
+    - /usr/local/bin/shared-utils.sh
+  remote:
+    - https://github.com/org/scripts/blob/main/deploy.sh
+    - github:org/scripts/monitoring.sh
+---
+```
+
+```bash
+# Results in:
+~/.claude/scripts/
+  local-helper.sh
+  shared-utils.sh          # From absolute path
+  deploy.sh                # From GitHub
+  monitoring.sh            # From GitHub (shorthand)
+```
+
+**Example 3: Simplified Syntax**
+```yaml
+# rules/workaxle/core.md
+---
+description: WorkAxle core patterns
+scripts:
+  - scripts/setup-env.sh
+  - scripts/database/migrate.sh
+  - /abs/path/to/utils.sh
+---
+```
+
+```bash
+# Results in (treated as files:):
+~/.claude/scripts/
+  setup-env.sh
+  migrate.sh
+  utils.sh
+```
+
+## Implementation Plan
+
+### Why TDD for This Feature?
+
+This feature requires TDD because:
+1. **Complex logic**: Parsing multiple frontmatter formats with fallbacks
+2. **Edge cases**: File paths (relative/absolute), URLs (full/shorthand), network errors
+3. **Security critical**: Script copying and permission setting must be correct
+4. **Remote dependencies**: Network operations need robust error handling
+5. **Backward compatibility**: Must not break existing bin/*.sh detection
+6. **Refactoring safety**: Tests ensure future changes don't break functionality
+
+### Phase 1: Core Implementation (Week 1) - TDD Approach
+
+**TDD Workflow**: Red → Green → Refactor
+- Write failing tests first (Red)
+- Implement minimal code to pass tests (Green)
+- Refactor while keeping tests green
+
+**Test Location**: `spec/ruly/cli_scripts_spec.rb` (new file for script-specific tests)
+
+**Step 1: Write Tests First (Red Phase)**
+- [ ] Write tests for `extract_scripts_from_frontmatter`
+  - [ ] Test parsing structured format (`files:` and `remote:`)
+  - [ ] Test parsing simplified format (array)
+  - [ ] Test empty/missing scripts frontmatter
+  - [ ] Test invalid frontmatter formats
+  - [ ] Test malformed YAML handling
+- [ ] Write tests for `normalize_github_url`
+  - [ ] Test shorthand conversion (`github:org/repo/path` → full URL)
+  - [ ] Test full URL passthrough
+  - [ ] Test edge cases (missing parts, invalid formats)
+- [ ] Write tests for `collect_scripts_from_sources`
+  - [ ] Test collecting local scripts (relative paths)
+  - [ ] Test collecting local scripts (absolute paths)
+  - [ ] Test collecting remote scripts
+  - [ ] Test mixed local and remote scripts
+  - [ ] Test missing script files (error handling)
+  - [ ] Test duplicate script references
+- [ ] Write tests for `fetch_remote_scripts`
+  - [ ] Test successful remote fetch
+  - [ ] Test network failure handling
+  - [ ] Test HTTP error codes (404, 401, etc.)
+  - [ ] Test malformed URLs
+- [ ] Write tests for `copy_scripts`
+  - [ ] Test copying local scripts
+  - [ ] Test copying remote scripts
+  - [ ] Test preserving subdirectory structure
+  - [ ] Test setting executable permissions (0755)
+  - [ ] Test destination directory creation
+  - [ ] Test dry-run mode (no copying)
+
+**Step 2: Implement Methods (Red → Green)**
+- [ ] Implement `extract_scripts_from_frontmatter` to pass tests
+- [ ] Implement `normalize_github_url` to pass tests
+- [ ] Implement `collect_scripts_from_sources` to pass tests
+- [ ] Implement `fetch_remote_scripts` to pass tests
+- [ ] Rename and update `copy_bin_files` → `copy_scripts` to pass tests
+
+**Step 3: Integration Tests**
+- [ ] Write integration test for `squash` command with scripts
+- [ ] Write integration test for `import` command with scripts
+- [ ] Write integration test for recipe aggregation of scripts
+- [ ] Write integration test for dry-run mode
+
+**Step 4: Refactor (Refactor Phase)**
+- [ ] Refactor for code clarity and DRY principles
+- [ ] Optimize performance if needed
+- [ ] Add inline documentation
+- [ ] Update integration points in `squash` and `import` commands
+- [ ] Verify all tests still pass after refactoring
+
+**Continuous Testing**
+```bash
+# Run tests continuously during development
+bundle exec guard
+
+# Run specific test file
+bundle exec rspec spec/ruly/cli_scripts_spec.rb
+
+# Run all tests
+bundle exec rspec
+```
+
+### Example Test Structure
+
+```ruby
+# spec/ruly/cli_scripts_spec.rb
+RSpec.describe Ruly::CLI do
+  let(:cli) { described_class.new }
+
+  describe '#extract_scripts_from_frontmatter' do
+    context 'with structured format' do
+      it 'extracts files and remote scripts' do
+        content = <<~YAML
+          ---
+          scripts:
+            files:
+              - scripts/setup.sh
+            remote:
+              - github:org/repo/deploy.sh
+          ---
+          # Content
+        YAML
+
+        result = cli.send(:extract_scripts_from_frontmatter, content, 'test.md')
+        expect(result[:files]).to eq(['scripts/setup.sh'])
+        expect(result[:remote]).to eq(['github:org/repo/deploy.sh'])
+      end
+    end
+
+    context 'with simplified format' do
+      it 'treats array as files' do
+        content = <<~YAML
+          ---
+          scripts:
+            - scripts/setup.sh
+          ---
+          # Content
+        YAML
+
+        result = cli.send(:extract_scripts_from_frontmatter, content, 'test.md')
+        expect(result[:files]).to eq(['scripts/setup.sh'])
+        expect(result[:remote]).to eq([])
+      end
+    end
+
+    context 'with malformed YAML' do
+      it 'returns empty hashes and warns' do
+        content = <<~YAML
+          ---
+          scripts: [invalid yaml syntax
+          ---
+          # Content
+        YAML
+
+        expect {
+          cli.send(:extract_scripts_from_frontmatter, content, 'test.md')
+        }.to output(/Warning/).to_stderr
+
+        result = cli.send(:extract_scripts_from_frontmatter, content, 'test.md')
+        expect(result).to eq({files: [], remote: []})
+      end
+    end
+  end
+
+  describe '#fetch_remote_scripts' do
+    let(:remote_scripts) do
+      [{
+        url: 'https://raw.githubusercontent.com/org/repo/main/deploy.sh',
+        filename: 'deploy.sh',
+        from_rule: 'rules/test.md'
+      }]
+    end
+
+    context 'with successful fetch' do
+      it 'downloads and returns script metadata' do
+        # Mock HTTP response
+        allow(Net::HTTP).to receive(:get_response).and_return(
+          double('response', code: '200', body: '#!/bin/bash\necho "test"')
+        )
+
+        result = cli.send(:fetch_remote_scripts, remote_scripts)
+
+        expect(result.size).to eq(1)
+        expect(result[0][:filename]).to eq('deploy.sh')
+        expect(result[0][:remote]).to be true
+        expect(File.exist?(result[0][:source_path])).to be true
+      end
+    end
+
+    context 'with network failure' do
+      it 'warns and continues' do
+        allow(Net::HTTP).to receive(:get_response).and_raise(SocketError)
+
+        expect {
+          cli.send(:fetch_remote_scripts, remote_scripts)
+        }.to output(/Error fetching/).to_stderr
+
+        result = cli.send(:fetch_remote_scripts, remote_scripts)
+        expect(result).to be_empty
+      end
+    end
+  end
+end
+```
+
+**Testing Best Practices**:
+- Use `let` blocks for shared test data
+- Mock external dependencies (HTTP, file system for remote fetches)
+- Test both success and failure paths
+- Verify error messages and warnings
+- Clean up temp files in `after` blocks
+
+### Phase 2: Migration Support (Week 1-2)
+- [ ] Keep legacy `bin/*.sh` pattern detection temporarily
+- [ ] Add deprecation warning for auto-detected bin files
+- [ ] Create migration guide documentation
+- [ ] Update existing rules to use new frontmatter approach
+
+### Phase 3: Documentation & Examples (Week 2)
+- [ ] Update README with script management documentation
+- [ ] Add examples to common recipes (workaxle, etc.)
+- [ ] Document script path resolution rules
+- [ ] Create troubleshooting guide
+
+### Phase 4: Deprecation & Cleanup (Week 3-4)
+- [ ] Remove legacy `bin/*.sh` auto-detection
+- [ ] Remove `.ruly/bin` references
+- [ ] Update all example recipes
+- [ ] Final documentation pass
+
+## Migration Guide
+
+### For Rule Authors
+
+**Before:**
+```bash
+# File: rules/workaxle/bin/setup-env.sh
+# Auto-detected by path pattern
+```
+
+**After (Structured Format):**
+```yaml
+---
+description: WorkAxle core setup
+scripts:
+  files:
+    - scripts/setup-env.sh
+    - scripts/database/migrate.sh
+  remote:
+    - github:org/shared-scripts/monitoring.sh
+---
+# WorkAxle Core
+...
+```
+
+```bash
+# File: rules/workaxle/scripts/setup-env.sh
+# Explicitly declared in frontmatter
+```
+
+**After (Simplified Format):**
+```yaml
+---
+description: WorkAxle core setup
+scripts:
+  - scripts/setup-env.sh
+  - scripts/database/migrate.sh
+---
+# WorkAxle Core
+...
+```
+
+### Migration Steps
+
+1. **Create new scripts directory**
+   ```bash
+   mkdir -p rules/workaxle/scripts
+   ```
+
+2. **Move existing scripts**
+   ```bash
+   mv rules/workaxle/bin/*.sh rules/workaxle/scripts/
+   ```
+
+3. **Update rule files**
+   - Add `scripts:` to frontmatter of relevant rules
+   - Reference moved scripts with new paths
+
+4. **Test the changes**
+   ```bash
+   cd $(mktemp -d)
+   ruly squash --recipe workaxle-bug --dry-run
+   ```
+
+5. **Verify scripts in Claude directory**
+   ```bash
+   ls -la ~/.claude/scripts/
+   ```
+
+## Success Criteria
+
+### Functional Requirements
+- ✅ Scripts can be declared explicitly in frontmatter (both `files:` and `remote:`)
+- ✅ Scripts are copied to `~/.claude/scripts/`
+- ✅ Scripts are made executable (chmod 0755)
+- ✅ Subdirectory structure is preserved
+- ✅ Multiple rules can reference the same script
+- ✅ Recipes aggregate scripts from all included rules
+- ✅ Dry-run mode skips script copying
+- ✅ Remote scripts are fetched from GitHub
+- ✅ Both full URLs and shorthand syntax supported for remote scripts
+- ✅ Simplified syntax (array) works as alias for `files:`
+
+### Non-Functional Requirements
+- ✅ Backward compatible during migration period
+- ✅ Clear error messages for missing scripts
+- ✅ Performance: Script copying adds < 100ms overhead
+- ✅ Documentation covers all use cases
+- ✅ Migration path is clearly documented
+
+### Quality Gates
+- ✅ All existing tests pass
+- ✅ New tests written before implementation (TDD)
+- ✅ Test coverage for all new methods (100% target)
+- ✅ Tests cover both happy path and edge cases
+- ✅ Tests cover error handling scenarios
+- ✅ Integration tests pass for squash and import commands
+- ✅ No regressions in existing functionality
+- ✅ Code review approved
+- ✅ Documentation reviewed and approved
+
+## Open Questions
+
+1. **Script validation**: Should we validate script syntax before copying?
+   - **Recommendation**: No, keep Ruly focused on file management. Script validation is the agent's responsibility.
+
+2. **Script overwriting**: What happens if multiple rules reference the same script path?
+   - **Recommendation**: Last write wins, with a warning message.
+
+3. **Script cleanup**: Should we clean up `~/.claude/scripts/` between runs?
+   - **Recommendation**: No, treat it like a cache. Users can manually clean if needed.
+
+4. **Non-shell scripts**: Should we support Python, Ruby, JavaScript scripts?
+   - **Recommendation**: Yes, any executable file type. Update file pattern validation.
+
+5. **Recipe-level scripts**: Should recipes themselves be able to declare scripts?
+   - **Recommendation**: Phase 2 feature. Start with rule-level only.
+
+6. **Remote script caching**: Should we cache remote scripts to avoid re-downloading?
+   - **Recommendation**: Yes, use the same caching mechanism as remote rules. Cache by URL + last-modified header.
+
+7. **Remote script authentication**: How do we handle private GitHub repositories?
+   - **Recommendation**: Use existing GitHub token authentication (same as remote rules).
+
+8. **Remote script version pinning**: Should we support specific commits/tags for remote scripts?
+   - **Recommendation**: Phase 2 feature. For now, always fetch from main/master branch.
+
+9. **Script conflict resolution**: What if a local and remote script have the same filename?
+   - **Recommendation**: Use subdirectories or filename prefixes to avoid conflicts. Document as best practice.
+
+## Dependencies
+
+### Internal
+- `lib/ruly/cli.rb` - Main CLI implementation
+- `lib/ruly/version.rb` - Version bump for release
+- Existing GitHub remote file fetching logic (for remote scripts)
+
+### External
+- FileUtils (stdlib) - Already used for file operations
+- YAML (stdlib) - Already used for frontmatter parsing
+- Net::HTTP (stdlib) - Already used for remote file fetching
+- URI (stdlib) - Already used for URL parsing
+- Tempfile (stdlib) - For temporary remote script storage
+- No new gem dependencies required
+
+## Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Breaking changes for existing users | High | Maintain backward compatibility during migration period |
+| Script path confusion (relative vs absolute) | Medium | Clear documentation and examples |
+| Permission issues with ~/.claude/scripts/ | Medium | Check directory writability, provide clear error messages |
+| Script conflicts between recipes | Low | Use subdirectories per recipe; document naming conventions |
+| Large binary files being copied | Low | Add file size validation; warn on files > 1MB |
+| Remote script fetch failures | Medium | Graceful degradation; clear error messages; retry logic |
+| Malicious remote scripts | High | Document security best practices; warn about remote script risks |
+| Network dependency for remote scripts | Low | Cache remote scripts; provide offline mode |
+| GitHub API rate limiting | Low | Reuse existing rate limit handling from remote rules |
+
+## Alternatives Considered
+
+### Alternative 1: Keep `.ruly/bin` but add symlinks
+**Pros**: No changes to existing behavior
+**Cons**: Confusing dual-directory setup, doesn't align with Claude Code conventions
+**Decision**: Rejected
+
+### Alternative 2: Auto-detect scripts in any location
+**Pros**: No frontmatter changes needed
+**Cons**: Implicit behavior, hard to control, slower processing
+**Decision**: Rejected
+
+### Alternative 3: Separate `ruly scripts` command
+**Pros**: Clean separation of concerns
+**Cons**: Extra step for users, not integrated with import workflow
+**Decision**: Rejected - integrate with existing flow
+
+## Future Enhancements
+
+1. **Script templates**: Support parameterized scripts with variable substitution
+2. **Recipe-level scripts**: Allow recipes to declare scripts directly in recipe config
+3. **Script validation**: Optional syntax checking for common script types (shellcheck, etc.)
+4. **Script documentation**: Extract and display script help text from comments
+5. **Script caching**: Skip copying if script hasn't changed (checksum-based)
+6. **Script execution tracking**: Log when scripts are invoked by agent
+7. **Remote script version pinning**: Support specific commits/tags (e.g., `github:org/repo@v1.2.3/script.sh`)
+8. **Remote script checksum verification**: Verify downloaded scripts against expected checksums
+9. **Multi-source support**: Support GitLab, Bitbucket, and other git hosting platforms
+10. **Script dependencies**: Allow scripts to declare dependencies on other scripts
+
+## Security Considerations
+
+### Remote Script Risks
+
+**Warning**: Remote scripts from untrusted sources pose security risks. Always review scripts before running.
+
+### Best Practices
+
+1. **Verify Script Sources**
+   - Only reference scripts from trusted repositories
+   - Review scripts before adding to frontmatter
+   - Use organization-owned repositories when possible
+
+2. **Script Review Process**
+   - All remote scripts should undergo code review
+   - Check for suspicious commands or network calls
+   - Verify script purpose matches documentation
+
+3. **Access Control**
+   - Use GitHub repository permissions to control access
+   - Consider using private repositories for sensitive scripts
+   - Document which scripts require authentication
+
+4. **Audit Trail**
+   - Track which rules reference which scripts
+   - Log script fetching and copying operations
+   - Monitor `~/.claude/scripts/` for unexpected changes
+
+### Security Features
+
+- Scripts copied to user-local directory (`~/.claude/scripts/`)
+- No automatic script execution - only copying and permission setting
+- Clear output showing script sources (local vs remote)
+- Warning messages for fetch failures
+
+## References
+
+- Current implementation: `lib/ruly/cli.rb:1853-1888`
+- Claude Code documentation: https://docs.claude.com/
+- Related issue: Script management modernization
+- Recipe patterns: `.claude/ruly-recipes-mcp-patterns.md`
+- Remote file fetching: `lib/ruly/cli.rb` (existing GitHub integration)
+
+## Approval
+
+- [ ] Product Owner: _______________ Date: ___________
+- [ ] Tech Lead: _______________ Date: ___________
+- [ ] Documentation: _______________ Date: ___________
+
+---
+
+**Document Version**: 1.0
+**Last Updated**: 2025-11-13
+**Author**: Claude Code (with Patrick)
+**Status**: Draft
