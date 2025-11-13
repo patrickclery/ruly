@@ -77,6 +77,9 @@ module Ruly
                       options[:output_file]
                     end
 
+      # Collect scripts from all sources
+      script_files = collect_scripts_from_sources(sources)
+
       # Check for cached version
       cache_used = false
       if recipe_name && options[:cache] && !dry_run
@@ -147,6 +150,18 @@ module Ruly
             bin_files.each do |file|
               target = calculate_bin_target(file[:relative_path])
               puts "  → #{target} (executable)"
+            end
+          end
+
+          # Show scripts that would be copied
+          if script_files[:local].any? || script_files[:remote].any?
+            total_scripts = script_files[:local].size + script_files[:remote].size
+            puts "\nWould copy #{total_scripts} scripts to ~/.claude/scripts/:"
+            script_files[:local].each do |script|
+              puts "  → #{script[:relative_path]} (local)"
+            end
+            script_files[:remote].each do |script|
+              puts "  → #{script[:filename]} (remote from GitHub)"
             end
           end
 
@@ -236,6 +251,9 @@ module Ruly
 
         # Process subagents if defined in recipe
         process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
+
+        # Copy scripts to Claude Code directory
+        copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
       end
 
       mode_desc = if agent == 'shell_gpt'
@@ -1026,6 +1044,101 @@ module Ruly
       else
         # Hash recipe = default behavior
         default_output
+      end
+    end
+
+    # Collect scripts from all sources
+    # Returns hash with :local and :remote arrays
+    def collect_scripts_from_sources(sources)
+      script_files = {local: [], remote: []}
+
+      sources.each do |source|
+        next unless source[:type] == 'local'
+
+        file_path = find_rule_file(source[:path])
+        next unless file_path
+
+        content = File.read(file_path, encoding: 'UTF-8')
+        scripts = extract_scripts_from_frontmatter(content, source[:path])
+
+        collect_local_scripts(scripts[:files], source[:path], script_files)
+        collect_remote_scripts(scripts[:remote], source[:path], script_files)
+      end
+
+      script_files
+    end
+
+    # Extract scripts declarations from frontmatter
+    # Supports both structured format ({ files: [...], remote: [...] })
+    # and simplified format (array of paths, treated as files)
+    def extract_scripts_from_frontmatter(content, source_path)
+      return {files: [], remote: []} unless content.start_with?('---')
+
+      parts = content.split(/^---\s*$/, 3)
+      return {files: [], remote: []} if parts.length < 3
+
+      frontmatter = YAML.safe_load(parts[1])
+      scripts = frontmatter['scripts']
+      return {files: [], remote: []} unless scripts
+
+      # Handle both structured and simplified formats
+      if scripts.is_a?(Hash)
+        # Structured format: { files: [...], remote: [...] }
+        {
+          files: scripts['files'] || [],
+          remote: scripts['remote'] || []
+        }
+      elsif scripts.is_a?(Array)
+        # Simplified format: treat as files
+        {
+          files: scripts,
+          remote: []
+        }
+      else
+        warn "Warning: Invalid scripts format in #{source_path}"
+        {files: [], remote: []}
+      end
+    rescue StandardError => e
+      warn "Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}"
+      {files: [], remote: []}
+    end
+
+    # Collect local script files and add to script_files hash
+    def collect_local_scripts(script_paths, source_path, script_files)
+      script_paths.each do |script_path|
+        resolved_path = script_path.start_with?('/') ? script_path : find_rule_file(script_path)
+
+        if resolved_path && File.exist?(resolved_path)
+          script_files[:local] << {
+            from_rule: source_path,
+            relative_path: File.basename(script_path),
+            source_path: resolved_path
+          }
+        else
+          warn "Warning: Script not found: #{script_path} (from #{source_path})"
+        end
+      end
+    end
+
+    # Collect remote script URLs and add to script_files hash
+    def collect_remote_scripts(script_urls, source_path, script_files)
+      script_urls.each do |script_url|
+        script_files[:remote] << {
+          filename: File.basename(script_url),
+          from_rule: source_path,
+          url: normalize_github_url(script_url)
+        }
+      end
+    end
+
+    # Normalize GitHub URLs
+    # Converts shorthand github:org/repo/path to full URL
+    def normalize_github_url(url)
+      if url.start_with?('github:')
+        path = url.sub('github:', '')
+        "https://github.com/#{path}"
+      else
+        url
       end
     end
 
@@ -2449,6 +2562,97 @@ module Ruly
       puts "    ⚠️  Warning: Could not save commands for '#{agent_name}': #{e.message}"
     end
 
+    # Copy scripts to ~/.claude/scripts/ and make them executable
+    # Supports both local and remote scripts
+    def copy_scripts(script_files, destination_dir = nil)
+      local_scripts = script_files[:local] || []
+      remote_scripts = script_files[:remote] || []
+
+      return if local_scripts.empty? && remote_scripts.empty?
+
+      # Fetch remote scripts first
+      fetched_remote = fetch_remote_scripts(remote_scripts)
+
+      # Combine local and fetched remote scripts
+      all_scripts = local_scripts + fetched_remote
+      return if all_scripts.empty?
+
+      # Default to Claude Code standard directory
+      scripts_dir = destination_dir || File.expand_path('~/.claude/scripts')
+      FileUtils.mkdir_p(scripts_dir)
+
+      copied_count = 0
+      all_scripts.each do |file|
+        source_path = file[:source_path]
+        relative_path = file[:relative_path]
+
+        # Preserve subdirectory structure from script path
+        target_path = File.join(scripts_dir, relative_path)
+        target_dir = File.dirname(target_path)
+
+        # Create subdirectories if needed
+        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
+
+        # Copy the file
+        FileUtils.cp(source_path, target_path)
+
+        # Make it executable
+        File.chmod(0o755, target_path)
+
+        type_label = file[:remote] ? 'remote' : 'local'
+        puts "  ✓ #{relative_path} (#{type_label})"
+
+        copied_count += 1
+      end
+
+      puts "🔧 Copied #{copied_count} scripts to #{scripts_dir} (made executable)"
+    end
+
+    # Fetch remote scripts from GitHub
+    # Returns array of fetched script metadata with temporary file paths
+    def fetch_remote_scripts(remote_scripts)
+      return [] if remote_scripts.empty?
+
+      puts '🔄 Fetching remote scripts...'
+      fetched_scripts = []
+
+      remote_scripts.each do |script|
+        # Convert blob URL to raw content URL
+        raw_url = script[:url]
+                    .gsub('github.com', 'raw.githubusercontent.com')
+                    .gsub('/blob/', '/')
+
+        # Fetch the script content
+        uri = URI(raw_url)
+        response = Net::HTTP.get_response(uri)
+
+        if response.code == '200'
+          # Save to temp location (keep file open to prevent auto-delete)
+          temp_file = Tempfile.new(['script', File.extname(script[:filename])])
+          temp_file.write(response.body)
+          temp_file.flush
+          temp_file.rewind
+
+          fetched_scripts << {
+            filename: script[:filename],
+            from_rule: script[:from_rule],
+            relative_path: script[:filename],
+            remote: true,
+            source_path: temp_file.path,
+            temp_file: # Keep reference to prevent GC
+          }
+
+          puts "  ✓ #{script[:filename]} (from #{URI(script[:url]).host})"
+        else
+          warn "  ✗ Failed to fetch #{script[:filename]}: HTTP #{response.code}"
+        end
+      rescue StandardError => e
+        warn "  ✗ Error fetching #{script[:filename]}: #{e.message}"
+      end
+
+      fetched_scripts
+    end
+
     def cached_file_count(output_file)
       # Count the number of sections in the output file
       return 0 unless File.exist?(output_file)
@@ -2991,192 +3195,6 @@ module Ruly
           end
         end
       end
-    end
-
-    # Extract scripts declarations from frontmatter
-    # Supports both structured format ({ files: [...], remote: [...] })
-    # and simplified format (array of paths, treated as files)
-    def extract_scripts_from_frontmatter(content, source_path)
-      return {files: [], remote: []} unless content.start_with?('---')
-
-      parts = content.split(/^---\s*$/, 3)
-      return {files: [], remote: []} if parts.length < 3
-
-      frontmatter = YAML.safe_load(parts[1])
-      scripts = frontmatter['scripts']
-      return {files: [], remote: []} unless scripts
-
-      # Handle both structured and simplified formats
-      if scripts.is_a?(Hash)
-        # Structured format: { files: [...], remote: [...] }
-        {
-          files: scripts['files'] || [],
-          remote: scripts['remote'] || []
-        }
-      elsif scripts.is_a?(Array)
-        # Simplified format: treat as files
-        {
-          files: scripts,
-          remote: []
-        }
-      else
-        warn "Warning: Invalid scripts format in #{source_path}"
-        {files: [], remote: []}
-      end
-    rescue StandardError => e
-      warn "Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}"
-      {files: [], remote: []}
-    end
-
-    # Normalize GitHub URLs
-    # Converts shorthand github:org/repo/path to full URL
-    def normalize_github_url(url)
-      if url.start_with?('github:')
-        path = url.sub('github:', '')
-        "https://github.com/#{path}"
-      else
-        url
-      end
-    end
-
-    # Collect scripts from all sources
-    # Returns hash with :local and :remote arrays
-    def collect_scripts_from_sources(sources)
-      script_files = {local: [], remote: []}
-
-      sources.each do |source|
-        next unless source[:type] == 'local'
-
-        file_path = find_rule_file(source[:path])
-        next unless file_path
-
-        content = File.read(file_path, encoding: 'UTF-8')
-        scripts = extract_scripts_from_frontmatter(content, source[:path])
-
-        collect_local_scripts(scripts[:files], source[:path], script_files)
-        collect_remote_scripts(scripts[:remote], source[:path], script_files)
-      end
-
-      script_files
-    end
-
-    # Collect local script files and add to script_files hash
-    def collect_local_scripts(script_paths, source_path, script_files)
-      script_paths.each do |script_path|
-        resolved_path = script_path.start_with?('/') ? script_path : find_rule_file(script_path)
-
-        if resolved_path && File.exist?(resolved_path)
-          script_files[:local] << {
-            from_rule: source_path,
-            relative_path: File.basename(script_path),
-            source_path: resolved_path
-          }
-        else
-          warn "Warning: Script not found: #{script_path} (from #{source_path})"
-        end
-      end
-    end
-
-    # Collect remote script URLs and add to script_files hash
-    def collect_remote_scripts(script_urls, source_path, script_files)
-      script_urls.each do |script_url|
-        script_files[:remote] << {
-          filename: File.basename(script_url),
-          from_rule: source_path,
-          url: normalize_github_url(script_url)
-        }
-      end
-    end
-
-    # Fetch remote scripts from GitHub
-    # Returns array of fetched script metadata with temporary file paths
-    def fetch_remote_scripts(remote_scripts)
-      return [] if remote_scripts.empty?
-
-      puts '🔄 Fetching remote scripts...'
-      fetched_scripts = []
-
-      remote_scripts.each do |script|
-        # Convert blob URL to raw content URL
-        raw_url = script[:url]
-                    .gsub('github.com', 'raw.githubusercontent.com')
-                    .gsub('/blob/', '/')
-
-        # Fetch the script content
-        uri = URI(raw_url)
-        response = Net::HTTP.get_response(uri)
-
-        if response.code == '200'
-          # Save to temp location (keep file open to prevent auto-delete)
-          temp_file = Tempfile.new(['script', File.extname(script[:filename])])
-          temp_file.write(response.body)
-          temp_file.flush
-          temp_file.rewind
-
-          fetched_scripts << {
-            filename: script[:filename],
-            from_rule: script[:from_rule],
-            relative_path: script[:filename],
-            remote: true,
-            source_path: temp_file.path,
-            temp_file: # Keep reference to prevent GC
-          }
-
-          puts "  ✓ #{script[:filename]} (from #{URI(script[:url]).host})"
-        else
-          warn "  ✗ Failed to fetch #{script[:filename]}: HTTP #{response.code}"
-        end
-      rescue StandardError => e
-        warn "  ✗ Error fetching #{script[:filename]}: #{e.message}"
-      end
-
-      fetched_scripts
-    end
-
-    # Copy scripts to ~/.claude/scripts/ and make them executable
-    # Supports both local and remote scripts
-    def copy_scripts(script_files, destination_dir = nil)
-      local_scripts = script_files[:local] || []
-      remote_scripts = script_files[:remote] || []
-
-      return if local_scripts.empty? && remote_scripts.empty?
-
-      # Fetch remote scripts first
-      fetched_remote = fetch_remote_scripts(remote_scripts)
-
-      # Combine local and fetched remote scripts
-      all_scripts = local_scripts + fetched_remote
-      return if all_scripts.empty?
-
-      # Default to Claude Code standard directory
-      scripts_dir = destination_dir || File.expand_path('~/.claude/scripts')
-      FileUtils.mkdir_p(scripts_dir)
-
-      copied_count = 0
-      all_scripts.each do |file|
-        source_path = file[:source_path]
-        relative_path = file[:relative_path]
-
-        # Preserve subdirectory structure from script path
-        target_path = File.join(scripts_dir, relative_path)
-        target_dir = File.dirname(target_path)
-
-        # Create subdirectories if needed
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-
-        # Copy the file
-        FileUtils.cp(source_path, target_path)
-
-        # Make it executable
-        File.chmod(0o755, target_path)
-
-        type_label = file[:remote] ? 'remote' : 'local'
-        puts "  ✓ #{relative_path} (#{type_label})"
-
-        copied_count += 1
-      end
-
-      puts "🔧 Copied #{copied_count} scripts to #{scripts_dir} (made executable)"
     end
 
     def add_agent_files_to_remove(agent, files_to_remove)
