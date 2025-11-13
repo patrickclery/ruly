@@ -207,6 +207,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/
     mcp_servers:
       - playwright # For browser automation and E2E testing
       - atlassian # For Jira ticket context
