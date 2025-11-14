@@ -34,7 +34,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/pr-create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
