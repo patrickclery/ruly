@@ -44,4 +44,4 @@ node_modules/
 # OS specific
 .DS_Store
 
-/.taskmaster/config.json
+.taskmaster/
