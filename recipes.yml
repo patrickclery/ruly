@@ -15,6 +15,232 @@ recipes:
       - rules/ruby/sequel.md
       - rules/ruby/monads.md
       - rules/ruby/rspec.md
+
+  # WorkAxle recipes - Dynamic loading based on current task
+  workaxle-core:
+    description: "WorkAxle essential patterns only"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+    mcp_servers:
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-bug:
+    description: "WorkAxle bug investigation and fixing"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+    mcp_servers:
+      - atlassian # For Jira ticket investigation
+      - github # For code/PR context
+      - grafana # For metrics and monitoring
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-testing:
+    description: "WorkAxle RSpec testing and TDD"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
+    mcp_servers:
+      - github # For code context
+      - playwright # For UI/integration testing
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-migration:
+    description: "WorkAxle database migrations"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
+    mcp_servers:
+      - github # For code/PR context
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-grpc:
+    description: "WorkAxle gRPC service development"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
+    mcp_servers:
+      - github # For code context
+      - Ref # For API documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-pr:
+    description: "WorkAxle PR creation and management"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+    mcp_servers:
+      - github # Essential for PR management
+      - atlassian # For linking to Jira tickets
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-feature:
+    description: "WorkAxle new feature development"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/story.md
+    mcp_servers:
+      - github # For code context
+      - atlassian # For requirements from Jira
+      - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-refactor:
+    description: "WorkAxle code refactoring"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+    mcp_servers:
+      - github # For code context
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-full:
+    description: "Complete WorkAxle documentation"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/
+      - /Users/patrick/Projects/ruly/rules/workaxle/archive/
+      - /Users/patrick/Projects/ruly/rules/workaxle/user-svc/
+    mcp_servers:
+      - atlassian # Full Jira integration
+      - github # Full GitHub integration
+      - grafana # Monitoring and metrics
+      - playwright # UI testing
+      - Ref # Documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-finalize:
+    description: "WorkAxle final testing and cleanup phase"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/rspec-debugging-guide.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+    mcp_servers:
+      - github # For CI/CD checks and test status
+      - playwright # For UI/integration testing
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-review:
+    description: "WorkAxle final review and QA stage"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/resolve-outdated-comments.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+    mcp_servers:
+      - github # Essential for PR management and reviews
+      - atlassian # For Jira ticket updates and status changes
+      - playwright # For UI testing, screenshots, and demos
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-atlassian:
+    description: "WorkAxle Jira and Confluence operations"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+    mcp_servers:
+      - atlassian # Full Jira and Confluence integration
+      - github # For linking PRs to tickets
+      - task-master-ai # Task management and workflow tracking
+
+  jira:
+    description: "Jira and Confluence operations (alias for workaxle-atlassian)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+    mcp_servers:
+      - atlassian # Full Jira and Confluence integration
+      - github # For linking PRs to tickets
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-orchestrator:
+    description: "WorkAxle multi-service development and E2E testing"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+    mcp_servers:
+      - github # For code context
+      - playwright # For E2E testing
+      - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-playwright:
+    description: "WorkAxle Playwright E2E testing and browser automation"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/
+    mcp_servers:
+      - playwright # For browser automation and E2E testing
+      - atlassian # For Jira ticket context
+      - github # For code context
+      - task-master-ai # Task management and workflow tracking
+
+  workaxle-spike:
+    description: "WorkAxle spike investigation and research for Jira tasks"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+    mcp_servers:
+      - atlassian # For Jira ticket investigation and research
+      - Ref # For documentation lookup and external research
+      - task-master-ai # Task management and spike tracking
+
+  local:
+    description: "Local development with all MCP servers, no rule files"
+    files: []
+    mcp_servers:
+      - github # GitHub API and PR management
+      - playwright # Browser automation and UI testing
+      - Ref # Documentation reference lookup
+      - task-master-ai # Task management and workflow tracking
+
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"

@@ -175,38 +175,12 @@ RSpec.describe Ruly::CLI do
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
-    it 'creates .ruly.yml metadata file' do
+    it 'creates the output file' do
       cli.invoke(:squash)
 
-      expect(File.exist?('.ruly.yml')).to be(true)
-
-      metadata = YAML.load_file('.ruly.yml')
-      expect(metadata['output_file']).to eq('CLAUDE.local.md')
-      expect(metadata['agent']).to eq('claude')
-      expect(metadata['recipe']).to be_nil
-      expect(metadata['files_count']).to be > 0
-      expect(metadata['created_at']).not_to be_nil
-      expect(metadata['version']).to eq(Ruly::VERSION)
-    end
-
-    skip 'includes recipe in metadata when specified (needs proper mocking of gem paths)' do
-      # Create a recipe file with test_recipe that points to the test file
-      recipes = {
-        'recipes' => {
-          'test_recipe' => {
-            'files' => ['rules/test.md']
-          }
-        }
-      }
-      File.write(File.join(test_dir, 'recipes.yml'), recipes.to_yaml)
-
-      # Suppress output during test
-      allow(cli).to receive(:puts)
-
-      cli.invoke(:squash, [], recipe: 'test_recipe')
-
-      metadata = YAML.load_file('.ruly.yml')
-      expect(metadata['recipe']).to eq('test_recipe')
+      expect(File.exist?('CLAUDE.local.md')).to be(true)
+      content = File.read('CLAUDE.local.md')
+      expect(content).to include('Combined Ruly Documentation')
     end
 
     it 'raises error for non-existent recipe' do
@@ -234,116 +208,40 @@ RSpec.describe Ruly::CLI do
         cli.invoke(:squash, [nonexistent_recipe])
       end.to raise_error(Thor::Error, /Recipe '#{nonexistent_recipe}' not found/)
     end
-
-    skip 'includes command files in metadata for Claude agent (needs proper mocking of gem paths)' do
-      # Create command file in the test directory
-      FileUtils.mkdir_p(File.join(test_dir, 'rules', 'commands'))
-      File.write(File.join(test_dir, 'rules', 'commands', 'test-command.md'), '# Command')
-
-      # Suppress output during test
-      allow(cli).to receive(:puts)
-
-      cli.invoke(:squash)
-
-      metadata = YAML.load_file('.ruly.yml')
-      expect(metadata['command_files']).to include('.claude/commands/test-command.md')
-    end
-
-    it 'does not create metadata in dry-run mode' do
-      cli.invoke(:squash, [], dry_run: true)
-
-      expect(File.exist?('.ruly.yml')).to be(false)
-    end
   end
 
-  describe '#clean with metadata' do
+  describe '#clean' do
     before do
       # Mock gem_root
       allow(cli).to receive(:gem_root).and_return(test_dir)
     end
 
-    context 'when .ruly.yml exists' do
-      before do
-        # Create metadata file
-        metadata = {
-          'agent' => 'claude',
-          'command_files' => ['.claude/commands/test.md'],
-          'created_at' => Time.now.iso8601,
-          'files_count' => 5,
-          'output_file' => 'TEST.md',
-          'recipe' => 'test_recipe',
-          'version' => '0.1.0'
-        }
-        File.write('.ruly.yml', metadata.to_yaml)
+    it 'removes default output file' do
+      File.write('CLAUDE.local.md', '# Content')
 
-        # Create the files referenced in metadata
-        File.write('TEST.md', '# Test content')
-        FileUtils.mkdir_p('.claude/commands')
-        File.write('.claude/commands/test.md', '# Command')
-      end
+      cli.invoke(:clean)
 
-      it 'removes files specified in metadata' do
-        cli.invoke(:clean)
-
-        expect(File.exist?('TEST.md')).to be(false)
-        expect(File.exist?('.claude/commands/test.md')).to be(false)
-        expect(File.exist?('.ruly.yml')).to be(false)
-      end
-
-      it 'uses metadata even if output file differs from default' do
-        # Metadata specifies TEST.md, not the default CLAUDE.local.md
-        cli.invoke(:clean)
-
-        expect(File.exist?('TEST.md')).to be(false)
-      end
-
-      it 'overrides metadata when --output-file is specified' do
-        File.write('OTHER.md', '# Other content')
-
-        cli.invoke(:clean, [], output_file: 'OTHER.md')
-
-        expect(File.exist?('OTHER.md')).to be(false)
-        expect(File.exist?('TEST.md')).to be(true) # Original from metadata not removed
-      end
-
-      it 'overrides metadata when --recipe is specified' do
-        File.write('CLAUDE.local.md', '# Default content')
-
-        cli.invoke(:clean, [], recipe: 'other_recipe')
-
-        # When recipe is specified, it overrides metadata and uses default output file
-        expect(File.exist?('CLAUDE.local.md')).to be(false)
-        # TEST.md from metadata is also removed since metadata is processed
-        expect(File.exist?('TEST.md')).to be(false)
-      end
-
-      it 'shows correct files in dry-run mode' do
-        # In dry-run mode, files should still exist after clean
-        cli.invoke(:clean, [], dry_run: true)
-
-        # Files should still exist
-        expect(File.exist?('TEST.md')).to be(true)
-        expect(File.exist?('.claude/commands/test.md')).to be(true)
-        expect(File.exist?('.ruly.yml')).to be(true)
-      end
+      expect(File.exist?('CLAUDE.local.md')).to be(false)
     end
 
-    context 'when .ruly.yml does not exist' do
-      it 'falls back to default behavior' do
-        File.write('CLAUDE.local.md', '# Content')
+    it 'removes specified output file' do
+      File.write('CUSTOM.md', '# Custom')
 
-        cli.invoke(:clean)
+      cli.invoke(:clean, [], output_file: 'CUSTOM.md')
 
-        expect(File.exist?('CLAUDE.local.md')).to be(false)
-      end
+      expect(File.exist?('CUSTOM.md')).to be(false)
+    end
 
-      it 'uses specified output file' do
-        File.write('CUSTOM.md', '# Custom')
+    it 'shows files to be removed in dry-run mode' do
+      FileUtils.mkdir_p('.claude/commands')
+      File.write('.claude/commands/test.md', '# Command')
+      File.write('CLAUDE.local.md', '# Content')
 
-        cli.invoke(:clean, [], output_file: 'CUSTOM.md')
+      cli.invoke(:clean, [], dry_run: true)
 
-        expect(File.exist?('CUSTOM.md')).to be(false)
-      end
+      # Files should still exist in dry-run mode
+      expect(File.exist?('CLAUDE.local.md')).to be(true)
+      expect(File.exist?('.claude/commands/test.md')).to be(true)
     end
 
     context 'with agent-specific files' do
@@ -436,7 +334,6 @@ RSpec.describe Ruly::CLI do
       File.write('CLAUDE.local.md', '# Old content')
       FileUtils.mkdir_p('.claude/commands')
       File.write('.claude/commands/old.md', '# Old command')
-      File.write('.ruly.yml', 'old: metadata')
 
       # Simply run squash with clean option
       cli.invoke(:squash, [], clean: true)
@@ -529,7 +426,6 @@ RSpec.describe Ruly::CLI do
           content = File.read('.gitignore')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('CLAUDE.local.md')
-          expect(content).to include('.ruly.yml')
         end
       end
 
@@ -546,7 +442,6 @@ RSpec.describe Ruly::CLI do
           expect(content).to include('node_modules/')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('CLAUDE.local.md')
-          expect(content).to include('.ruly.yml')
         end
       end
 
@@ -562,7 +457,6 @@ RSpec.describe Ruly::CLI do
           expect(content).to include('# Existing')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('NEW.md')
-          expect(content).to include('.ruly.yml')
           expect(content).not_to include('old-file.md')
           expect(content).to include('# Other')
         end
@@ -599,7 +493,6 @@ RSpec.describe Ruly::CLI do
           content = File.read('.git/info/exclude')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('CLAUDE.local.md')
-          expect(content).to include('.ruly.yml')
         end
       end
 
@@ -656,9 +549,171 @@ RSpec.describe Ruly::CLI do
         expect([gitignore_content, exclude_content]).to all(
           include('# Ruly generated files')
             .and(include('CLAUDE.local.md'))
-            .and(include('.ruly.yml'))
         )
       end
+    end
+  end
+
+  describe '#get_command_relative_path' do
+    it 'handles basic command paths' do
+      path = 'rules/commands/test.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('test.md')
+    end
+
+    it 'preserves subdirectories between rules and commands' do
+      path = 'rules/core/commands/bug/fix.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('core/bug/fix.md')
+    end
+
+    it 'handles paths without rules directory' do
+      path = 'some/dir/commands/test.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('dir/test.md')
+    end
+
+    context 'with omit_command_prefix' do
+      it 'removes the full prefix when path starts with it' do
+        path = 'rules/workaxle/core/testing/commands/pre-commit.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('testing/pre-commit.md')
+      end
+
+      it 'removes partial prefix when path partially matches' do
+        path = 'rules/workaxle/pr/commands/create.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('pr/create.md')
+      end
+
+      it 'removes only matching parts of prefix' do
+        path = 'rules/workaxle/atlassian/jira/commands/details.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('atlassian/jira/details.md')
+      end
+
+      it 'does not remove prefix if it does not match at all' do
+        path = 'rules/other/project/commands/test.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('other/project/test.md')
+      end
+
+      it 'handles prefix that exactly matches the entire path' do
+        path = 'rules/workaxle/core/commands/test.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('test.md')
+      end
+
+      it 'handles nested subdirectories after prefix removal' do
+        path = 'rules/workaxle/core/commands/bug/fix/issue.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('bug/fix/issue.md')
+      end
+
+      it 'handles paths without the prefix' do
+        path = 'rules/commands/direct.md'
+        result = cli.send(:get_command_relative_path, path, 'workaxle/core')
+        expect(result).to eq('direct.md')
+      end
+    end
+
+    it 'handles files without /commands/ in path' do
+      path = 'some/regular/file.md'
+      result = cli.send(:get_command_relative_path, path)
+      expect(result).to eq('file.md')
+    end
+  end
+
+  describe '#save_command_files with omit_command_prefix' do
+    let(:commands_dir) { '.claude/commands' }
+
+    before do
+      # Create a test command file
+      @test_command = {
+        content: '# Test Command',
+        path: 'rules/workaxle/core/commands/jira/details.md'
+      }
+    end
+
+    it 'saves commands with prefix omitted when recipe config has omit_command_prefix' do
+      recipe_config = {'omit_command_prefix' => 'workaxle/core'}
+
+      cli.send(:save_command_files, [@test_command], recipe_config)
+
+      # Check file was saved to the correct location without the prefix
+      expected_file = File.join(commands_dir, 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+      expect(File.read(expected_file)).to eq('# Test Command')
+
+      # Check that the prefixed directory was NOT created
+      prefixed_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(prefixed_file)).to be(false)
+    end
+
+    it 'saves commands with full path when no omit_command_prefix is set' do
+      recipe_config = {}
+
+      cli.send(:save_command_files, [@test_command], recipe_config)
+
+      # Check file was saved to the correct location with the full path
+      expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+      expect(File.read(expected_file)).to eq('# Test Command')
+    end
+
+    it 'handles nil recipe_config' do
+      cli.send(:save_command_files, [@test_command], nil)
+
+      # Should save with full path when config is nil
+      expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
+      expect(File.exist?(expected_file)).to be(true)
+    end
+  end
+
+  describe '#introspect preserving custom keys' do
+    let(:user_recipes_file) { File.join(Dir.home, '.config', 'ruly', 'recipes.yml') }
+
+    before do
+      # Ensure the config directory exists
+      FileUtils.mkdir_p(File.dirname(user_recipes_file))
+
+      # Create initial recipe with custom keys
+      initial_config = {
+        'recipes' => {
+          'test_recipe' => {
+            'custom_key' => 'custom_value',
+            'description' => 'Test recipe',
+            'files' => ['rules/test.md'],
+            'mcp_servers' => %w[github atlassian],
+            'omit_command_prefix' => 'workaxle/core',
+            'plan' => 'claude_max'
+          }
+        }
+      }
+      File.write(user_recipes_file, initial_config.to_yaml)
+
+      # Create test markdown files
+      FileUtils.mkdir_p(File.join(test_dir, 'rules'))
+      File.write(File.join(test_dir, 'rules', 'new.md'), '# New Rule')
+    end
+
+    after do
+      FileUtils.rm_f(user_recipes_file)
+    end
+
+    it 'preserves all custom keys except files/sources when updating a recipe' do
+      # Run introspect to update the recipe
+      cli.invoke(:introspect, ['test_recipe', File.join(test_dir, 'rules')])
+
+      # Check that all custom keys were preserved
+      updated_config = YAML.safe_load_file(user_recipes_file)
+      recipe = updated_config['recipes']['test_recipe']
+
+      expect(recipe['omit_command_prefix']).to eq('workaxle/core')
+      expect(recipe['mcp_servers']).to eq(%w[github atlassian])
+      expect(recipe['custom_key']).to eq('custom_value')
+      expect(recipe['plan']).to eq('claude_max')
+      expect(recipe['files']).to include(File.join(test_dir, 'rules', 'new.md'))
     end
   end
 end

@@ -1,0 +1,13 @@
+- always update the ~/.config/ruly/recipes.yml and /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml when you change things it references (they should be identical)
+- Every time the slash commands are updated. Make sure to update the slash command Section of the read me
+- When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
+
+# Claude Code Instructions
+
+## Ruly Recipe and MCP Configuration Patterns
+
+**Import Ruly recipe configuration patterns and MCP server guidelines.**
+@./.claude/ruly-recipes-mcp-patterns.md
+
+- When testing out `ruly squash ...`, always run it from a `mktmpdir` and not the main project directory
+- always update ruly after any changes. for instance, /Users/patrick/.local/share/mise/installs/ruby/3.3.3/bin/ruly is out of sync right now
