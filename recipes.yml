@@ -234,6 +234,19 @@ recipes:
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
+  workaxle-initiative-core:
+    description: "WorkAxle spike investigation and research for Jira tasks"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+    mcp_servers:
+      - atlassian # For Jira ticket investigation and research
+      - Ref # For documentation lookup and external research
+      - task-master-ai # Task management and spike tracking
+
   local:
     description: "Local development with all MCP servers, no rule files"
     files: []
