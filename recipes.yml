@@ -102,6 +102,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/story.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/epic.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/initiative.md
     mcp_servers:
       - github # For code context
       - atlassian # For requirements from Jira
