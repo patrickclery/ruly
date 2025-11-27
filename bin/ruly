@@ -1,4 +1,4 @@
-#!/usr/bin/env -S mise exec ruby@3.3.3 -- ruby
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
 require_relative '../lib/ruly'

@@ -35,6 +35,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
@@ -54,6 +56,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - playwright # For UI/integration testing
@@ -76,6 +81,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - Ref # For API documentation lookup
@@ -86,6 +94,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # Essential for PR management
       - atlassian # For linking to Jira tickets
@@ -103,6 +112,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/story.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/epic.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/initiative.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - atlassian # For requirements from Jira
@@ -116,6 +128,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - task-master-ai # Task management and workflow tracking
@@ -150,6 +165,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For CI/CD checks and test status
@@ -162,6 +179,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/resolve-outdated-comments.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
     mcp_servers:
@@ -195,6 +213,9 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - playwright # For E2E testing
