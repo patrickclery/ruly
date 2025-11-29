@@ -284,7 +284,8 @@ recipes:
 
   local:
     description: "Local development with all MCP servers, no rule files"
-    files: []
+    files:
+      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
     mcp_servers:
       - github # GitHub API and PR management
       - playwright # Browser automation and UI testing
