@@ -34,6 +34,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/details.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
@@ -286,8 +287,11 @@ recipes:
     description: "Local development with all MCP servers, no rule files"
     files:
       - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
     mcp_servers:
-      - github # GitHub API and PR management
       - playwright # Browser automation and UI testing
       - Ref # Documentation reference lookup
       - task-master-ai # Task management and workflow tracking
