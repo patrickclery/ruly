@@ -285,7 +285,7 @@ recipes:
     description: "Local development with all MCP servers, no rule files"
     files:
       - /Users/patrick/Projects/ruly/rules/home/
-      - /Users/patrick/Projects/ruly/rules/taskmaster-llmux-setup.md
+      - /Users/patrick/Projects/ruly/rules/llmux-tools-setup.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
