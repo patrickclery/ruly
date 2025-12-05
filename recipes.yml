@@ -41,7 +41,6 @@ recipes:
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
-      - grafana # For metrics and monitoring
       - task-master-ai # Task management and workflow tracking
 
   workaxle-testing:
@@ -150,7 +149,6 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira integration
       - github # Full GitHub integration
-      - grafana # Monitoring and metrics
       - playwright # UI testing
       - Ref # Documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -286,7 +284,8 @@ recipes:
   local:
     description: "Local development with all MCP servers, no rule files"
     files:
-      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/home/
+      - /Users/patrick/Projects/ruly/rules/taskmaster-llmux-setup.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
