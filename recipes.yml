@@ -109,9 +109,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/story.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/epic.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/initiative.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
