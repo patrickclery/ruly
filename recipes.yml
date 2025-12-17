@@ -222,6 +222,22 @@ recipes:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
+  workaxle-gateway:
+    description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+    mcp_servers:
+      - github # For code context and PRs
+      - atlassian # For Jira ticket context
+      - playwright # For E2E testing
+      - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
+
   workaxle-playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
     files:
