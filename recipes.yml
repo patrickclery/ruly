@@ -312,6 +312,22 @@ recipes:
       - Ref # Documentation reference lookup
       - task-master-ai # Task management and workflow tracking
 
+  awesomer:
+    description: "Local development with Plane and GitHub integration (no Playwright)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/awesomer
+      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
+    mcp_servers:
+      - playwright # Browser automation and UI testing
+      - plane # Plane project management
+      - github # GitHub integration
+      - Ref # Documentation reference lookup
+      - task-master-ai # Task management and workflow tracking
+
   # Example recipe with multiple source types
   example_mixed:
     description: "Mixed local and remote sources demonstration recipe"
