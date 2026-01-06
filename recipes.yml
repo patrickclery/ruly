@@ -110,12 +110,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
       - github # For code context
       - atlassian # For requirements from Jira
+      - teams # For Teams DM notifications
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
@@ -142,6 +144,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/
@@ -150,6 +153,7 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira integration
       - github # Full GitHub integration
+      - teams # MS Teams integration
       - playwright # UI testing
       - Ref # Documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -193,8 +197,10 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
+      - teams # For Teams DM notifications
       - github # For linking PRs to tickets
       - task-master-ai # Task management and workflow tracking
 
@@ -203,8 +209,10 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
+      - teams # For Teams DM notifications
       - github # For linking PRs to tickets
       - task-master-ai # Task management and workflow tracking
 
