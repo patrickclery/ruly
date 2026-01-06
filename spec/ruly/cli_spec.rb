@@ -627,9 +627,8 @@ RSpec.describe Ruly::CLI do
   describe '#save_command_files with omit_command_prefix' do
     let(:commands_dir) { '.claude/commands' }
 
-    before do
-      # Create a test command file
-      @test_command = {
+    let(:test_command) do
+      {
         content: '# Test Command',
         path: 'rules/workaxle/core/commands/jira/details.md'
       }
@@ -638,7 +637,7 @@ RSpec.describe Ruly::CLI do
     it 'saves commands with prefix omitted when recipe config has omit_command_prefix' do
       recipe_config = {'omit_command_prefix' => 'workaxle/core'}
 
-      cli.send(:save_command_files, [@test_command], recipe_config)
+      cli.send(:save_command_files, [test_command], recipe_config)
 
       # Check file was saved to the correct location without the prefix
       expected_file = File.join(commands_dir, 'jira', 'details.md')
@@ -653,7 +652,7 @@ RSpec.describe Ruly::CLI do
     it 'saves commands with full path when no omit_command_prefix is set' do
       recipe_config = {}
 
-      cli.send(:save_command_files, [@test_command], recipe_config)
+      cli.send(:save_command_files, [test_command], recipe_config)
 
       # Check file was saved to the correct location with the full path
       expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
@@ -662,7 +661,7 @@ RSpec.describe Ruly::CLI do
     end
 
     it 'handles nil recipe_config' do
-      cli.send(:save_command_files, [@test_command], nil)
+      cli.send(:save_command_files, [test_command], nil)
 
       # Should save with full path when config is nil
       expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
