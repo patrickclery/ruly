@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'ruly/version'
+require_relative 'ruly/checks'
 require_relative 'ruly/cli'
 
 module Ruly

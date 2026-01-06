@@ -254,6 +254,9 @@ module Ruly
 
         # Copy scripts to Claude Code directory
         copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+
+        # Run post-squash validation checks
+        Ruly::Checks.run_all(local_sources, command_files)
       end
 
       mode_desc = if agent == 'shell_gpt'
