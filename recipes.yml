@@ -38,10 +38,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - github # For code/PR context
       - task-master-ai # Task management and workflow tracking
+      - teams # For Teams DM notifications
 
   workaxle-testing:
     description: "WorkAxle RSpec testing and TDD"
