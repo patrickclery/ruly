@@ -10,8 +10,6 @@ RSpec.describe Ruly::CLI, '#essential' do
 
   before do
     # Mock the gem_root to use our test directory
-    allow(cli).to receive(:gem_root).and_return(test_dir)
-    allow(cli).to receive(:rules_dir).and_return(File.join(test_dir, 'rules'))
 
     # Create test directory structure
     FileUtils.mkdir_p(File.join(test_dir, 'rules', 'ruby'))
@@ -27,7 +25,8 @@ RSpec.describe Ruly::CLI, '#essential' do
             - rules/ruby/extra.md
     YAML
     File.write(File.join(test_dir, 'recipes.yml'), recipes_content)
-    allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+    allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'),
+                                   rules_dir: File.join(test_dir, 'rules'))
   end
 
   after do
@@ -200,16 +199,16 @@ RSpec.describe Ruly::CLI, '#essential' do
       MD
 
       options = {
-        output_file: 'output.md',
         agent: 'claude',
         cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
-        git_ignore: false,
+        essential: true,
         git_exclude: false,
-        toc: false,
-        essential: true
+        git_ignore: false,
+        output_file: 'output.md',
+        toc: false
       }
       allow(cli).to receive(:options).and_return(options)
 
@@ -225,14 +224,14 @@ RSpec.describe Ruly::CLI, '#essential' do
       expect(filtered_sources[0][:path]).to eq('rules/ruby/essential.md')
 
       # Then process with requires (which should add common.md)
-      local_sources, _, _ = cli.send(:process_sources_for_squash, filtered_sources, 'claude', {}, options)
+      local_sources, = cli.send(:process_sources_for_squash, filtered_sources, 'claude', {}, options)
 
       paths = local_sources.map { |s| s[:path] }
 
       # Should have essential.md
       expect(paths).to include('rules/ruby/essential.md')
       # Should have common.md pulled in by requires (even though not essential)
-      expect(paths.any? { |p| p.end_with?('common.md') }).to be true
+      expect(paths.any? { |p| p.end_with?('common.md') }).to be(true)
       # Should NOT have extra.md (not essential, not required)
       expect(paths).not_to include('rules/ruby/extra.md')
     end
@@ -254,16 +253,16 @@ RSpec.describe Ruly::CLI, '#essential' do
       MD
 
       options = {
-        output_file: 'output.md',
         agent: 'claude',
         cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
-        git_ignore: false,
+        essential: true,
         git_exclude: false,
-        toc: false,
-        essential: true
+        git_ignore: false,
+        output_file: 'output.md',
+        toc: false
       }
       allow(cli).to receive(:options).and_return(options)
 

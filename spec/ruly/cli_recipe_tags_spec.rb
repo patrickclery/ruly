@@ -10,8 +10,6 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
 
   before do
     # Mock the gem_root to use our test directory
-    allow(cli).to receive(:gem_root).and_return(test_dir)
-    allow(cli).to receive(:rules_dir).and_return(File.join(test_dir, 'rules'))
 
     # Create test directory structure
     FileUtils.mkdir_p(File.join(test_dir, 'rules', 'ruby'))
@@ -26,7 +24,8 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
             - rules/ruby/common.md
     YAML
     File.write(File.join(test_dir, 'recipes.yml'), recipes_content)
-    allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+    allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'),
+                                   rules_dir: File.join(test_dir, 'rules'))
   end
 
   after do

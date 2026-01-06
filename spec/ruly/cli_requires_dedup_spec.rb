@@ -25,8 +25,8 @@ RSpec.describe Ruly::CLI do
 
         it 'normalizes different relative paths to the same file' do
           # Create sources pointing to the same file via different paths
-          source1 = { path: 'rules/commands.md', type: 'local' }
-          source2 = { path: './rules/commands.md', type: 'local' }
+          source1 = {path: 'rules/commands.md', type: 'local'}
+          source2 = {path: './rules/commands.md', type: 'local'}
 
           # Mock find_rule_file to return the actual paths
           allow(cli).to receive(:find_rule_file).with('rules/commands.md')
@@ -44,8 +44,8 @@ RSpec.describe Ruly::CLI do
 
         it 'handles parent directory references correctly' do
           # Simulate being in rules/commands/bug/ and referencing ../../commands.md
-          source1 = { path: 'rules/commands.md', type: 'local' }
-          source2 = { path: 'rules/commands/../../commands.md', type: 'local' }
+          source1 = {path: 'rules/commands.md', type: 'local'}
+          source2 = {path: 'rules/commands/../../commands.md', type: 'local'}
 
           allow(cli).to receive(:find_rule_file).with('rules/commands.md')
             .and_return(File.join(temp_dir, 'rules', 'commands.md'))
@@ -61,8 +61,8 @@ RSpec.describe Ruly::CLI do
         it 'returns different keys for different files' do
           File.write(File.join(temp_dir, 'rules', 'other.md'), '# Other')
 
-          source1 = { path: 'rules/commands.md', type: 'local' }
-          source2 = { path: 'rules/other.md', type: 'local' }
+          source1 = {path: 'rules/commands.md', type: 'local'}
+          source2 = {path: 'rules/other.md', type: 'local'}
 
           allow(cli).to receive(:find_rule_file).with('rules/commands.md')
             .and_return(File.join(temp_dir, 'rules', 'commands.md'))
@@ -78,7 +78,7 @@ RSpec.describe Ruly::CLI do
 
       context 'with remote files' do
         it 'uses the URL as the key' do
-          source = { path: 'https://github.com/user/repo/blob/main/file.md', type: 'remote' }
+          source = {path: 'https://github.com/user/repo/blob/main/file.md', type: 'remote'}
 
           key = cli.send(:get_source_key, source)
 
@@ -117,7 +117,7 @@ RSpec.describe Ruly::CLI do
 
       it 'adds .md extension if missing' do
         source_path = 'rules/commands/bug/diagnose.md'
-        required_path = '../../commands'  # No .md extension
+        required_path = '../../commands' # No .md extension
 
         allow(cli).to receive(:find_rule_file).with(source_path)
           .and_return(File.join(temp_dir, source_path))
@@ -203,7 +203,7 @@ RSpec.describe Ruly::CLI do
         ]
 
         # Process sources with requires
-        local_sources, command_files, _ = cli.send(:process_sources_for_squash, sources, 'claude', {}, {})
+        local_sources, command_files, = cli.send(:process_sources_for_squash, sources, 'claude', {}, {})
 
         # Combine all sources for testing
         all_sources = local_sources + command_files
@@ -228,7 +228,7 @@ RSpec.describe Ruly::CLI do
       it 'processes files in correct dependency order' do
         sources = [{path: 'test_rules/commands/bug/diagnose.md', type: 'local'}]
 
-        local_sources, command_files, _ = cli.send(:process_sources_for_squash, sources, 'claude', {}, {})
+        local_sources, command_files, = cli.send(:process_sources_for_squash, sources, 'claude', {}, {})
 
         # Combine all sources for testing
         all_sources = local_sources + command_files
