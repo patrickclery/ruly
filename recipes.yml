@@ -303,8 +303,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation and research
+      - teams # For Teams DM notifications
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
