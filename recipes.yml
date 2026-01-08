@@ -41,7 +41,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
-      - github # For code/PR context
       - task-master-ai # Task management and workflow tracking
       - teams # For Teams DM notifications
 
@@ -62,7 +61,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
 
@@ -73,7 +71,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
     mcp_servers:
-      - github # For code/PR context
       - task-master-ai # Task management and workflow tracking
 
   workaxle-grpc:
@@ -87,7 +84,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context
       - Ref # For API documentation lookup
       - task-master-ai # Task management and workflow tracking
 
@@ -98,7 +94,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # Essential for PR management
       - atlassian # For linking to Jira tickets
       - task-master-ai # Task management and workflow tracking
 
@@ -117,7 +112,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context
       - atlassian # For requirements from Jira
       - teams # For Teams DM notifications
       - Ref # For documentation lookup
@@ -134,7 +128,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context
       - task-master-ai # Task management and workflow tracking
 
   workaxle-full:
@@ -154,7 +147,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
     mcp_servers:
       - atlassian # Full Jira integration
-      - github # Full GitHub integration
       - teams # MS Teams integration
       - playwright # UI testing
       - Ref # Documentation lookup
@@ -175,7 +167,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For CI/CD checks and test status
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
 
@@ -189,7 +180,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
     mcp_servers:
-      - github # Essential for PR management and reviews
       - atlassian # For Jira ticket updates and status changes
       - playwright # For UI testing, screenshots, and demos
       - task-master-ai # Task management and workflow tracking
@@ -203,7 +193,6 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - teams # For Teams DM notifications
-      - github # For linking PRs to tickets
       - task-master-ai # Task management and workflow tracking
 
   jira:
@@ -215,7 +204,6 @@ recipes:
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - teams # For Teams DM notifications
-      - github # For linking PRs to tickets
       - task-master-ai # Task management and workflow tracking
 
   workaxle-orchestrator:
@@ -227,7 +215,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context
       - playwright # For E2E testing
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -242,7 +229,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - github # For code context and PRs
       - atlassian # For Jira ticket context
       - playwright # For E2E testing
       - Ref # For documentation lookup
@@ -260,7 +246,6 @@ recipes:
     mcp_servers:
       - playwright # For browser automation and E2E testing
       - atlassian # For Jira ticket context
-      - github # For code context
       - task-master-ai # Task management and workflow tracking
 
   workaxle-spike:
@@ -336,7 +321,6 @@ recipes:
     mcp_servers:
       - playwright # Browser automation and UI testing
       - plane # Plane project management
-      - github # GitHub integration
       - Ref # Documentation reference lookup
       - task-master-ai # Task management and workflow tracking
 
