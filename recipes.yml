@@ -38,6 +38,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
       - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
@@ -60,6 +61,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
@@ -83,6 +85,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - Ref # For API documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -111,6 +114,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - atlassian # For requirements from Jira
       - teams # For Teams DM notifications
@@ -127,6 +131,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -166,6 +171,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
@@ -214,6 +220,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
@@ -228,6 +235,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
     mcp_servers:
       - atlassian # For Jira ticket context
       - playwright # For E2E testing
