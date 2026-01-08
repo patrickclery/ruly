@@ -15,6 +15,7 @@ require 'tiktoken_ruby'
 require 'base64'
 require 'tempfile'
 require_relative 'version'
+require_relative 'operations'
 
 module Ruly
   # Command Line Interface for Ruly gem
@@ -700,6 +701,43 @@ module Ruly
     desc 'version', 'Show version'
     def version
       puts "Ruly v#{Ruly::VERSION}"
+    end
+
+    desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
+    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path', type: :string
+    def stats(recipe_name = nil)
+      # Collect sources and resolve paths
+      sources = if recipe_name
+                  sources_list, = load_recipe_sources(recipe_name)
+                  sources_list
+                else
+                  collect_local_sources
+                end
+
+      # Resolve file paths for the operation
+      resolved_sources = sources.map do |source|
+        next source unless source[:type] == 'local'
+
+        resolved_path = find_rule_file(source[:path])
+        source.merge(path: resolved_path) if resolved_path
+      end.compact
+
+      puts "📊 Analyzing #{resolved_sources.size} files..."
+
+      result = Operations::Stats.call(
+        sources: resolved_sources,
+        output_file: options[:output]
+      )
+
+      if result[:success]
+        data = result[:data]
+        formatted_tokens = data[:total_tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+        puts "✅ Generated #{data[:output_file]}"
+        puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
+      else
+        puts "❌ Error: #{result[:error]}"
+        exit 1
+      end
     end
 
     private
