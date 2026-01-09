@@ -6,16 +6,6 @@
 plan: claude_pro
 
 recipes:
-  # Rails projects with Sequel (no Jira dependencies)
-  rails:
-    description: "Ruby on Rails development with Sequel ORM, monads, and RSpec testing"
-    plan: claude_max # This recipe targets Claude API users
-    files:
-      - rules/ruby/ruby-practices.md
-      - rules/ruby/sequel.md
-      - rules/ruby/monads.md
-      - rules/ruby/rspec.md
-
   # WorkAxle recipes - Dynamic loading based on current task
   workaxle-core:
     description: "WorkAxle essential patterns only"
@@ -36,10 +26,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/details.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation
       - task-master-ai # Task management and workflow tracking
@@ -59,9 +49,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
@@ -83,9 +73,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - Ref # For API documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -110,11 +100,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - atlassian # For requirements from Jira
       - teams # For Teams DM notifications
@@ -129,9 +119,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -144,7 +134,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/
@@ -169,9 +159,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
@@ -181,7 +171,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/resolve-outdated-comments.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/resolve-outdated-comments.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
@@ -195,7 +185,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - teams # For Teams DM notifications
@@ -206,7 +196,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # Full Jira and Confluence integration
       - teams # For Teams DM notifications
@@ -218,9 +208,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
@@ -233,9 +223,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/ready-for-qa.md
     mcp_servers:
       - atlassian # For Jira ticket context
       - playwright # For E2E testing
@@ -296,7 +286,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
-      - /Users/patrick/Projects/ruly/rules/workaxle/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
       - atlassian # For Jira ticket investigation and research
       - teams # For Teams DM notifications
@@ -332,19 +322,3 @@ recipes:
       - Ref # Documentation reference lookup
       - task-master-ai # Task management and workflow tracking
 
-  # Example recipe with multiple source types
-  example_mixed:
-    description: "Mixed local and remote sources demonstration recipe"
-    # 'sources' accepts both local files and remote URLs
-    sources:
-      - rules/awesome-cursor.md # Local file
-      - https://github.com/metabase/metabase/blob/master/.claude/commands/fix-issue.md # GitHub URL
-      - https://raw.githubusercontent.com/anthropics/anthropic-cookbook/main/misc/claude_prompting_guide.md # Raw URL
-      - rules/ruby/rspec.md # Another local file
-  # Example with separate files and remote sources (backward compatible)
-  legacy_format:
-    description: "Backward compatible format with separate files and remote_sources"
-    files:
-      - rules/awesome-cursor.md
-    remote_sources:
-      - https://github.com/metabase/metabase/blob/master/.claude/commands/fix-issue.md
