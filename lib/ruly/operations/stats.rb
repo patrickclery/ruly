@@ -89,7 +89,8 @@ module Ruly
         file.puts '|--:|-------:|-----:|:-----|'
 
         file_stats.each_with_index do |stat, idx|
-          file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | `#{stat[:path]}` |"
+          filename = File.basename(stat[:path])
+          file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
         end
 
         file.puts
