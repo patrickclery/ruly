@@ -45,19 +45,20 @@ Choose MCP servers based on the specific task requirements:
 ```yaml
 # Bug Investigation
 mcp_servers:
-  - atlassian  # For Jira ticket details
-  - github     # For code context
-  - grafana    # For metrics and monitoring
+  - atlassian       # For Jira ticket details
+  - grafana         # For metrics and monitoring
+  - task-master-ai  # Task management and workflow tracking
 
 # Testing
 mcp_servers:
-  - github      # For code context
-  - playwright  # For UI/integration testing
+  - playwright      # For UI/integration testing
+  - task-master-ai  # Task management and workflow tracking
 
 # PR Management
 mcp_servers:
-  - github     # Essential for PR operations
-  - atlassian  # For Jira ticket linking
+  - atlassian       # For Jira ticket linking
+  - teams           # For Teams DM notifications
+  - task-master-ai  # Task management and workflow tracking
 ```
 
 ## Examples
@@ -70,13 +71,13 @@ workaxle-bug:
   files:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/core/bug/
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-diagnose.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/bug-fix.md
+    - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+    - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+    - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
   mcp_servers:
-    - atlassian  # For Jira ticket investigation
-    - github     # For code/PR context
-    - grafana    # For metrics and monitoring
+    - atlassian       # For Jira ticket investigation
+    - task-master-ai  # Task management and workflow tracking
+    - teams           # For Teams DM notifications
 ```
 
 ### Task-Specific Recipes
@@ -88,13 +89,12 @@ workaxle-review:
   files:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-create.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/pr-comments.md
+    - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
     - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
   mcp_servers:
-    - github      # PR management and reviews
-    - atlassian   # Jira status updates
-    - playwright  # UI testing and demos
+    - atlassian       # Jira status updates
+    - playwright      # UI testing and demos
+    - task-master-ai  # Task management and workflow tracking
 ```
 
 ## Best Practices
@@ -179,11 +179,15 @@ workaxle-refactor:
 ### Available MCP Servers
 
 - `atlassian` - Jira and Confluence integration
-- `github` - GitHub API and PR management
-- `grafana` - Metrics and monitoring
-- `playwright` - Browser automation and UI testing
 - `circleci` - CI/CD pipeline management
+- `grafana` - Metrics and monitoring
+- `jetbrains` - JetBrains IDE integration
+- `memory` - Persistent memory storage
+- `plane` - Plane project management
+- `playwright` - Browser automation and UI testing
 - `Ref` - Documentation reference lookup
+- `task-master-ai` - Task management and workflow tracking
+- `teams` - Microsoft Teams integration
 
 ## Usage Commands
 
