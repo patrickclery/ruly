@@ -14,6 +14,8 @@ require 'digest'
 require 'tiktoken_ruby'
 require 'base64'
 require 'tempfile'
+require 'shellwords'
+require 'set'
 require_relative 'version'
 require_relative 'operations'
 
@@ -83,6 +85,15 @@ module Ruly
 
       # Build script path mappings for rewriting references
       script_mappings = build_script_mappings(script_files)
+
+      # Check required shell commands and warn about missing ones
+      required_commands = collect_required_shell_commands(sources)
+      unless required_commands.empty?
+        check_result = check_required_shell_commands(required_commands)
+        check_result[:missing].each do |cmd|
+          puts "⚠️  Warning: Required shell command '#{cmd}' not found in PATH"
+        end
+      end
 
       # Check for cached version
       cache_used = false
@@ -1191,6 +1202,72 @@ module Ruly
     rescue StandardError => e
       warn "Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}"
       {files: [], remote: []}
+    end
+
+    # Extract require_shell_commands from frontmatter
+    # @param content [String] The file content with potential frontmatter
+    # @return [Array<String>] List of required shell commands
+    def extract_require_shell_commands_from_frontmatter(content)
+      return [] unless content.start_with?('---')
+
+      parts = content.split(/^---\s*$/, 3)
+      return [] if parts.length < 3
+
+      frontmatter = YAML.safe_load(parts[1])
+      commands = frontmatter&.dig('require_shell_commands')
+      return [] unless commands
+
+      # Handle both array and single string
+      Array(commands)
+    rescue StandardError
+      []
+    end
+
+    # Check if a shell command is available in PATH and executable
+    # @param command [String] The command name to check
+    # @return [Boolean] true if command is available and executable
+    def check_shell_command_available(command)
+      # Use 'which' to find the command in PATH
+      system("which #{command.shellescape} > /dev/null 2>&1")
+    end
+
+    # Collect all require_shell_commands from sources
+    # @param sources [Array<Hash>] Array of source hashes
+    # @return [Array<String>] Unique list of required commands
+    def collect_required_shell_commands(sources)
+      commands = Set.new
+
+      sources.each do |source|
+        next unless source[:type] == 'local'
+
+        file_path = source[:path]
+        file_path = find_rule_file(file_path) unless File.exist?(file_path)
+        next unless file_path && File.exist?(file_path)
+
+        content = File.read(file_path, encoding: 'UTF-8')
+        cmds = extract_require_shell_commands_from_frontmatter(content)
+        commands.merge(cmds)
+      end
+
+      commands.to_a
+    end
+
+    # Check which required shell commands are available
+    # @param commands [Array<String>] List of commands to check
+    # @return [Hash] Hash with :available and :missing arrays
+    def check_required_shell_commands(commands)
+      available = []
+      missing = []
+
+      commands.each do |cmd|
+        if check_shell_command_available(cmd)
+          available << cmd
+        else
+          missing << cmd
+        end
+      end
+
+      { available: available, missing: missing }
     end
 
     # Collect local script files and add to script_files hash
