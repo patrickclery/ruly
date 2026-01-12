@@ -202,4 +202,278 @@ RSpec.describe Ruly::Operations::Stats do
       expect(content).to include(' KB')
     end
   end
+
+  describe 'orphaned files detection' do
+    let(:recipes_file) { File.join(test_dir, 'recipes.yml') }
+    let(:rules_dir) { File.join(test_dir, 'rules') }
+
+    def create_recipes_file(recipes_hash)
+      File.write(recipes_file, YAML.dump({ 'recipes' => recipes_hash }))
+    end
+
+    describe '#find_orphaned_files' do
+      context 'when all files are used by recipes' do
+        it 'returns empty array' do
+          used_file = create_test_file('rules/used.md', '# Used file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [used_file]
+                                }
+                              })
+
+          sources = [{ path: used_file, type: 'local' }]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+      end
+
+      context 'when files are not used by any recipe' do
+        it 'returns orphaned files' do
+          used_file = create_test_file('rules/used.md', '# Used file')
+          orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [used_file]
+                                }
+                              })
+
+          sources = [
+            { path: used_file, type: 'local' },
+            { path: orphaned_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to contain_exactly(orphaned_file)
+        end
+      end
+
+      context 'when recipe uses directory path' do
+        it 'considers all files in directory as used' do
+          FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
+          file_in_dir = create_test_file('rules/subdir/file.md', '# File in dir')
+          orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [File.join(test_dir, 'rules', 'subdir/')]
+                                }
+                              })
+
+          sources = [
+            { path: file_in_dir, type: 'local' },
+            { path: orphaned_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to contain_exactly(orphaned_file)
+        end
+      end
+
+      context 'when file is required by another file' do
+        it 'does not consider it orphaned' do
+          parent_file = create_test_file('rules/parent.md', "# Parent\n@./child.md")
+          child_file = create_test_file('rules/child.md', '# Child file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [parent_file]
+                                }
+                              })
+
+          sources = [
+            { path: parent_file, type: 'local' },
+            { path: child_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+      end
+
+      context 'when file is required with relative path from subdirectory' do
+        it 'resolves the path correctly' do
+          FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
+          parent_file = create_test_file('rules/subdir/parent.md', "# Parent\n@../sibling.md")
+          sibling_file = create_test_file('rules/sibling.md', '# Sibling file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [parent_file]
+                                }
+                              })
+
+          sources = [
+            { path: parent_file, type: 'local' },
+            { path: sibling_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+      end
+
+      context 'when chained requirements exist' do
+        it 'considers transitively required files as used' do
+          file_a = create_test_file('rules/a.md', "# A\n@./b.md")
+          file_b = create_test_file('rules/b.md', "# B\n@./c.md")
+          file_c = create_test_file('rules/c.md', '# C')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [file_a]
+                                }
+                              })
+
+          sources = [
+            { path: file_a, type: 'local' },
+            { path: file_b, type: 'local' },
+            { path: file_c, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+      end
+
+      context 'when no recipes file exists' do
+        it 'considers all files as orphaned' do
+          file1 = create_test_file('rules/file1.md', '# File 1')
+          file2 = create_test_file('rules/file2.md', '# File 2')
+
+          sources = [
+            { path: file1, type: 'local' },
+            { path: file2, type: 'local' }
+          ]
+          operation = described_class.new(
+            sources:,
+            output_file:,
+            recipes_file: '/nonexistent/recipes.yml',
+            rules_dir:
+          )
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to contain_exactly(file1, file2)
+        end
+      end
+
+      context 'with multiple recipes' do
+        it 'considers files used by any recipe as not orphaned' do
+          file1 = create_test_file('rules/file1.md', '# File 1')
+          file2 = create_test_file('rules/file2.md', '# File 2')
+          orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
+
+          create_recipes_file({
+                                'recipe1' => { 'files' => [file1] },
+                                'recipe2' => { 'files' => [file2] }
+                              })
+
+          sources = [
+            { path: file1, type: 'local' },
+            { path: file2, type: 'local' },
+            { path: orphaned_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to contain_exactly(orphaned_file)
+        end
+      end
+    end
+
+    describe 'orphaned files in output' do
+      it 'includes orphaned files section in markdown output' do
+        used_file = create_test_file('rules/used.md', '# Used file')
+        orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned file')
+
+        create_recipes_file({
+                              'test-recipe' => {
+                                'files' => [used_file]
+                              }
+                            })
+
+        sources = [
+          { path: used_file, type: 'local' },
+          { path: orphaned_file, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Orphaned Files')
+        expect(content).to include('orphaned.md')
+      end
+
+      it 'shows count of orphaned files' do
+        used_file = create_test_file('rules/used.md', '# Used')
+        orphan1 = create_test_file('rules/orphan1.md', '# Orphan 1')
+        orphan2 = create_test_file('rules/orphan2.md', '# Orphan 2')
+
+        create_recipes_file({
+                              'test-recipe' => { 'files' => [used_file] }
+                            })
+
+        sources = [
+          { path: used_file, type: 'local' },
+          { path: orphan1, type: 'local' },
+          { path: orphan2, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('2 files not used')
+      end
+
+      it 'does not show orphaned section when all files are used' do
+        used_file = create_test_file('rules/used.md', '# Used file')
+
+        create_recipes_file({
+                              'test-recipe' => { 'files' => [used_file] }
+                            })
+
+        sources = [{ path: used_file, type: 'local' }]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).not_to include('## Orphaned Files')
+      end
+
+      it 'includes orphaned files data in result' do
+        used_file = create_test_file('rules/used.md', '# Used')
+        orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
+
+        create_recipes_file({
+                              'test-recipe' => { 'files' => [used_file] }
+                            })
+
+        sources = [
+          { path: used_file, type: 'local' },
+          { path: orphaned_file, type: 'local' }
+        ]
+
+        result = described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        expect(result[:data][:orphaned_files]).to contain_exactly(orphaned_file)
+        expect(result[:data][:orphaned_count]).to eq(1)
+      end
+    end
+  end
 end

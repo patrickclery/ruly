@@ -81,6 +81,9 @@ module Ruly
       # Collect scripts from all sources
       script_files = collect_scripts_from_sources(sources)
 
+      # Build script path mappings for rewriting references
+      script_mappings = build_script_mappings(script_files)
+
       # Check for cached version
       cache_used = false
       if recipe_name && options[:cache] && !dry_run
@@ -157,7 +160,7 @@ module Ruly
           # Show scripts that would be copied
           if script_files[:local].any? || script_files[:remote].any?
             total_scripts = script_files[:local].size + script_files[:remote].size
-            puts "\nWould copy #{total_scripts} scripts to ~/.claude/scripts/:"
+            puts "\nWould copy #{total_scripts} scripts to .claude/scripts/:"
             script_files[:local].each do |script|
               puts "  → #{script[:relative_path]} (local)"
             end
@@ -206,11 +209,14 @@ module Ruly
               output.puts "## #{source[:path]}"
               output.puts
 
+              # Rewrite script references to local .claude/scripts/ paths
+              content = rewrite_script_references(source[:content], script_mappings)
+
               # If TOC is enabled, add anchor IDs to headers in content
               if options[:toc]
-                output.puts add_anchor_ids_to_content(source[:content], source[:path])
+                output.puts add_anchor_ids_to_content(content, source[:path])
               else
-                output.puts source[:content]
+                output.puts content
               end
 
               output.puts
@@ -309,7 +315,7 @@ module Ruly
 
         if script_files[:local].any? || script_files[:remote].any?
           total_scripts = script_files[:local].size + script_files[:remote].size
-          puts "Would copy #{total_scripts} scripts to ~/.claude/scripts/:"
+          puts "Would copy #{total_scripts} scripts to .claude/scripts/:"
           script_files[:local].each do |script|
             puts "  → #{script[:relative_path]} (local)"
           end
@@ -726,7 +732,9 @@ module Ruly
 
       result = Operations::Stats.call(
         sources: resolved_sources,
-        output_file: options[:output]
+        output_file: options[:output],
+        recipes_file: recipes_file,
+        rules_dir: rules_dir
       )
 
       if result[:success]
@@ -734,6 +742,9 @@ module Ruly
         formatted_tokens = data[:total_tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
         puts "✅ Generated #{data[:output_file]}"
         puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
+        if data[:orphaned_count].positive?
+          puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
+        end
       else
         puts "❌ Error: #{result[:error]}"
         exit 1
@@ -2656,8 +2667,8 @@ module Ruly
       all_scripts = local_scripts + fetched_remote
       return if all_scripts.empty?
 
-      # Default to Claude Code standard directory
-      scripts_dir = destination_dir || File.expand_path('~/.claude/scripts')
+      # Default to local .claude/scripts/ directory (relative to current working directory)
+      scripts_dir = destination_dir || File.join(Dir.pwd, '.claude', 'scripts')
       FileUtils.mkdir_p(scripts_dir)
 
       copied_count = 0
@@ -2730,6 +2741,33 @@ module Ruly
       end
 
       fetched_scripts
+    end
+
+    # Build a mapping from absolute script paths to relative filenames
+    # Used for rewriting references in the squashed output
+    def build_script_mappings(script_files)
+      mappings = {}
+
+      (script_files[:local] || []).each do |script|
+        mappings[script[:source_path]] = script[:relative_path]
+      end
+
+      mappings
+    end
+
+    # Rewrite absolute script paths to relative .claude/scripts/ paths
+    # @param content [String] The content to rewrite
+    # @param script_mappings [Hash] Map of absolute path => relative filename
+    # @return [String] Content with rewritten paths
+    def rewrite_script_references(content, script_mappings)
+      result = content.dup
+
+      script_mappings.each do |abs_path, relative_path|
+        # Replace absolute path with .claude/scripts/filename
+        result.gsub!(abs_path, ".claude/scripts/#{relative_path}")
+      end
+
+      result
     end
 
     def cached_file_count(output_file)

@@ -645,7 +645,7 @@ RSpec.describe Ruly::CLI do
     end
 
     context 'with default destination' do
-      it 'uses ~/.claude/scripts/ as default' do
+      it 'uses .claude/scripts/ in current working directory as default' do
         script_files = {
           local: [{
             from_rule: 'rules/test.md',
@@ -655,13 +655,13 @@ RSpec.describe Ruly::CLI do
           remote: []
         }
 
-        # Mock File.expand_path to return our temp dir
-        default_scripts_dir = File.join(temp_dir, '.claude', 'scripts')
-        allow(File).to receive(:expand_path).with('~/.claude/scripts').and_return(default_scripts_dir)
+        # Change to temp dir to test default behavior
+        Dir.chdir(temp_dir) do
+          cli.send(:copy_scripts, script_files)
 
-        cli.send(:copy_scripts, script_files)
-
-        expect(File.exist?(File.join(default_scripts_dir, 'setup.sh'))).to be(true)
+          default_scripts_dir = File.join(temp_dir, '.claude', 'scripts')
+          expect(File.exist?(File.join(default_scripts_dir, 'setup.sh'))).to be(true)
+        end
       end
     end
   end
