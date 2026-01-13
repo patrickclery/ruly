@@ -336,6 +336,27 @@ ruly squash --deepclean
 ruly squash rails --deepclean
 ```
 
+**Generate MCP server configuration:**
+
+```bash
+# Create .mcp.json with specific servers (must exist in ~/.config/ruly/mcp.json)
+ruly mcp atlassian teams playwright
+
+# Use MCP servers from a recipe
+ruly mcp -r workaxle-spike
+ruly mcp --recipe workaxle-bug
+
+# Append to existing .mcp.json instead of overwriting
+ruly mcp playwright -a
+ruly mcp --append task-master-ai
+
+# Combine recipe servers with additional servers
+ruly mcp -r workaxle-bug playwright
+
+# Append recipe servers to existing config
+ruly mcp -r workaxle-spike -a
+```
+
 ### Recipe System
 
 Recipes allow you to define collections of rules to combine, rather than always including all files.

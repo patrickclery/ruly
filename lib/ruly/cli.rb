@@ -720,6 +720,92 @@ module Ruly
       puts "Ruly v#{Ruly::VERSION}"
     end
 
+    desc 'mcp [SERVERS...]', 'Generate .mcp.json with specified MCP servers'
+    option :append, aliases: '-a', default: false, type: :boolean,
+                    desc: 'Append to existing .mcp.json instead of overwriting'
+    option :recipe, aliases: '-r', type: :string,
+                    desc: 'Use MCP servers from specified recipe'
+    def mcp(*servers)
+      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
+
+      # Check if config file exists
+      unless File.exist?(mcp_config_file)
+        puts "❌ Error: ~/.config/ruly/mcp.json not found"
+        puts "   Create this file with your MCP server definitions."
+        return
+      end
+
+      # Load all available MCP server definitions
+      all_servers = JSON.parse(File.read(mcp_config_file))
+
+      # Collect server names from recipe if specified
+      recipe_servers = []
+      if options[:recipe]
+        recipes = load_all_recipes
+        recipe_config = recipes[options[:recipe]]
+
+        if recipe_config.nil?
+          puts "❌ Error: Recipe '#{options[:recipe]}' not found"
+          return
+        end
+
+        recipe_servers = recipe_config['mcp_servers'] || []
+        if recipe_servers.empty?
+          puts "⚠️  Warning: Recipe '#{options[:recipe]}' has no MCP servers defined"
+        end
+      end
+
+      # Combine explicit servers with recipe servers
+      all_requested = (servers + recipe_servers).uniq
+
+      # Check if we have any servers to add
+      if all_requested.empty?
+        puts "❌ Error: No servers specified"
+        puts "   Usage: ruly mcp server1 server2 ..."
+        puts "   Or:    ruly mcp -r <recipe>"
+        return
+      end
+
+      # Build selected servers hash
+      selected_servers = {}
+      all_requested.each do |name|
+        if all_servers[name]
+          server_config = all_servers[name].dup
+          # Filter out fields starting with underscore (metadata/comments)
+          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
+          # Ensure 'type' field is present for stdio servers (required by Claude)
+          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
+          selected_servers[name] = server_config
+        else
+          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
+        end
+      end
+
+      # Load existing .mcp.json if append mode
+      existing_settings = {}
+      if options[:append] && File.exist?('.mcp.json')
+        existing_settings = JSON.parse(File.read('.mcp.json'))
+      end
+
+      # Merge or create mcpServers
+      existing_servers = existing_settings['mcpServers'] || {}
+      merged_servers = existing_servers.merge(selected_servers)
+
+      # Write output
+      output = { 'mcpServers' => merged_servers }
+      File.write('.mcp.json', JSON.pretty_generate(output))
+
+      if selected_servers.empty?
+        puts "⚠️  No valid servers found, created empty .mcp.json"
+      elsif options[:append]
+        puts "🔌 Appended #{selected_servers.size} server(s) to .mcp.json"
+      else
+        puts "🔌 Created .mcp.json with #{selected_servers.size} server(s)"
+      end
+    rescue JSON::ParserError => e
+      puts "❌ Error parsing JSON: #{e.message}"
+    end
+
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
     option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path', type: :string
     def stats(recipe_name = nil)
