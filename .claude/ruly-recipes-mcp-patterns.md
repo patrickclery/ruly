@@ -42,22 +42,22 @@ files:
 
 Choose MCP servers based on the specific task requirements:
 
+**Note**: Jira operations now use the `jira` CLI (jira-cli). The `atlassian` MCP is only needed for Confluence page creation.
+
 ```yaml
-# Bug Investigation
+# Bug Investigation (Jira uses CLI, not MCP)
 mcp_servers:
-  - atlassian       # For Jira ticket details
-  - grafana         # For metrics and monitoring
   - task-master-ai  # Task management and workflow tracking
+  - teams           # For Teams DM notifications
 
 # Testing
 mcp_servers:
   - playwright      # For UI/integration testing
   - task-master-ai  # Task management and workflow tracking
 
-# PR Management
+# Confluence Operations (only case needing atlassian MCP)
 mcp_servers:
-  - atlassian       # For Jira ticket linking
-  - teams           # For Teams DM notifications
+  - atlassian       # For Confluence page creation only
   - task-master-ai  # Task management and workflow tracking
 ```
 
@@ -75,24 +75,24 @@ workaxle-bug:
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
   mcp_servers:
-    - atlassian       # For Jira ticket investigation
     - task-master-ai  # Task management and workflow tracking
     - teams           # For Teams DM notifications
+    # Note: Jira uses CLI (jira issue view, jira issue move, etc.)
 ```
 
 ### Task-Specific Recipes
 
 ```yaml
-# Final Review Stage Recipe
+# Final Review Stage Recipe (with Confluence access)
 workaxle-review:
   description: "WorkAxle final review and QA stage"
   files:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-    - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
     - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+    - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/  # Includes confluence
   mcp_servers:
-    - atlassian       # Jira status updates
+    - atlassian       # For Confluence page creation only
     - playwright      # UI testing and demos
     - task-master-ai  # Task management and workflow tracking
 ```
@@ -155,12 +155,12 @@ files:
 ### 4. ❌ Unnecessary MCP Servers
 
 ```yaml
-# WRONG - Including servers not needed for the task
-workaxle-refactor:
+# WRONG - Including atlassian when only Jira (not Confluence) is needed
+workaxle-bug:
   mcp_servers:
-    - atlassian   # Not needed for refactoring
-    - grafana     # Not needed for refactoring
-    - playwright  # Not needed for refactoring
+    - atlassian   # WRONG - Jira now uses CLI, atlassian only for Confluence
+    - grafana     # Not needed for bug fixing
+    - playwright  # Not needed for bug fixing
 ```
 
 ## Related Files
@@ -178,7 +178,7 @@ workaxle-refactor:
 
 ### Available MCP Servers
 
-- `atlassian` - Jira and Confluence integration
+- `atlassian` - **Confluence page creation only** (Jira operations use `jira` CLI)
 - `circleci` - CI/CD pipeline management
 - `grafana` - Metrics and monitoring
 - `jetbrains` - JetBrains IDE integration
@@ -188,6 +188,22 @@ workaxle-refactor:
 - `Ref` - Documentation reference lookup
 - `task-master-ai` - Task management and workflow tracking
 - `teams` - Microsoft Teams integration
+
+### Jira CLI Commands (replaces atlassian MCP for Jira)
+
+```bash
+# View issue details
+jira issue view WA-1234
+
+# Transition issue status
+jira issue move WA-1234 "Ready for QA"
+
+# Add comment (simple)
+jira issue comment add WA-1234 "comment"
+
+# For comments with @mentions, use post-jira-comment.sh
+post-jira-comment.sh WA-1234 "markdown with [@Name](mention:ID)"
+```
 
 ## Usage Commands
 

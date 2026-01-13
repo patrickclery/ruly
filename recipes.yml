@@ -33,7 +33,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
-      - atlassian # For Jira ticket investigation
       - task-master-ai # Task management and workflow tracking
       - teams # For Teams DM notifications
 
@@ -89,7 +88,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
     mcp_servers:
-      - atlassian # For linking to Jira tickets
       - task-master-ai # Task management and workflow tracking
 
   workaxle-feature:
@@ -109,7 +107,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
-      - atlassian # For requirements from Jira
       - teams # For Teams DM notifications
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -144,7 +141,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/user-svc/
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
     mcp_servers:
-      - atlassian # Full Jira integration
+      - atlassian # For Confluence page creation only
       - teams # MS Teams integration
       - playwright # UI testing
       - Ref # Documentation lookup
@@ -179,29 +176,29 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
     mcp_servers:
-      - atlassian # For Jira ticket updates and status changes
+      - atlassian # For Confluence page creation only
       - playwright # For UI testing, screenshots, and demos
       - task-master-ai # Task management and workflow tracking
 
   workaxle-atlassian:
-    description: "WorkAxle Jira and Confluence operations"
+    description: "WorkAxle Jira (CLI) and Confluence (MCP) operations"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
-      - atlassian # Full Jira and Confluence integration
+      - atlassian # For Confluence page creation only (Jira uses CLI)
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
 
   jira:
-    description: "Jira and Confluence operations (alias for workaxle-atlassian)"
+    description: "Jira (CLI) and Confluence (MCP) operations"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
-      - atlassian # Full Jira and Confluence integration
+      - atlassian # For Confluence page creation only (Jira uses CLI)
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
 
@@ -230,7 +227,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
-      - atlassian # For Jira ticket context
       - playwright # For E2E testing
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -246,7 +242,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/
     mcp_servers:
       - playwright # For browser automation and E2E testing
-      - atlassian # For Jira ticket context
       - task-master-ai # Task management and workflow tracking
 
   workaxle-spike:
@@ -263,7 +258,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
     mcp_servers:
-      - atlassian # For Jira ticket investigation and research
+      - atlassian # For Confluence page creation only (Jira uses CLI)
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
@@ -276,7 +271,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/
     mcp_servers:
-      - atlassian # For Jira ticket investigation and research
+      - atlassian # For Confluence page creation only (Jira uses CLI)
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
@@ -291,7 +286,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
     mcp_servers:
-      - atlassian # For Jira ticket investigation and research
+      - atlassian # For Confluence page creation only (Jira uses CLI)
       - teams # For Teams DM notifications
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
