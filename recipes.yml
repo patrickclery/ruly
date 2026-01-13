@@ -11,6 +11,7 @@ recipes:
     description: "WorkAxle essential patterns only"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -18,6 +19,7 @@ recipes:
     description: "WorkAxle bug investigation and fixing"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
@@ -94,6 +96,7 @@ recipes:
     description: "WorkAxle new feature development"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
