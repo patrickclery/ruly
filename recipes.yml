@@ -337,6 +337,29 @@ recipes:
       - Ref # Documentation reference lookup
       - task-master-ai # Task management and workflow tracking
 
+  workaxle-merger:
+    description: "WorkAxle PR merging and communications (no code knowledge needed)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      # Communications - Teams, Jira comments, full-context
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/
+      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
+      # PR operations - create, squash-and-merge, review loop
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/pr-creation.md
+      # Jira operations - details, transitions
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/accounts.md
+    mcp_servers:
+      - teams # For Teams DM notifications
+      - task-master-ai # Task management and workflow tracking
+
   awesomer:
     description: "Local development with Plane and GitHub integration (no Playwright)"
     files:
