@@ -16,7 +16,7 @@ recipes:
       - task-master-ai # Task management and workflow tracking
 
   workaxle-bug:
-    description: "WorkAxle bug investigation and fixing"
+    description: "WorkAxle bug investigation and fixing (coding only)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
@@ -25,19 +25,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
+      # PR feedback loop only - use workaxle-merger for PR creation/comms
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/full-context.md
+      # Scripts for PR operations
+      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
-      - teams # For Teams DM notifications
 
   workaxle-testing:
     description: "WorkAxle RSpec testing and TDD"
@@ -96,7 +89,7 @@ recipes:
       - task-master-ai # Task management and workflow tracking
 
   workaxle-feature:
-    description: "WorkAxle new feature development"
+    description: "WorkAxle new feature development (coding only)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
@@ -105,17 +98,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/full-context.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
+      # PR feedback loop only - use workaxle-merger for PR creation/comms
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
+      # Scripts for PR operations
+      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
-      - teams # For Teams DM notifications
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 

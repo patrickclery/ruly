@@ -2230,8 +2230,8 @@ module Ruly
         relative_path = file[:relative_path]
 
         # Extract subdirectory structure from bin/ onwards
-        target_relative = if relative_path.match?(%r{bin/(.+\.sh)$})
-                            Regexp.last_match(1)
+        target_relative = if (match = relative_path.match(%r{bin/(.+\.sh)$}))
+                            match[1]
                           else
                             # Fallback: just use the filename
                             File.basename(source_path)
@@ -2256,8 +2256,8 @@ module Ruly
     end
 
     def calculate_bin_target(relative_path)
-      if relative_path.match?(%r{bin/(.+\.sh)$})
-        Regexp.last_match(1)
+      if (match = relative_path.match(%r{bin/(.+\.sh)$}))
+        match[1]
       else
         File.basename(relative_path)
       end
