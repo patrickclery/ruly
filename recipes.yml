@@ -28,6 +28,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/bug-report.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/details.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -50,6 +51,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -74,6 +76,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -103,6 +106,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/commands/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -119,6 +123,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -161,6 +166,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -225,6 +231,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -240,6 +247,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
