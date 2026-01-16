@@ -47,6 +47,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -72,6 +73,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -115,6 +117,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -158,6 +161,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -227,6 +231,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -243,6 +248,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
@@ -333,10 +339,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/ms-teams/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      # PR operations - create, squash-and-merge, review loop
+      # PR operations - create, squash-and-merge, merge, review loop
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/details.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/pr-creation.md
       # Jira operations - details, transitions
