@@ -46,3 +46,4 @@ node_modules/
 .DS_Store
 
 .taskmaster/
+/tmp/
