@@ -25,10 +25,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
-      # PR feedback loop only - use workaxle-merger for PR creation/comms
+      # PR operations
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
-      # Scripts for PR operations
-      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -102,7 +101,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      # PR feedback loop only - use workaxle-merger for PR creation/comms
+      # PR operations
+      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
       # Scripts for PR operations
       - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
