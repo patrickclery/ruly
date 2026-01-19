@@ -325,6 +325,101 @@ RSpec.describe Ruly::Operations::Stats do
         end
       end
 
+      context 'when file has YAML frontmatter with requires' do
+        it 'parses requires from frontmatter' do
+          parent_file = create_test_file('rules/parent.md', <<~MARKDOWN)
+            ---
+            description: Test file
+            requires:
+              - ./child.md
+            ---
+
+            # Parent Content
+          MARKDOWN
+          child_file = create_test_file('rules/child.md', '# Child file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [parent_file]
+                                }
+                              })
+
+          sources = [
+            { path: parent_file, type: 'local' },
+            { path: child_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+
+        it 'resolves relative paths from subdirectory in frontmatter' do
+          FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir', 'deep'))
+          parent_file = create_test_file('rules/subdir/deep/parent.md', <<~MARKDOWN)
+            ---
+            requires:
+              - ../../sibling.md
+              - ../cousin.md
+            ---
+
+            # Parent Content
+          MARKDOWN
+          sibling_file = create_test_file('rules/sibling.md', '# Sibling file')
+          cousin_file = create_test_file('rules/subdir/cousin.md', '# Cousin file')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [parent_file]
+                                }
+                              })
+
+          sources = [
+            { path: parent_file, type: 'local' },
+            { path: sibling_file, type: 'local' },
+            { path: cousin_file, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+
+        it 'handles both frontmatter requires and @ syntax' do
+          parent_file = create_test_file('rules/parent.md', <<~MARKDOWN)
+            ---
+            requires:
+              - ./frontmatter-child.md
+            ---
+
+            # Parent Content
+
+            @./at-child.md
+          MARKDOWN
+          frontmatter_child = create_test_file('rules/frontmatter-child.md', '# Frontmatter child')
+          at_child = create_test_file('rules/at-child.md', '# At-syntax child')
+
+          create_recipes_file({
+                                'test-recipe' => {
+                                  'files' => [parent_file]
+                                }
+                              })
+
+          sources = [
+            { path: parent_file, type: 'local' },
+            { path: frontmatter_child, type: 'local' },
+            { path: at_child, type: 'local' }
+          ]
+          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+          orphaned = operation.find_orphaned_files
+
+          expect(orphaned).to be_empty
+        end
+      end
+
       context 'when chained requirements exist' do
         it 'considers transitively required files as used' do
           file_a = create_test_file('rules/a.md', "# A\n@./b.md")

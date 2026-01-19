@@ -142,16 +142,49 @@ module Ruly
         end
       end
 
-      # Extract @./path requirements from a file
+      # Extract requirements from a file (both @./path syntax and YAML frontmatter requires)
       def extract_requirements(file_path)
         content = File.read(file_path, encoding: 'UTF-8')
         base_dir = File.dirname(file_path)
 
         requirements = []
+
+        # Extract from @./path syntax
         content.scan(/^@(\.\.?\/[^\s]+)/).each do |match|
           relative_path = match[0]
           absolute_path = File.expand_path(relative_path, base_dir)
           requirements << absolute_path if File.exist?(absolute_path)
+        end
+
+        # Extract from YAML frontmatter requires
+        extract_frontmatter_requires(content, base_dir).each do |path|
+          requirements << path
+        end
+
+        requirements.uniq
+      end
+
+      # Extract requires from YAML frontmatter if present
+      def extract_frontmatter_requires(content, base_dir)
+        requirements = []
+        return requirements unless content.start_with?('---')
+
+        # Find the closing --- of the frontmatter
+        frontmatter_match = content.match(/\A---\r?\n(.+?)\r?\n---/m)
+        return requirements unless frontmatter_match
+
+        begin
+          frontmatter = YAML.safe_load(frontmatter_match[1], permitted_classes: [Symbol])
+          return requirements unless frontmatter.is_a?(Hash) && frontmatter['requires'].is_a?(Array)
+
+          frontmatter['requires'].each do |relative_path|
+            next unless relative_path.is_a?(String)
+
+            absolute_path = File.expand_path(relative_path, base_dir)
+            requirements << absolute_path if File.exist?(absolute_path)
+          end
+        rescue Psych::SyntaxError
+          # Invalid YAML frontmatter - skip silently
         end
 
         requirements
