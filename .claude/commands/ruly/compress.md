@@ -29,7 +29,7 @@ The `/ruly:compress` command analyzes Claude Code markdown rule files to identif
 /ruly:compress rules/workaxle/core/
 
 # Analyze multiple directories
-/ruly:compress rules/workaxle/core/ rules/workaxle/pr/
+/ruly:compress rules/workaxle/core/ rules/github/pr/
 
 # Analyze all rules
 /ruly:compress rules/

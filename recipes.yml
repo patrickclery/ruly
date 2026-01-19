@@ -26,8 +26,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       # PR operations
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -44,12 +44,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
@@ -71,12 +71,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - Ref # For API documentation lookup
@@ -86,8 +86,8 @@ recipes:
     description: "WorkAxle PR creation and management"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -102,8 +102,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       # PR operations
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       # Scripts for PR operations
       - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
@@ -117,12 +117,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
@@ -134,7 +134,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/github/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/accounts.md
@@ -161,13 +161,13 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/bug/debugging-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/make-tests-green.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/make-tests-green.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
@@ -177,9 +177,9 @@ recipes:
     description: "WorkAxle final review and QA stage"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+      - /Users/patrick/Projects/ruly/rules/github/pr/
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/resolve-outdated-comments.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/jira/
       - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/common.md
@@ -233,12 +233,12 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
@@ -251,12 +251,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
@@ -356,12 +356,12 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # PR details and merging
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/pr/merge-common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 

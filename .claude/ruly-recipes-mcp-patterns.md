@@ -88,7 +88,7 @@ workaxle-review:
   description: "WorkAxle final review and QA stage"
   files:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/pr/
+    - /Users/patrick/Projects/ruly/rules/github/pr/
     - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
     - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/  # Includes confluence
   mcp_servers:

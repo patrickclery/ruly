@@ -31,7 +31,7 @@ When `omit_command_prefix` is set:
 With `omit_command_prefix: workaxle/core`:
 
 - `rules/workaxle/core/testing/commands/pre-commit.md` → `.claude/commands/testing/pre-commit.md` (full prefix matched and removed)
-- `rules/workaxle/pr/commands/create.md` → `.claude/commands/pr/create.md` (partial prefix "workaxle" matched and removed)
+- `rules/github/pr/commands/create.md` → `.claude/commands/github/pr/create.md` (no match, retains structure)
 - `rules/workaxle/atlassian/jira/commands/details.md` → `.claude/commands/atlassian/jira/details.md` (partial prefix "workaxle" matched and removed)
 - `rules/other/project/commands/tool.md` → `.claude/commands/other/project/tool.md` (no match, retains structure)
 
