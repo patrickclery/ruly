@@ -581,15 +581,15 @@ RSpec.describe Ruly::CLI do
       end
 
       it 'removes partial prefix when path partially matches' do
-        path = 'rules/workaxle/atlassian/commands/details.md'
+        path = 'rules/workaxle/orchestrator/commands/spike.md'
         result = cli.send(:get_command_relative_path, path, 'workaxle/core')
-        expect(result).to eq('atlassian/details.md')
+        expect(result).to eq('orchestrator/spike.md')
       end
 
       it 'removes only matching parts of prefix' do
-        path = 'rules/workaxle/atlassian/jira/commands/details.md'
+        path = 'rules/workaxle/gateway/api/commands/endpoint.md'
         result = cli.send(:get_command_relative_path, path, 'workaxle/core')
-        expect(result).to eq('atlassian/jira/details.md')
+        expect(result).to eq('gateway/api/endpoint.md')
       end
 
       it 'does not remove prefix if it does not match at all' do

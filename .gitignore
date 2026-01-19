@@ -7,7 +7,6 @@ cache/
 
 # Ruly generated files
 test.md
-stats.md
 vendor/bundle
 *.gem
 .bundle

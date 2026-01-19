@@ -32,7 +32,7 @@ With `omit_command_prefix: workaxle/core`:
 
 - `rules/workaxle/core/testing/commands/pre-commit.md` → `.claude/commands/testing/pre-commit.md` (full prefix matched and removed)
 - `rules/github/pr/commands/create.md` → `.claude/commands/github/pr/create.md` (no match, retains structure)
-- `rules/workaxle/atlassian/jira/commands/details.md` → `.claude/commands/atlassian/jira/details.md` (partial prefix "workaxle" matched and removed)
+- `rules/workaxle/orchestrator/commands/spike.md` → `.claude/commands/orchestrator/spike.md` (partial prefix "workaxle" matched and removed)
 - `rules/other/project/commands/tool.md` → `.claude/commands/other/project/tool.md` (no match, retains structure)
 
 The prefix removal works by matching path components from the beginning, removing any parts that match the prefix components.

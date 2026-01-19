@@ -71,7 +71,7 @@ workaxle-bug:
   files:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/bug/
+    - /Users/patrick/Projects/ruly/rules/bug/
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
   mcp_servers:
@@ -90,7 +90,7 @@ workaxle-review:
     - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     - /Users/patrick/Projects/ruly/rules/github/pr/
     - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-    - /Users/patrick/Projects/ruly/rules/workaxle/atlassian/  # Includes confluence
+    - /Users/patrick/Projects/ruly/rules/comms/  # Includes jira, confluence
   mcp_servers:
     - atlassian       # For Confluence page creation only
     - playwright      # UI testing and demos

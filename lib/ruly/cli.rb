@@ -807,7 +807,7 @@ module Ruly
     end
 
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
-    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path', type: :string
+    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path (default: rules/stats.md)', type: :string
     def stats(recipe_name = nil)
       # Collect sources and resolve paths
       sources = if recipe_name
@@ -827,9 +827,13 @@ module Ruly
 
       puts "📊 Analyzing #{resolved_sources.size} files..."
 
+      # Default output to rules/ directory if not explicitly specified
+      output_file = options[:output]
+      output_file = File.join(rules_dir, output_file) if output_file == 'stats.md'
+
       result = Operations::Stats.call(
         sources: resolved_sources,
-        output_file: options[:output],
+        output_file: output_file,
         recipes_file: recipes_file,
         rules_dir: rules_dir
       )
