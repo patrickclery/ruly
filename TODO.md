@@ -2,6 +2,29 @@
 
 ## Features
 
+### Optional Files in Recipes
+
+- [ ] Add ability to mark files as optional in a recipe, prompting user for confirmation
+  - **Use Case**: Some rules are situationally useful but add tokens; let users decide at import/squash time
+  - **Syntax Ideas**:
+    ```yaml
+    files:
+      - /path/to/required-file.md
+      - optional: /path/to/optional-file.md
+      # or
+      - path: /path/to/optional-file.md
+        optional: true
+        description: "Include advanced debugging patterns?"
+    ```
+  - **Behavior**:
+    - Prompt user with `Include [description]? (Y/n)` for each optional file
+    - `--yes` flag to include all optional files without prompting
+    - `--no-optional` flag to skip all optional files without prompting
+  - **Components Needed**:
+    - Recipe parser update to handle optional file syntax
+    - Interactive prompt system
+    - CLI flags for non-interactive mode
+
 ### Context Switching Workflow
 
 - [ ] Add ability to create one set of rules to execute a command, then clear the context and restart Claude with a different set of rules
