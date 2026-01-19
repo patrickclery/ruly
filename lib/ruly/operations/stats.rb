@@ -197,9 +197,83 @@ module Ruly
         File.open(output_file, 'w') do |f|
           write_header(f, file_stats.size, total_tokens, total_size)
           write_table(f, file_stats)
+          write_recipe_sections(f, file_stats)
           write_orphaned_section(f, orphaned_files) if orphaned_files.any?
           write_footer(f)
         end
+      end
+
+      def write_recipe_sections(file, file_stats)
+        return unless recipes_file && File.exist?(recipes_file)
+
+        recipe_files_map = build_recipe_files_map
+        return if recipe_files_map.empty?
+
+        # Build lookup from path to stats
+        stats_by_path = file_stats.each_with_object({}) do |stat, hash|
+          hash[File.expand_path(stat[:path])] = stat
+        end
+
+        recipe_files_map.keys.sort.each do |recipe_name|
+          recipe_file_paths = recipe_files_map[recipe_name]
+
+          # Get stats for files in this recipe
+          recipe_stats = recipe_file_paths.filter_map do |path|
+            stats_by_path[File.expand_path(path)]
+          end
+
+          # Skip recipes with no valid files
+          next if recipe_stats.empty?
+
+          # Sort by token count descending
+          recipe_stats = recipe_stats.sort_by { |s| -s[:tokens] }
+
+          recipe_total_tokens = recipe_stats.sum { |s| s[:tokens] }
+          recipe_total_size = recipe_stats.sum { |s| s[:size] }
+
+          file.puts "## Recipe: #{recipe_name}"
+          file.puts
+          file.puts "- **Files**: #{recipe_stats.size}"
+          file.puts "- **Total Tokens**: #{format_number(recipe_total_tokens)}"
+          file.puts "- **Total Size**: #{format_bytes(recipe_total_size)}"
+          file.puts
+          file.puts '| # | Tokens | Size | File |'
+          file.puts '|--:|-------:|-----:|:-----|'
+
+          recipe_stats.each_with_index do |stat, idx|
+            filename = File.basename(stat[:path])
+            file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
+          end
+
+          file.puts
+        end
+      end
+
+      # Build a map of recipe name to list of file paths
+      def build_recipe_files_map
+        return {} unless recipes_file && File.exist?(recipes_file)
+
+        config = YAML.safe_load_file(recipes_file, aliases: true) || {}
+        recipes = config['recipes'] || {}
+
+        recipe_files_map = {}
+
+        recipes.each do |name, recipe|
+          next unless recipe.is_a?(Hash) && recipe['files']
+
+          files = []
+          recipe['files'].each do |path|
+            if File.directory?(path)
+              Dir.glob(File.join(path, '**', '*.md')).each { |f| files << f }
+            elsif File.exist?(path)
+              files << path
+            end
+          end
+
+          recipe_files_map[name] = files unless files.empty?
+        end
+
+        recipe_files_map
       end
 
       def write_header(file, file_count, total_tokens, total_size)

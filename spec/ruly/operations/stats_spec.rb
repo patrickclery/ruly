@@ -570,5 +570,176 @@ RSpec.describe Ruly::Operations::Stats do
         expect(result[:data][:orphaned_count]).to eq(1)
       end
     end
+
+    describe 'per-recipe token counts' do
+      it 'generates a Files by Token Count section for each recipe' do
+        file1 = create_test_file('rules/file1.md', '# File 1 content here')
+        file2 = create_test_file('rules/file2.md', '# File 2 different content')
+        file3 = create_test_file('rules/file3.md', '# File 3 more content')
+
+        create_recipes_file({
+                              'recipe-alpha' => { 'files' => [file1, file2] },
+                              'recipe-beta' => { 'files' => [file2, file3] }
+                            })
+
+        sources = [
+          { path: file1, type: 'local' },
+          { path: file2, type: 'local' },
+          { path: file3, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: recipe-alpha')
+        expect(content).to include('## Recipe: recipe-beta')
+      end
+
+      it 'shows token counts for files in each recipe' do
+        file1 = create_test_file('rules/file1.md', 'Short content')
+        file2 = create_test_file('rules/file2.md', 'Much longer content ' * 50)
+
+        create_recipes_file({
+                              'test-recipe' => { 'files' => [file1, file2] }
+                            })
+
+        sources = [
+          { path: file1, type: 'local' },
+          { path: file2, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: test-recipe')
+        # Should contain a table with token counts
+        expect(content).to match(/\|\s*#\s*\|\s*Tokens\s*\|/)
+        # Should list both files under the recipe section
+        expect(content).to include('file1.md')
+        expect(content).to include('file2.md')
+      end
+
+      it 'shows recipe total tokens in the summary' do
+        file1 = create_test_file('rules/file1.md', 'Content one')
+        file2 = create_test_file('rules/file2.md', 'Content two')
+
+        create_recipes_file({
+                              'my-recipe' => { 'files' => [file1, file2] }
+                            })
+
+        sources = [
+          { path: file1, type: 'local' },
+          { path: file2, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        # Should show total tokens for the recipe
+        expect(content).to match(/## Recipe: my-recipe.*Total Tokens/m)
+      end
+
+      it 'expands directory paths in recipes' do
+        FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
+        file1 = create_test_file('rules/subdir/file1.md', '# File 1')
+        file2 = create_test_file('rules/subdir/file2.md', '# File 2')
+
+        create_recipes_file({
+                              'dir-recipe' => { 'files' => [File.join(test_dir, 'rules', 'subdir/')] }
+                            })
+
+        sources = [
+          { path: file1, type: 'local' },
+          { path: file2, type: 'local' }
+        ]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: dir-recipe')
+        expect(content).to include('file1.md')
+        expect(content).to include('file2.md')
+      end
+
+      it 'reuses token counts from build_file_stats instead of recalculating' do
+        file1 = create_test_file('rules/file1.md', '# File 1')
+        file2 = create_test_file('rules/file2.md', '# File 2')
+
+        create_recipes_file({
+                              'recipe1' => { 'files' => [file1] },
+                              'recipe2' => { 'files' => [file1, file2] }
+                            })
+
+        sources = [
+          { path: file1, type: 'local' },
+          { path: file2, type: 'local' }
+        ]
+
+        operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+
+        # Mock count_tokens to track calls
+        call_count = 0
+        allow(operation).to receive(:count_tokens).and_wrap_original do |method, *args|
+          call_count += 1
+          method.call(*args)
+        end
+
+        operation.call
+
+        # Should only count tokens once per file, not once per recipe occurrence
+        expect(call_count).to eq(2) # Once for file1, once for file2
+      end
+
+      it 'sorts recipes alphabetically' do
+        file1 = create_test_file('rules/file1.md', '# File 1')
+
+        create_recipes_file({
+                              'zebra-recipe' => { 'files' => [file1] },
+                              'alpha-recipe' => { 'files' => [file1] },
+                              'middle-recipe' => { 'files' => [file1] }
+                            })
+
+        sources = [{ path: file1, type: 'local' }]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        alpha_pos = content.index('## Recipe: alpha-recipe')
+        middle_pos = content.index('## Recipe: middle-recipe')
+        zebra_pos = content.index('## Recipe: zebra-recipe')
+
+        expect(alpha_pos).to be < middle_pos
+        expect(middle_pos).to be < zebra_pos
+      end
+
+      it 'does not generate recipe sections when no recipes file exists' do
+        file1 = create_test_file('rules/file1.md', '# File 1')
+
+        sources = [{ path: file1, type: 'local' }]
+
+        described_class.call(sources:, output_file:)
+
+        content = File.read(output_file)
+        expect(content).not_to include('## Recipe:')
+      end
+
+      it 'handles recipes with no valid files gracefully' do
+        file1 = create_test_file('rules/file1.md', '# File 1')
+
+        create_recipes_file({
+                              'valid-recipe' => { 'files' => [file1] },
+                              'empty-recipe' => { 'files' => ['/nonexistent/file.md'] }
+                            })
+
+        sources = [{ path: file1, type: 'local' }]
+
+        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: valid-recipe')
+        # Empty recipe should either not appear or show 0 files
+        expect(content).not_to include('## Recipe: empty-recipe')
+      end
+    end
   end
 end
