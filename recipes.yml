@@ -234,12 +234,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
