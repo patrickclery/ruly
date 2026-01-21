@@ -25,6 +25,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
@@ -101,6 +102,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      # Context loading (pre-fetched Jira/PR/Teams data)
+      - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
