@@ -1,6 +1,9 @@
 - always update the ~/.config/ruly/recipes.yml and /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml when you change things it references (they should be identical)
 - Every time the slash commands are updated. Make sure to update the slash command Section of the read me
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
+- When I say "commit", commit and push BOTH repos:
+  1. The rules submodule (./rules) → https://github.com/patrickclery/rules
+  2. The parent ruly repo → https://github.com/patrickclery/ruly (update submodule reference)
 
 # Claude Code Instructions
 
