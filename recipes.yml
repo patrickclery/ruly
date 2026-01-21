@@ -368,6 +368,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # Communications - Teams, Jira comments, full-context
       - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/
+      - /Users/patrick/Projects/ruly/rules/comms/commands/
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/
