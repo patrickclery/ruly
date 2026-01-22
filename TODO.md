@@ -25,6 +25,25 @@
     - Interactive prompt system
     - CLI flags for non-interactive mode
 
+### Auto-Exclude Diff Based on Token Count
+
+- [ ] Update `fetch-pr-details.sh` to automatically exclude diff when output exceeds token limit
+  - **Use Case**: Instead of requiring `--without-diff` flag, automatically detect when output is too large
+  - **File**: `rules/github/pr/hooks/fetch-pr-details.sh`
+  - **Behavior**:
+    - Remove `--without-diff` option
+    - After fetching PR data with diff, count tokens
+    - If token count > 25000 (Claude Code's per-message limit), re-fetch without diff
+    - Display message: "Diff excluded (output would exceed 25000 tokens)"
+  - **Token Counting Options**:
+    - Simple: `wc -c` / 4 (rough estimate: ~4 chars per token)
+    - Better: Use `tiktoken` or similar tokenizer if available
+    - Best: Use Claude's tokenizer API if accessible
+  - **Components Needed**:
+    - Token counting function
+    - Conditional diff inclusion logic
+    - User feedback when diff is excluded
+
 ### Malformed Frontmatter/Markdown Warnings
 
 - [ ] Add warnings for malformed frontmatter or markdown that could affect squash interpretation
