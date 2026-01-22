@@ -25,6 +25,24 @@
     - Interactive prompt system
     - CLI flags for non-interactive mode
 
+### Malformed Frontmatter/Markdown Warnings
+
+- [ ] Add warnings for malformed frontmatter or markdown that could affect squash interpretation
+  - **Use Case**: Files with invalid YAML frontmatter (e.g., closing `---` not on its own line) silently pass through unprocessed, causing unexpected content in output
+  - **Checks to Implement**:
+    - Frontmatter closing `---` must be on its own line (not `value---`)
+    - Valid YAML syntax in frontmatter block
+    - Unclosed code blocks that could swallow content
+    - Mismatched markdown headers
+  - **Behavior**:
+    - Display warning during squash with file path and issue description
+    - Suggest fix or auto-fix with `--fix-frontmatter` flag
+    - `--strict` flag to fail on any malformed content
+  - **Components Needed**:
+    - Frontmatter validation check before stripping
+    - Markdown linting for common issues
+    - Warning output formatting
+
 ### Context Switching Workflow
 
 - [ ] Add ability to create one set of rules to execute a command, then clear the context and restart Claude with a different set of rules
