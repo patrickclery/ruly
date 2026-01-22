@@ -62,6 +62,20 @@
     - Markdown linting for common issues
     - Warning output formatting
 
+### TOON Output Format
+
+- [ ] Add `--toon` flag to convert CLAUDE.local.md to TOON format for token efficiency
+  - **Use Case**: TOON format is more token-efficient than markdown; useful when context size is a concern
+  - **Command**: `ruly squash --toon` or `ruly import --toon`
+  - **Behavior**:
+    - After generating CLAUDE.local.md, convert to TOON format
+    - Output to CLAUDE.local.toon (or replace .md with .toon extension)
+    - Requires `npx @toon-format/cli` to be available
+  - **Components Needed**:
+    - CLI flag parsing for `--toon`
+    - Post-processing step to run TOON conversion
+    - Fallback behavior if npx/@toon-format/cli not available
+
 ### Context Switching Workflow
 
 - [ ] Add ability to create one set of rules to execute a command, then clear the context and restart Claude with a different set of rules
