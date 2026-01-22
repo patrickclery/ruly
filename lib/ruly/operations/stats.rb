@@ -50,6 +50,8 @@ module Ruly
 
           file_path = source[:path]
           next unless file_path && File.exist?(file_path)
+          # Skip stats.md itself (generated file)
+          next if File.basename(file_path) == 'stats.md'
 
           content = File.read(file_path, encoding: 'UTF-8')
           tokens = count_tokens(content)
@@ -71,6 +73,8 @@ module Ruly
           next unless s[:type] == 'local'
 
           path = s[:path]
+          # Skip stats.md (generated file)
+          next if File.basename(path) == 'stats.md'
           # Normalize to absolute path for comparison
           abs_path = File.expand_path(path, rules_dir&.sub(%r{/rules$}, ''))
           abs_path if File.exist?(abs_path)
