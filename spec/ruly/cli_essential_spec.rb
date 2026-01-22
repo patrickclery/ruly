@@ -289,7 +289,7 @@ RSpec.describe Ruly::CLI, '#essential' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).to include('other_field: value')
@@ -306,7 +306,7 @@ RSpec.describe Ruly::CLI, '#essential' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).not_to include('essential:')
@@ -326,7 +326,7 @@ RSpec.describe Ruly::CLI, '#essential' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).to include('other_field: value')
@@ -344,7 +344,7 @@ RSpec.describe Ruly::CLI, '#essential' do
         Body text
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).not_to include('---')
       expect(result).to start_with("\n# Content")

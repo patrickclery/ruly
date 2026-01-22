@@ -48,6 +48,9 @@ module Ruly
     option :keep_taskmaster, default: false,
                              desc: 'When used with --clean or --deepclean, append Task Master import to output file',
                              type: :boolean
+    option :front_matter, default: false,
+                          desc: 'Preserve non-metadata frontmatter in output',
+                          type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Clean first if requested (deepclean takes precedence over clean)
@@ -203,9 +206,6 @@ module Ruly
         else
           # Standard markdown output
           File.open(output_file, 'w') do |output|
-            output.puts '# Combined Ruly Documentation'
-            output.puts
-
             # Generate TOC if requested
             if options[:toc]
               toc_content = generate_toc_content(local_sources, command_files, agent)
@@ -213,13 +213,7 @@ module Ruly
               output.puts
             end
 
-            output.puts '---'
-
-            local_sources.each do |source|
-              output.puts
-              output.puts "## #{source[:path]}"
-              output.puts
-
+            local_sources.each_with_index do |source, index|
               # Rewrite script references to local .claude/scripts/ paths
               content = rewrite_script_references(source[:content], script_mappings)
 
@@ -230,9 +224,8 @@ module Ruly
                 output.puts content
               end
 
-              output.puts
-              output.puts '---'
-              output.puts
+              # Add blank line between sources (but not after the last one)
+              output.puts if index < local_sources.length - 1
             end
           end
 
@@ -1616,7 +1609,8 @@ module Ruly
           agent: agent, # rubocop:disable Style/HashSyntax
           prefetched_content: prefetched_content, # rubocop:disable Style/HashSyntax
           processed_files: processed_files, # rubocop:disable Style/HashSyntax
-          sources_to_process: sources_to_process # rubocop:disable Style/HashSyntax
+          sources_to_process: sources_to_process, # rubocop:disable Style/HashSyntax
+          keep_frontmatter: options[:front_matter] # rubocop:disable Style/HashSyntax
         }
         result = process_single_source_with_requires(source, index, sources.length + index, context)
 
@@ -1794,9 +1788,10 @@ module Ruly
       prefetched_content = context[:prefetched_content]
       processed_files = context[:processed_files]
       sources_to_process = context[:sources_to_process]
+      keep_frontmatter = context[:keep_frontmatter]
 
       # First process the source normally
-      result = process_single_source(source, index, total, agent, prefetched_content)
+      result = process_single_source(source, index, total, agent, prefetched_content, keep_frontmatter:)
 
       return nil unless result
 
@@ -1821,19 +1816,19 @@ module Ruly
       result
     end
 
-    def process_single_source(source, index, total, agent, prefetched_content)
+    def process_single_source(source, index, total, agent, prefetched_content, keep_frontmatter: false)
       if source[:type] == 'local'
-        process_local_file_with_progress(source, index, total, agent)
+        process_local_file_with_progress(source, index, total, agent, keep_frontmatter:)
       elsif prefetched_content[source[:path]]
         # Use prefetched content from GraphQL
-        display_prefetched_remote(source, index, total, agent, prefetched_content[source[:path]])
+        display_prefetched_remote(source, index, total, agent, prefetched_content[source[:path]], keep_frontmatter:)
       else
         # Fallback to individual fetch
-        process_remote_file_with_progress(source, index, total, agent)
+        process_remote_file_with_progress(source, index, total, agent, keep_frontmatter:)
       end
     end
 
-    def process_local_file_with_progress(source, index, total, agent)
+    def process_local_file_with_progress(source, index, total, agent, keep_frontmatter: false)
       # Check if this is from requires and adjust the message
       prefix = source[:from_requires] ? '📚 Required' : '📁 Local'
       print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..."
@@ -1852,7 +1847,7 @@ module Ruly
           # Store original content (with requires) for dependency resolution
           original_content = content
           # Strip metadata fields from YAML frontmatter for output
-          content = strip_metadata_from_frontmatter(content)
+          content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
 
           # Count tokens for the content
@@ -1874,7 +1869,7 @@ module Ruly
       end
     end
 
-    def strip_metadata_from_frontmatter(content)
+    def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
       # Check if content has YAML frontmatter
       return content unless content.start_with?('---')
 
@@ -1885,7 +1880,10 @@ module Ruly
       frontmatter = parts[1]
       body = parts[2]
 
-      # Remove the requires field and its values
+      # Default behavior: strip all frontmatter
+      return body unless keep_frontmatter
+
+      # With keep_frontmatter: strip only metadata fields (requires, recipes, essential)
       # This handles both:
       # 1. Single line: "requires: value" or "requires: [value1, value2]"
       # 2. Multi-line array format:
@@ -1922,7 +1920,7 @@ module Ruly
       encoder.encode(utf8_text).length
     end
 
-    def display_prefetched_remote(source, index, total, agent, content)
+    def display_prefetched_remote(source, index, total, agent, content, keep_frontmatter: false)
       # Extract domain and full path for display
       if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
         owner = Regexp.last_match(1)
@@ -1941,7 +1939,7 @@ module Ruly
       # Store original content for requires resolution
       original_content = content
       # Strip metadata fields from YAML frontmatter
-      content = strip_metadata_from_frontmatter(content)
+      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
 
       # Count tokens in the content
       tokens = count_tokens(content)
@@ -1960,7 +1958,7 @@ module Ruly
       {data: {content:, original_content:, path: source[:path]}, is_command:}
     end
 
-    def process_remote_file_with_progress(source, index, total, agent) # rubocop:disable Metrics/MethodLength
+    def process_remote_file_with_progress(source, index, total, agent, keep_frontmatter: false) # rubocop:disable Metrics/MethodLength
       # Extract domain and full path for display
       if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
         owner = Regexp.last_match(1)
@@ -1984,7 +1982,7 @@ module Ruly
         # Store original content for requires resolution
         original_content = content
         # Strip metadata fields from YAML frontmatter
-        content = strip_metadata_from_frontmatter(content)
+        content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
 
         # Count tokens in the content
         tokens = count_tokens(content)
@@ -2305,12 +2303,11 @@ module Ruly
         # Duplicate string to avoid frozen string error
         content = source[:content].dup.force_encoding('UTF-8')
         # Replace invalid UTF-8 sequences
-        content = content.scrub('?')
-        "## #{source[:path]}\n\n#{content}"
+        content.scrub('?')
       end
 
       # Join all parts into single description string
-      description = description_parts.join("\n\n---\n\n")
+      description = description_parts.join("\n\n")
 
       # Create role JSON structure
       role_json = {
@@ -2337,15 +2334,14 @@ module Ruly
     end
 
     def generate_toc_for_source(source)
-      toc_section = ["### #{source[:path]}", '']
+      toc_section = []
       headers = extract_headers_from_content(source[:content], source[:path])
 
       if headers.any?
         headers.each do |header|
-          indent = '  ' * (header[:level] - 2) if header[:level] > 2
+          indent = '  ' * (header[:level] - 1) if header[:level] > 1
           toc_section << "#{indent}- [#{header[:text]}](##{header[:anchor]})"
         end
-        toc_section << ''
       end
 
       toc_section.join("\n")

@@ -228,7 +228,7 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).to include('other_field: value')
@@ -247,7 +247,7 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).not_to include('requires:')
@@ -267,7 +267,7 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).to include('other_field: value')
@@ -289,7 +289,7 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
         Body text
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).not_to include('---')
       expect(result).to start_with("\n# Content")
@@ -304,7 +304,7 @@ RSpec.describe Ruly::CLI, '#recipe_tags' do
         # Content
       MD
 
-      result = cli.send(:strip_metadata_from_frontmatter, content)
+      result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
       expect(result).to include('description: Test file')
       expect(result).not_to include('recipes:')
