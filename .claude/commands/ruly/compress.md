@@ -81,7 +81,7 @@ Employee.dataset.not_deleted.where(company:)
 
 - Create a central `patterns/` directory for reusable patterns
 - Reference patterns instead of duplicating them
-- Use YAML frontmatter `requires:` to include shared content
+- **REQUIRED**: Add extracted file to `requires:` frontmatter (see below)
 
 #### Strategy 2: Use Template Files
 
@@ -100,6 +100,48 @@ Employee.dataset.not_deleted.where(company:)
 - Extract all commands to a single reference
 - Create lookup tables for common patterns
 - Build quick reference guides
+
+### 4. Required: Update `requires:` Frontmatter
+
+**When extracting common content to a shared file, you MUST add that file to the `requires:` frontmatter of all files that depend on it.**
+
+This ensures:
+- The common file is loaded when dependent files are loaded
+- Dependencies are explicitly tracked
+- `ruly squash` includes all required content
+
+#### Example
+
+When extracting debug script conventions from `bug-workflow.md` and `debugging.md` into `debugging-common.md`:
+
+**Before** (bug-workflow.md):
+```yaml
+---
+description: Complete bug investigation workflow
+alwaysApply: false
+globs:
+  - 'tmp/WA-*.rb'
+---
+```
+
+**After** (bug-workflow.md):
+```yaml
+---
+description: Complete bug investigation workflow
+alwaysApply: false
+globs:
+  - 'tmp/WA-*.rb'
+requires:
+  - debugging-common.md
+---
+```
+
+#### Rules for `requires:`
+
+- Use relative paths from the current file's directory
+- List all files that contain content referenced via section links
+- Order doesn't matter, but alphabetical is preferred
+- The required file must exist in the same rules directory structure
 
 ## Output Format
 
@@ -151,13 +193,14 @@ Employee.dataset.not_deleted.where(company:)
 ## Implementation Plan
 
 ### Phase 1: Extract (No Breaking Changes)
-- Create new reference files
-- Add cross-references from existing files
+- Create new common/shared files with extracted content
+- **Add common file to `requires:` frontmatter** of all dependent files
+- Add section link cross-references from existing files
 - Gradually migrate content
 
 ### Phase 2: Consolidate
 - Merge highly redundant files
-- Update requires: sections
+- Verify all `requires:` dependencies are correct
 - Clean up duplicates
 
 ### Phase 3: Optimize
@@ -176,6 +219,13 @@ When compression opportunities are found, the command can offer to:
 4. **Export report** - Save analysis to file
 
 ## Compression Rules
+
+### MUST Do When Extracting:
+
+1. Create the new common file with extracted content
+2. **Add the common file to `requires:` frontmatter** in all dependent files
+3. Replace duplicated content with section link references
+4. Verify cross-references use anchor links (not filenames)
 
 ### DO Compress:
 
