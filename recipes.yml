@@ -22,8 +22,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/bug/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
@@ -287,7 +285,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/debugging-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/
-      - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
       - Ref # For documentation lookup and external research
