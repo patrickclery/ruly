@@ -201,7 +201,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/full-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
@@ -216,7 +216,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/full-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
@@ -316,7 +316,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/full-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
       - teams # For Teams DM notifications
@@ -367,7 +367,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # Communications - Teams, Jira comments, full-context
-      - /Users/patrick/Projects/ruly/rules/workaxle/comms/commands/
       - /Users/patrick/Projects/ruly/rules/comms/commands/
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
