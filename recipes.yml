@@ -28,6 +28,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
@@ -106,6 +107,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       # Scripts for PR operations
       - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
