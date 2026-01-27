@@ -237,6 +237,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
@@ -354,9 +355,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # PR details and merging
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-stale.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
     mcp_servers:

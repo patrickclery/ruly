@@ -128,7 +128,7 @@ module Ruly
         end
 
         # Process sources and separate command files and bin files
-        local_sources, command_files, bin_files = process_sources_for_squash(sources, agent, recipe_config, options)
+        local_sources, command_files, bin_files, skill_files = process_sources_for_squash(sources, agent, recipe_config, options)
 
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
@@ -168,6 +168,14 @@ module Ruly
             bin_files.each do |file|
               target = calculate_bin_target(file[:relative_path])
               puts "  → #{target} (executable)"
+            end
+          end
+
+          if agent == 'claude' && !skill_files.empty?
+            puts "\nWould create skill files in .claude/skills/:"
+            skill_files.each do |file|
+              skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
+              puts "  → .claude/skills/#{skill_name}/SKILL.md"
             end
           end
 
@@ -254,6 +262,9 @@ module Ruly
         # Save command files separately if agent is Claude
         save_command_files(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
 
+        # Save skill files separately if agent is Claude
+        save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
+
         # Update MCP settings (JSON for Claude, YAML for others)
         update_mcp_settings(recipe_config, agent)
 
@@ -289,14 +300,18 @@ module Ruly
       total_files = if cache_used
                       cached_file_count(output_file)
                     else
-                      local_sources.size + command_files.size
+                      local_sources.size + command_files.size + skill_files.size
                     end
 
       print_summary(mode_desc, output_file, total_files)
 
-      return unless agent == 'claude' && !command_files.empty?
+      if agent == 'claude' && !command_files.empty?
+        puts "📁 Saved #{command_files.size} command files to .claude/commands/ (with subdirectories)"
+      end
 
-      puts "📁 Saved #{command_files.size} command files to .claude/commands/ (with subdirectories)"
+      return unless agent == 'claude' && !skill_files.empty?
+
+      puts "🎯 Saved #{skill_files.size} skill files to .claude/skills/"
     end
     # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
 
@@ -1486,6 +1501,22 @@ module Ruly
       end
     end
 
+    def save_skill_files(skill_files)
+      return if skill_files.empty?
+
+      skill_files.each do |file|
+        # Extract skill name from path: /rules/skills/deploy-to-production.md -> deploy-to-production
+        skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
+
+        # Create .claude/skills/{name}/ directory
+        skill_dir = ".claude/skills/#{skill_name}"
+        FileUtils.mkdir_p(skill_dir)
+
+        # Write content to SKILL.md
+        File.write(File.join(skill_dir, 'SKILL.md'), file[:content])
+      end
+    end
+
     def get_command_relative_path(file_path, omit_prefix = nil) # rubocop:disable Metrics/MethodLength
       if file_path.include?('/commands/')
         # Split on /commands/ to get everything before and after
@@ -1586,6 +1617,7 @@ module Ruly
       local_sources = []
       command_files = []
       bin_files = []
+      skill_files = []
       processed_files = Set.new
       sources_to_process = sources.dup
 
@@ -1619,6 +1651,8 @@ module Ruly
 
           if result[:is_bin]
             bin_files << result[:data]
+          elsif result[:is_skill]
+            skill_files << result[:data]
           elsif result[:is_command]
             command_files << result[:data]
           else
@@ -1634,7 +1668,7 @@ module Ruly
 
       puts
 
-      [local_sources, command_files, bin_files]
+      [local_sources, command_files, bin_files, skill_files]
     end
 
     def prefetch_remote_files(sources)
@@ -1849,19 +1883,22 @@ module Ruly
           # Strip metadata fields from YAML frontmatter for output
           content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
           is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
+          is_skill = agent == 'claude' && source[:path].include?('/skills/')
 
           # Count tokens for the content
           tokens = count_tokens(content)
           formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
 
-          if is_command
+          if is_skill
+            puts " ✅ (skill, #{formatted_tokens} tokens)"
+          elsif is_command
             puts " ✅ (command, #{formatted_tokens} tokens)"
           elsif source[:from_requires]
             puts " ✅ (from requires, #{formatted_tokens} tokens)"
           else
             puts " ✅ (#{formatted_tokens} tokens)"
           end
-          {data: {content:, original_content:, path: source[:path]}, is_command:}
+          {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
         end
       else
         puts ' ❌ not found'
@@ -1945,9 +1982,12 @@ module Ruly
       tokens = count_tokens(content)
       formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
 
-      # Check if remote file is a command file
+      # Check if remote file is a command file or skill file
       is_command = agent == 'claude' && source[:path].include?('/commands/')
-      if is_command
+      is_skill = agent == 'claude' && source[:path].include?('/skills/')
+      if is_skill
+        puts " ✅ (skill, #{formatted_tokens} tokens)"
+      elsif is_command
         puts " ✅ (command, #{formatted_tokens} tokens)"
       elsif source[:from_requires]
         puts " ✅ (from requires, #{formatted_tokens} tokens)"
@@ -1955,7 +1995,7 @@ module Ruly
         puts " ✅ (#{formatted_tokens} tokens)"
       end
 
-      {data: {content:, original_content:, path: source[:path]}, is_command:}
+      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
     end
 
     def process_remote_file_with_progress(source, index, total, agent, keep_frontmatter: false) # rubocop:disable Metrics/MethodLength
@@ -1988,16 +2028,19 @@ module Ruly
         tokens = count_tokens(content)
         formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
 
-        # Check if remote file is a command file (has /commands/ in path)
+        # Check if remote file is a command file or skill file
         is_command = agent == 'claude' && source[:path].include?('/commands/')
-        if is_command
+        is_skill = agent == 'claude' && source[:path].include?('/skills/')
+        if is_skill
+          puts " ✅ (skill, #{formatted_tokens} tokens)"
+        elsif is_command
           puts " ✅ (command, #{formatted_tokens} tokens)"
         elsif source[:from_requires]
           puts " ✅ (from requires, #{formatted_tokens} tokens)"
         else
           puts " ✅ (#{formatted_tokens} tokens)"
         end
-        {data: {content:, original_content:, path: source[:path]}, is_command:}
+        {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
       else
         puts ' ❌ failed'
         nil
