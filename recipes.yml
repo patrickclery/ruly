@@ -339,7 +339,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # PR details and merging
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/fetching-pr-details.md
       - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
