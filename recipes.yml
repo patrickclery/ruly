@@ -7,7 +7,7 @@ plan: claude_pro
 
 recipes:
   # WorkAxle recipes - Dynamic loading based on current task
-  workaxle-core:
+  core:
     description: "WorkAxle essential patterns only"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -15,7 +15,7 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-bug:
+  bug:
     description: "WorkAxle bug investigation and fixing (coding only)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -31,7 +31,7 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-testing:
+  testing:
     description: "WorkAxle RSpec testing and TDD"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -55,7 +55,7 @@ recipes:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-migration:
+  migration:
     description: "WorkAxle database migrations"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -64,7 +64,7 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-grpc:
+  grpc:
     description: "WorkAxle gRPC service development"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -82,7 +82,7 @@ recipes:
       - Ref # For API documentation lookup
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-pr:
+  pr:
     description: "WorkAxle PR creation and management"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -91,7 +91,7 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-feature:
+  feature:
     description: "WorkAxle new feature development (coding only)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -113,7 +113,7 @@ recipes:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-refactor:
+  refactor:
     description: "WorkAxle code refactoring"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -130,7 +130,7 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-full:
+  full:
     description: "Complete WorkAxle documentation"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -154,7 +154,7 @@ recipes:
       - Ref # Documentation lookup
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-finalize:
+  finalize:
     description: "WorkAxle final testing and cleanup phase"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -176,7 +176,7 @@ recipes:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-review:
+  review:
     description: "WorkAxle final review and QA stage"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -191,23 +191,8 @@ recipes:
       - playwright # For UI testing, screenshots, and demos
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-jira:
-    description: "WorkAxle Jira operations (uses CLI)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
-      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
-    mcp_servers:
-      - teams # For Teams DM notifications
-      - task-master-ai # Task management and workflow tracking
-
   jira:
-    description: "Jira operations (alias for workaxle-jira)"
+    description: "Jira operations (uses CLI)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/
@@ -221,7 +206,7 @@ recipes:
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-confluence:
+  confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -231,7 +216,7 @@ recipes:
       - atlassian # Required for Confluence page creation
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-orchestrator:
+  orchestrator:
     description: "WorkAxle multi-service development and E2E testing"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -243,7 +228,7 @@ recipes:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-gateway:
+  gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -261,7 +246,7 @@ recipes:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-playwright:
+  playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -274,7 +259,7 @@ recipes:
       - playwright # For browser automation and E2E testing
       - task-master-ai # Task management and workflow tracking
 
-  workaxle-spike:
+  spike:
     description: "WorkAxle spike investigation and research for Jira tasks"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -292,7 +277,7 @@ recipes:
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
-  workaxle-initiative-core:
+  initiative-core:
     description: "WorkAxle initiative investigation and planning"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -306,7 +291,7 @@ recipes:
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
 
-  workaxle-agile:
+  agile:
     description: "WorkAxle agile planning with orchestrator patterns"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
