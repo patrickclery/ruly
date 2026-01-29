@@ -22,6 +22,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/bug/
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
       # PR operations
@@ -269,6 +270,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/
       - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
