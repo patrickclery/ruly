@@ -47,3 +47,34 @@ Review [Jira Draft Preview Workflow](#jira-draft-preview-workflow) before submit
 ```
 
 **Why this matters:** After squashing, the section headers remain as anchor targets, but filenames disappear completely. The `requires:` frontmatter ensures the referenced content is included in the squashed output.
+
+## CRITICAL: Never Reference Commands by Name in Rules
+
+**Command names like `/create` or `/merge-to-develop` do not exist after `ruly squash`.** When referencing related commands, use section anchor links instead.
+
+### BAD (command references)
+
+```markdown
+- `/pr:review-feedback-loop` - Handle review feedback
+- `/create-branch` - Create feature branches
+- See `/create-develop` for creating PRs against develop
+```
+
+### GOOD (section anchor links + requires)
+
+```yaml
+---
+requires:
+  - ./review-feedback-loop.md
+  - ./create-branch.md
+  - ./create-develop.md
+---
+```
+
+```markdown
+- [PR Review Feedback Loop](#pr-review-feedback-loop) - Handle review feedback
+- [Create Feature Branches](#create-feature-branches) - Create branches with proper naming
+- See [Create PR Against Develop](#create-pr-against-develop) for creating PRs against develop
+```
+
+**Why this matters:** Slash commands are just file names with `/` prefix - they disappear after squashing just like filenames do.
