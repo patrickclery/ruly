@@ -29,6 +29,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
@@ -108,6 +109,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
       # Scripts for PR operations
       - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
@@ -347,6 +349,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-stale.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
     mcp_servers:
