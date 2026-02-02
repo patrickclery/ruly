@@ -78,19 +78,3 @@ requires:
 ```
 
 **Why this matters:** Slash commands are just file names with `/` prefix - they disappear after squashing just like filenames do.
-
-## Rules Directory Structure Convention
-
-**Goal:** Keep a shallow, standardized directory structure for discoverability.
-
-**Allowed subfolders** (not all required, but only these can exist):
-- `commands/` - Slash command definitions
-- `hooks/` - Hook scripts and configurations
-- `standards/` - Decomposed standard/pattern files (via `/ruly:decompose`)
-- `skills/` - Skill definitions
-
-**Flatten deeply nested paths** by using hyphens:
-- `rules/github/pr/` → `rules/github-pr/`
-- `rules/comms/jira/` → `rules/comms-jira/`
-
-**Why this matters:** Deeply nested directories make rules hard to find and create inconsistent organization. A shallow structure with standardized subfolder names enables predictable navigation.

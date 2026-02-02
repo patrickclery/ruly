@@ -157,36 +157,19 @@ This repository **does not include rule files**. You need to:
 
 2. **Organize your rules:**
 
-   **Directory structure convention:** Keep a shallow, standardized structure. Each topic folder can only contain these subfolders:
-   - `commands/` - Slash command definitions
-   - `hooks/` - Hook scripts and configurations
-   - `standards/` - Decomposed standard/pattern files (via `/ruly:decompose`)
-   - `skills/` - Skill definitions
-
-   **Flatten deeply nested paths** using hyphens for discoverability:
-   - `rules/github/pr/` → `rules/github-pr/`
-   - `rules/comms/jira/` → `rules/comms-jira/`
-
    ```
    rules/
    ├── ruby/
    │   ├── common.md
    │   ├── rspec.md
-   │   └── standards/           # Decomposed patterns
-   │       ├── _common-ruby-patterns.md
-   │       └── error-handling.md
+   │   └── best-practices.md
    ├── testing/
    │   └── patterns.md
-   ├── github-pr/               # Flattened from github/pr/
-   │   ├── commands/
-   │   │   ├── create.md
-   │   │   └── merge.md
-   │   └── common.md
-   ├── bug/
-   │   ├── commands/
+   ├── commands/
+   │   ├── bug/
    │   │   └── diagnose.md
-   │   └── skills/
-   │       └── debugging.md
+   │   └── pr/
+   │       └── create.md
    └── core/
        └── debugging.md
    ```
