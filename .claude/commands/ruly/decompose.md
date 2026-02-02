@@ -1,199 +1,301 @@
 ---
 name: ruly:decompose
-description: Decompose a markdown file into smaller section-based files with automatic anchor linking
+description: Decompose a markdown file into a directory of section-based files with anchor links
 ---
 
 # /ruly:decompose Command
 
 ## Overview
 
-The `/ruly:decompose` command analyzes a markdown file and splits it into smaller, focused files based on its section headers. The original file is modified to reference the extracted sections via markdown anchor links, and the `requires:` frontmatter is automatically updated.
+The `/ruly:decompose` command splits a markdown file into a directory of separate files based on its section headers. It uses `git mv` to preserve history, moving the original file to become the index file (`_common-{tag}.md`) that references all extracted sections via anchor links.
 
 ## Usage
 
 ```
-/ruly:decompose <file-path> [--level N] [--min-lines N]
+/ruly:decompose <file> <directory>
 ```
 
 ## Arguments
 
-- `<file-path>` - The markdown file to decompose (required)
-- `--level N` - Header level to split on (default: 2, meaning `##` headers)
-- `--min-lines N` - Minimum lines in a section to extract (default: 10)
+- `<file>` - The markdown file to decompose
+- `<directory>` - The name for the output directory (e.g., "standards", "patterns")
 
 ## Examples
 
 ```bash
-# Decompose a file at level 2 headers (##)
-/ruly:decompose rules/workaxle/core/common.md
+# Decompose common.md into a "standards" directory
+/ruly:decompose rules/workaxle/core/frameworks/common.md standards
 
-# Split on level 3 headers (###)
-/ruly:decompose rules/bug/debugging.md --level 3
-
-# Only extract sections with 20+ lines
-/ruly:decompose rules/workaxle/core.md --min-lines 20
+# Decompose debugging.md into a "troubleshooting" directory
+/ruly:decompose rules/bug/debugging.md troubleshooting
 ```
+
+## Example Transformation
+
+**Before** (`rules/core/common.md`):
+```markdown
+---
+description: Common Ruby patterns
+globs:
+  - '**/*.rb'
+---
+
+# Ruby Language Patterns
+
+## Code Style
+
+Content about code style...
+
+## Error Handling
+
+Content about error handling...
+
+## Testing
+
+Content about testing...
+```
+
+**After decomposition** into `standards/`:
+
+```
+rules/core/standards/
+├── _common-ruby-language-patterns.md  # Index (original file, moved via git mv)
+├── code-style.md                      # Extracted section
+├── error-handling.md                  # Extracted section
+└── testing.md                         # Extracted section
+```
+
+`standards/_common-ruby-language-patterns.md` (index):
+```yaml
+---
+description: Common Ruby patterns
+globs:
+  - '**/*.rb'
+requires:
+  - ./code-style.md
+  - ./error-handling.md
+  - ./testing.md
+---
+```
+```markdown
+# Ruby Language Patterns
+
+## Code Style
+
+See [Code Style](#code-style) for code style patterns.
+
+## Error Handling
+
+See [Error Handling](#error-handling) for error handling patterns.
+
+## Testing
+
+See [Testing](#testing) for testing patterns.
+```
+
+`standards/code-style.md`:
+```markdown
+---
+description: Code style guidelines
+alwaysApply: false
+---
+
+# Code Style
+
+Content about code style...
+```
+
+## Index File Naming
+
+The index file is named `_common-{tag}.md` where `{tag}` is derived from:
+
+1. **Primary**: The H1 (`#`) header text, slugified (kebab-case)
+   - `# Ruby Language Patterns` → `_common-ruby-language-patterns.md`
+   - `# Debugging Methodology` → `_common-debugging-methodology.md`
+
+2. **Fallback**: If no H1 header, use the `description` from frontmatter, slugified
+
+3. **Last resort**: Use the original filename as the tag
 
 ## Process
 
-### Step 1: Parse the Source File
+### Step 1: Parse the File
 
-1. Read the source markdown file
-2. Extract existing frontmatter (preserve it)
-3. Identify all headers at the specified level
-4. Calculate section boundaries
+1. Read the input file
+2. Extract existing frontmatter (to preserve)
+3. Identify the H1 header (for the `{tag}` in `_common-{tag}.md`)
+4. Identify all H2 section headers (for extraction)
+5. For each H2 header, capture:
+   - The header text (e.g., "Code Style")
+   - All content until the next H2 header (including nested H3, H4, etc.)
 
-### Step 2: Identify Extractable Sections
+### Step 2: Generate Preview
 
-For each section at the target header level:
-1. Count lines in the section (including subsections)
-2. If lines >= min-lines threshold, mark for extraction
-3. Generate a slug from the header text (e.g., "Debugging Methodology" -> "debugging-methodology")
-
-### Step 3: Create Extracted Files
-
-For each extractable section:
-
-**File naming:** `{original-basename}-{section-slug}.md`
-
-Example: `common.md` with section "## Quick Reference" -> `common-quick-reference.md`
-
-**File content:**
-```markdown
----
-description: [Section header text]
-alwaysApply: false
----
-
-# [Section Header]
-
-[Section content including all subsections]
-```
-
-### Step 4: Modify Original File
-
-Replace extracted section content with an anchor link reference:
-
-**Before:**
-```markdown
-## Debugging Methodology
-
-Long content about debugging...
-Multiple paragraphs...
-Code examples...
-```
-
-**After:**
-```markdown
-## Debugging Methodology
-
-See [Debugging Methodology](#debugging-methodology) in the extracted file.
-
-For details, refer to the full section in [common-debugging-methodology.md](#debugging-methodology).
-```
-
-### Step 5: Update requires: Frontmatter
-
-Add all extracted files to the `requires:` array in the original file's frontmatter:
-
-**Before:**
-```yaml
----
-description: Common patterns
-alwaysApply: false
----
-```
-
-**After:**
-```yaml
----
-description: Common patterns
-alwaysApply: false
-requires:
-  - common-debugging-methodology.md
-  - common-quick-reference.md
----
-```
-
-## Output
-
-The command produces:
-
-1. **Modified original file** - With section placeholders and updated `requires:`
-2. **Extracted section files** - One per extracted section
-3. **Summary report** - Shows what was extracted
-
-### Example Summary
+Show the user what will happen:
 
 ```
-=== Decomposition Summary ===
-Source: rules/workaxle/core/common.md
-
-Extracted sections:
-  1. common-debugging-methodology.md (45 lines)
-  2. common-quick-reference.md (28 lines)
-  3. common-service-patterns.md (67 lines)
-
-Original file updated:
-  - 3 sections replaced with anchor links
-  - requires: frontmatter updated with 3 entries
-
-Total reduction: 140 lines -> 35 lines (75% reduction)
+╔══════════════════════════════════════════════════════════════╗
+║                    DECOMPOSITION PREVIEW                     ║
+╠══════════════════════════════════════════════════════════════╣
+║ Source: rules/core/common.md                                 ║
+║ Target directory: rules/core/standards/                      ║
+║ Sections found: 3                                            ║
+╠══════════════════════════════════════════════════════════════╣
+║ GIT MV (preserves history):                                  ║
+║   common.md → standards/_common-ruby-language-patterns.md    ║
+╠══════════════════════════════════════════════════════════════╣
+║ EXTRACTED FILES:                                             ║
+║   standards/code-style.md         (from "## Code Style")     ║
+║   standards/error-handling.md     (from "## Error Handling") ║
+║   standards/testing.md            (from "## Testing")        ║
+╚══════════════════════════════════════════════════════════════╝
 ```
 
-## Anchor Link Format
+### Step 3: Wait for Confirmation
 
-**CRITICAL:** Use markdown anchor links that work after `ruly squash`:
+Accept ONLY "decompose it" (case-insensitive, exact match).
 
-```markdown
-See [Section Name](#section-name-slug) for details.
+**If user says anything else:** Ask for clarification or cancel.
+
+### Step 4: Execute Decomposition
+
+After confirmation:
+
+1. **Create directory**: `mkdir -p {directory}/`
+
+2. **Move original file with git**:
+   ```bash
+   git mv {file} {directory}/_common-{tag}.md
+   ```
+   This preserves git history for the file.
+
+3. **Create extracted files**: For each H2 section, create a file in the new directory
+   - Filename: kebab-case slug of the header (e.g., "## Error Handling" → `error-handling.md`)
+   - Content: Section header (promoted to H1) + all content until next H2
+   - Frontmatter: Add `description` and `alwaysApply: false`
+
+4. **Update index file**: Modify the moved file to contain:
+   - Preserved original frontmatter
+   - Added `requires:` listing all extracted files (relative paths with `./`)
+   - The H1 header
+   - H2 stubs with anchor links: `See [Section Name](#section-anchor)`
+
+### Step 5: Report Results
+
+```
+✅ Decomposition complete!
+
+Created directory: rules/core/standards/
+
+Git moved:
+  common.md → standards/_common-ruby-language-patterns.md
+
+Created files:
+  • code-style.md (45 lines)
+  • error-handling.md (32 lines)
+  • testing.md (28 lines)
 ```
 
-The anchor slug is generated from the header text:
-- Lowercase
-- Spaces -> hyphens
-- Remove special characters
-- Example: "Quick Reference (Commands)" -> `#quick-reference-commands`
+## Slug Generation Rules
+
+Convert header text to filename slug (kebab-case):
+
+1. Remove emoji characters
+2. Convert to lowercase
+3. Replace spaces with hyphens
+4. Remove special characters (keep alphanumeric and hyphens)
+5. Remove leading/trailing hyphens
+6. Collapse multiple hyphens to single
+
+**Examples:**
+- "## Code Style" → `code-style.md`
+- "## 🛡️ Guard Clauses" → `guard-clauses.md`
+- "# Ruby Language Patterns" → `_common-ruby-language-patterns.md`
+- "## API v2 Changes" → `api-v2-changes.md`
+
+## Anchor Generation Rules
+
+Convert header text to anchor (for linking after `ruly squash`):
+
+1. Remove emoji characters
+2. Convert to lowercase
+3. Replace spaces with hyphens
+4. Remove special characters (keep alphanumeric and hyphens)
+
+**Examples:**
+- "## Code Style" → `#code-style`
+- "## Error Handling" → `#error-handling`
+
+## Important Rules
+
+### DO:
+
+- ✅ Show preview before making any changes
+- ✅ Wait for explicit "decompose it" confirmation
+- ✅ Use `git mv` to move the original file (preserves history)
+- ✅ Name index file `_common-{tag}.md` where tag is from H1 header
+- ✅ Preserve all content within sections (including nested headers)
+- ✅ Use relative paths (`./`) in `requires:` frontmatter
+- ✅ Preserve existing frontmatter from the original file
+
+### DO NOT:
+
+- ❌ Execute without showing preview first
+- ❌ Accept vague confirmations (only "decompose it")
+- ❌ Delete the original file (use `git mv` instead)
+- ❌ Delete or overwrite the target directory (other decomposed files may exist there)
+- ❌ Use generic names without the tag (e.g., just `_common.md`)
+- ❌ Strip nested headers from extracted content
+- ❌ Use absolute paths in `requires:` frontmatter
 
 ## Edge Cases
 
-### Preserving Context
+### Directory Already Exists
 
-When a section is extracted, include a brief context note in the original:
-
-```markdown
-## Debugging Methodology
-
-> **Extracted:** Full content in [Debugging Methodology](#debugging-methodology).
-
-[Optional 1-2 sentence summary if needed for context]
+This is normal - multiple files can be decomposed into the same directory. Just add new files alongside existing ones:
+```
+ℹ️ Directory exists: standards/
+   Adding new files alongside existing content.
 ```
 
-### Nested Headers
+**Only warn if a specific file would be overwritten:**
+```
+⚠️ File already exists: standards/error-handling.md
+   Overwrite? (yes/no)
+```
 
-When extracting a `##` section, include ALL nested `###`, `####`, etc. headers in the extracted file.
+### File Not Under Git Control
 
-### Frontmatter Preservation
+If the file is not tracked by git, fall back to regular `mv`:
+```
+ℹ️ File not under git control. Using regular move instead of git mv.
+```
 
-- Preserve all existing frontmatter fields
-- Only modify/add the `requires:` array
-- Maintain YAML formatting
+### File Has Only One H2 Section
 
-### Already Extracted Sections
+Report that decomposition may not be useful:
+```
+ℹ️ File has only one section. Decomposition would create just one file.
+   Continue anyway? (yes/no)
+```
 
-If a section only contains an anchor link reference, skip it (already extracted).
+### File Has No H2 Sections
 
-## Integration
+Report that no sections were found:
+```
+⚠️ No H2 (##) sections found. Nothing to decompose.
+```
 
-Works well with:
-- `/ruly:compress` - Analyze for redundancies before decomposing
-- `/ruly:validate` - Verify anchor links after decomposition
-- `ruly squash` - Combines files while maintaining anchor targets
+### No H1 Header for Tag
 
-## Verification
+If the file has no H1 header:
+1. Use the `description` from frontmatter, slugified
+2. If no description, use the original filename as the tag
 
-After running, verify:
-1. All extracted files exist
-2. Original file has correct anchor links
-3. `requires:` frontmatter includes all extracted files
-4. Run `ruly squash --recipe <recipe>` to verify anchors resolve
+### Content Before First H2
+
+If there's content between the H1 and first H2 (e.g., an intro paragraph), include it in the index file above the section stubs.
+
+### Existing Frontmatter
+
+Merge existing frontmatter with the new `requires:` field in the index file. Preserve all original fields.
