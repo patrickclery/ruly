@@ -2,7 +2,7 @@
 - Every time the slash commands are updated. Make sure to update the slash command Section of the read me
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
 - Always use `git mv` to move/rename files instead of deleting and re-creating them (preserves git history)
-- When I say "commit", commit and push BOTH repos:
+- When I say "commit" or "commit all", commit and push ALL modified files in BOTH repos (don't assume any changes are unrelated):
   1. The rules submodule (./rules) → https://github.com/patrickclery/rules
   2. The parent ruly repo → https://github.com/patrickclery/ruly (update submodule reference)
 
