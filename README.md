@@ -526,6 +526,7 @@ This ensures proper navigation even when multiple rule files contain headers wit
 
 - `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
 - `/ruly:decompose` - Decompose a markdown file into smaller section-based files with automatic anchor linking
+- `/decompose` - Decompose a markdown file into a directory using git mv (preserves history)
 
 ### Examples
 
