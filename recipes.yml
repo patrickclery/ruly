@@ -105,6 +105,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       # Context loading (pre-fetched Jira/PR/Teams data)
       - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md

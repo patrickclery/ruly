@@ -522,6 +522,11 @@ The `--toc` option will automatically generate:
 
 This ensures proper navigation even when multiple rule files contain headers with identical names (e.g., multiple files with "# Introduction" sections).
 
+#### Available Ruly Commands
+
+- `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
+- `/ruly:decompose` - Decompose a markdown file into smaller section-based files with automatic anchor linking
+
 ### Examples
 
 ```bash
