@@ -1,6 +1,7 @@
 - always update the ~/.config/ruly/recipes.yml and /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml when you change things it references (they should be identical)
 - Every time the slash commands are updated. Make sure to update the slash command Section of the read me
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
+- When I ask to create a skill, add it to `rules/{tag}/skills/{skill-name}.md` (Ruly searches for skills in that structure)
 - Always use `git mv` to move/rename files instead of deleting and re-creating them (preserves git history)
 - When I say "commit" or "commit all", commit and push ALL modified files in BOTH repos (don't assume any changes are unrelated):
   1. The rules submodule (./rules) → https://github.com/patrickclery/rules
