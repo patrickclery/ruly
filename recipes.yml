@@ -167,6 +167,18 @@ recipes:
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: jira_comment
+        recipe: jira-comment
+      - name: jira_bug_report
+        recipe: jira-bug-report
+      - name: jira_epic
+        recipe: jira-epic
+      - name: jira_initiative
+        recipe: jira-initiative
+      - name: jira_story
+        recipe: jira-story
+      - name: jira_ready_for_qa
+        recipe: jira-ready-for-qa
 
   finalize:
     description: "WorkAxle final testing and cleanup phase"
@@ -224,6 +236,16 @@ recipes:
         recipe: ms-teams-dm
       - name: jira_comment
         recipe: jira-comment
+      - name: jira_bug_report
+        recipe: jira-bug-report
+      - name: jira_epic
+        recipe: jira-epic
+      - name: jira_initiative
+        recipe: jira-initiative
+      - name: jira_story
+        recipe: jira-story
+      - name: jira_ready_for_qa
+        recipe: jira-ready-for-qa
 
   confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
@@ -331,6 +353,18 @@ recipes:
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: jira_comment
+        recipe: jira-comment
+      - name: jira_bug_report
+        recipe: jira-bug-report
+      - name: jira_epic
+        recipe: jira-epic
+      - name: jira_initiative
+        recipe: jira-initiative
+      - name: jira_story
+        recipe: jira-story
+      - name: jira_ready_for_qa
+        recipe: jira-ready-for-qa
 
   local:
     description: "Local development with all MCP servers, no rule files"
@@ -398,6 +432,16 @@ recipes:
         recipe: ms-teams-dm
       - name: jira_comment
         recipe: jira-comment
+      - name: jira_bug_report
+        recipe: jira-bug-report
+      - name: jira_epic
+        recipe: jira-epic
+      - name: jira_initiative
+        recipe: jira-initiative
+      - name: jira_story
+        recipe: jira-story
+      - name: jira_ready_for_qa
+        recipe: jira-ready-for-qa
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
@@ -434,8 +478,47 @@ recipes:
   jira-comment:
     description: "Post a Jira comment (subagent execution)"
     files:
-      # CRITICAL: This file tells the subagent what to DO when dispatched
       - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-comment.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
     mcp_servers: []  # Uses shell script, no MCP needed
+
+  jira-bug-report:
+    description: "Create a Jira bug report (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-bug-report.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers: []  # Uses shell script, no MCP needed
+
+  jira-epic:
+    description: "Create a Jira epic (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-epic.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - atlassian  # Uses Atlassian MCP for issue creation
+
+  jira-initiative:
+    description: "Create a Jira initiative (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-initiative.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - atlassian  # Uses Atlassian MCP for issue creation
+
+  jira-story:
+    description: "Create a Jira story (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-story.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - atlassian  # Uses Atlassian MCP for issue creation
+
+  jira-ready-for-qa:
+    description: "Notify QA - comment, transition, and Teams DM (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+    mcp_servers:
+      - teams  # Uses Teams MCP for DM
 
