@@ -51,8 +51,18 @@ module Ruly
     option :front_matter, default: false,
                           desc: 'Preserve non-metadata frontmatter in output',
                           type: :boolean
+    option :home_override, default: false,
+                           desc: 'Allow running squash in $HOME directory (dangerous)',
+                           type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
+      # Safeguard: prevent running in $HOME to avoid deleting ~/.claude/
+      if Dir.pwd == Dir.home && !options[:home_override]
+        say_error "ERROR: Running 'ruly squash' in $HOME is dangerous and may delete ~/.claude/"
+        say_error 'Use --home-override if you really want to do this.'
+        exit 1
+      end
+
       # Clean first if requested (deepclean takes precedence over clean)
       if options[:deepclean] && !options[:dry_run]
         invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
