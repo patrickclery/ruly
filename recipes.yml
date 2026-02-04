@@ -23,7 +23,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/bug/
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -104,7 +104,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       # Context loading (pre-fetched Jira/PR/Teams data)
-      - /Users/patrick/Projects/ruly/rules/comms/commands/use-context.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
@@ -350,7 +350,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-stale.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-branches.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
@@ -366,6 +366,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
       # Jira operations - details, transitions
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
@@ -373,5 +374,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
     mcp_servers:
       - teams # For Teams DM notifications
+      - atlassian # For Confluence page creation
       - task-master-ai # Task management and workflow tracking
 
