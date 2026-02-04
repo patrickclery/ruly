@@ -124,6 +124,35 @@ recipes:
       - name: context_fetcher
         recipe: context-fetcher
 
+  auth0:
+    description: "WorkAxle Auth0 password and session management development"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      # Auth0 specific
+      - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
+      # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      # PR operations
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
+      # Scripts for PR operations
+      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
+    mcp_servers:
+      - Ref # For documentation lookup
+      - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
+
   refactor:
     description: "WorkAxle code refactoring"
     files:
