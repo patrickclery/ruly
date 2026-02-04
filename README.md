@@ -357,6 +357,164 @@ ruly mcp -r workaxle-bug playwright
 ruly mcp -r workaxle-spike -a
 ```
 
+### Subagents
+
+Subagents allow you to generate specialized agent files that Claude can dispatch to for specific tasks. Each subagent is a self-contained agent with its own rules, commands, and MCP server access.
+
+#### Defining Subagents in Recipes
+
+Add a `subagents` array to any recipe. Each subagent references another recipe:
+
+```yaml
+recipes:
+  # Main recipe that spawns subagents
+  full:
+    description: "Complete development environment"
+    files:
+      - /path/to/rules/core.md
+    subagents:
+      - name: bug_investigator
+        recipe: bug
+      - name: test_runner
+        recipe: testing
+      - name: pr_manager
+        recipe: pr
+
+  # Recipes used by subagents
+  bug:
+    description: "Bug investigation and debugging"
+    files:
+      - /path/to/rules/bug/
+      - /path/to/rules/debugging.md
+    mcp_servers:
+      - task-master-ai
+
+  testing:
+    description: "Testing and QA workflows"
+    files:
+      - /path/to/rules/testing/
+    mcp_servers:
+      - playwright
+
+  pr:
+    description: "PR management"
+    files:
+      - /path/to/rules/github/pr/
+```
+
+#### How It Works
+
+When you run `ruly squash -r full`:
+
+1. **Main rules generated**: `CLAUDE.local.md` with the main recipe content
+2. **Agent files created**: `.claude/agents/{name}.md` for each subagent
+3. **Commands organized**: `.claude/commands/{agent_name}/` for agent-specific commands
+
+```
+your-project/
+├── CLAUDE.local.md              # Main rules (from 'full' recipe)
+└── .claude/
+    ├── agents/
+    │   ├── bug_investigator.md  # Squashed 'bug' recipe
+    │   ├── test_runner.md       # Squashed 'testing' recipe
+    │   └── pr_manager.md        # Squashed 'pr' recipe
+    └── commands/
+        ├── bug_investigator/    # Commands for bug agent
+        ├── test_runner/         # Commands for testing agent
+        └── pr_manager/          # Commands for PR agent
+```
+
+#### Agent File Format
+
+Generated agent files have YAML frontmatter that Claude understands:
+
+```yaml
+---
+name: bug_investigator
+description: Bug investigation and debugging
+tools: inherit
+model: inherit
+# Auto-generated from recipe: bug
+# Do not edit manually - regenerate using 'ruly squash full'
+---
+
+# Bug Investigator
+
+Bug investigation and debugging
+
+## Recipe Content
+
+[squashed content from bug recipe]
+
+## MCP Servers
+
+This subagent has access to the following MCP servers:
+- task-master-ai
+
+---
+*Last generated: 2026-02-04 12:30:00*
+*Source recipe: bug*
+```
+
+#### When to Use Subagents
+
+| Use Case | Benefit |
+|----------|---------|
+| **Specialized tasks** | Each agent has focused rules for its domain |
+| **Parallel work** | Dispatch multiple agents for independent tasks |
+| **Context isolation** | Agents only load rules they need |
+| **MCP server scoping** | Each agent gets only the MCP servers it needs |
+
+#### Example: Development Workflow
+
+```yaml
+recipes:
+  workaxle:
+    description: "Main WorkAxle development"
+    files:
+      - /path/to/rules/core.md
+    subagents:
+      - name: comms
+        recipe: comms        # Jira, Teams, GitHub communications
+      - name: merger
+        recipe: merger       # PR merging operations
+      - name: dashboard
+        recipe: dashboard    # PR status dashboard
+
+  comms:
+    description: "Communication via Jira, Teams, GitHub"
+    files:
+      - /path/to/rules/comms/
+    mcp_servers:
+      - teams
+      - atlassian
+
+  merger:
+    description: "PR merging commands"
+    files:
+      - /path/to/rules/github/pr/
+    mcp_servers: []
+
+  dashboard:
+    description: "Open PRs dashboard"
+    files:
+      - /path/to/rules/dashboard.md
+    mcp_servers: []
+```
+
+Then Claude can dispatch to these agents:
+
+```
+User: "Update all my PRs with latest main"
+Claude: [Dispatches to merger agent which has PR merge rules]
+
+User: "Send a Teams message about WA-1234"
+Claude: [Dispatches to comms agent which has Teams MCP access]
+
+User: "Show me my open PRs"
+Claude: [Dispatches to dashboard agent]
+```
+
 ### Recipe System
 
 Recipes allow you to define collections of rules to combine, rather than always including all files.
