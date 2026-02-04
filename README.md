@@ -170,9 +170,21 @@ This repository **does not include rule files**. You need to:
    │   │   └── diagnose.md
    │   └── pr/
    │       └── create.md
+   ├── comms/
+   │   └── ms-teams/
+   │       ├── common.md           # Shared Teams patterns
+   │       ├── commands/
+   │       │   └── dm.md           # User-facing command
+   │       └── agents/
+   │           └── ms-teams-dm.md  # Subagent instructions
    └── core/
        └── debugging.md
    ```
+
+   **Directory conventions:**
+   - `commands/` - User-invocable slash commands (e.g., `/ms-teams:dm`)
+   - `agents/` - Subagent instruction files (dispatched by orchestrator, not user-invocable)
+   - Root files - Common patterns and shared configuration
 
 ### Option 2: Use Multiple Rule Sources
 
@@ -455,6 +467,25 @@ This subagent has access to the following MCP servers:
 *Last generated: 2026-02-04 12:30:00*
 *Source recipe: bug*
 ```
+
+#### Directory Structure for Subagents
+
+Subagent instruction files should be organized in `agents/` directories:
+
+```
+rules/
+└── comms/
+    └── ms-teams/
+        ├── common.md                     # Shared patterns (loaded by both)
+        ├── commands/
+        │   └── dm.md                     # User command: /ms-teams:dm
+        └── agents/
+            └── ms-teams-dm.md   # Subagent: dispatched on "send it"
+```
+
+**Key distinction:**
+- `commands/` - User-invocable via `/command-name`
+- `agents/` - Dispatched programmatically by the orchestrator
 
 #### When to Use Subagents
 

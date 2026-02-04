@@ -164,6 +164,9 @@ recipes:
       - playwright # UI testing
       - Ref # Documentation lookup
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: ms_teams_dm
+        recipe: ms-teams-dm
 
   finalize:
     description: "WorkAxle final testing and cleanup phase"
@@ -216,6 +219,9 @@ recipes:
     mcp_servers:
       - teams # For Teams DM notifications
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: ms_teams_dm
+        recipe: ms-teams-dm
 
   confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
@@ -320,6 +326,9 @@ recipes:
       - teams # For Teams DM notifications
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
+    subagents:
+      - name: ms_teams_dm
+        recipe: ms-teams-dm
 
   local:
     description: "Local development with all MCP servers, no rule files"
@@ -382,6 +391,9 @@ recipes:
       - teams # For Teams DM notifications
       - atlassian # For Confluence page creation
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: ms_teams_dm
+        recipe: ms-teams-dm
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
@@ -404,4 +416,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
     mcp_servers:
       - teams  # For fetching Teams threads
+
+  ms-teams-dm:
+    description: "Send a Teams DM (subagent execution)"
+    files:
+      # CRITICAL: This file tells the subagent what to DO when dispatched
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/agents/ms-teams-dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - teams  # For Teams MCP calls
 
