@@ -378,12 +378,20 @@ recipes:
       - task-master-ai # Task management and workflow tracking
 
   dashboard:
-    description: "Open PRs dashboard with context fetching"
+    description: "Open PRs dashboard with context fetching via subagent"
     files:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+    mcp_servers: []
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
+
+  context-fetcher:
+    description: "Fetch and cache Jira/PR/Teams context for a ticket"
+    files:
       - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
-    mcp_servers: []
+    mcp_servers:
+      - teams  # For fetching Teams threads
 
