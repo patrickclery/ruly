@@ -23,7 +23,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/bug/
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
+      # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -32,6 +33,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
 
   testing:
     description: "WorkAxle RSpec testing and TDD"
@@ -103,9 +107,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      # Context loading (pre-fetched Jira/PR/Teams data)
-      - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
+      # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -117,6 +120,9 @@ recipes:
     mcp_servers:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
 
   refactor:
     description: "WorkAxle code refactoring"
