@@ -1917,8 +1917,24 @@ module Ruly
       frontmatter = parts[1]
       body = parts[2]
 
-      # Default behavior: strip all frontmatter
-      return body unless keep_frontmatter
+      # Default behavior: strip all frontmatter EXCEPT Claude Code directives
+      unless keep_frontmatter
+        # Extract Claude Code directives to preserve
+        claude_directives = {}
+        %w[name description permissionMode allowed_tools model].each do |key|
+          if frontmatter =~ /^#{key}:\s*(.+)$/
+            claude_directives[key] = Regexp.last_match(1).strip
+          end
+        end
+
+        # If we have Claude Code directives, keep only those
+        if claude_directives.any?
+          preserved = claude_directives.map { |k, v| "#{k}: #{v}" }.join("\n")
+          return "---\n#{preserved}\n---#{body}"
+        end
+
+        return body
+      end
 
       # With keep_frontmatter: strip only metadata fields (requires, recipes, essential)
       # This handles both:
@@ -2785,8 +2801,9 @@ module Ruly
         ---
         name: #{context[:agent_name]}
         description: #{context[:description]}
-        tools: inherit
+        tools: Bash, Read, Write, Edit, Glob, Grep
         model: inherit
+        permissionMode: bypassPermissions
         # Auto-generated from recipe: #{context[:recipe_name]}
         # Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'
         ---
