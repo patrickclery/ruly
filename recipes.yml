@@ -388,6 +388,8 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+      # MUST include the rule that enforces subagent usage
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
     mcp_servers: []
     subagents:
       - name: context_fetcher
