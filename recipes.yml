@@ -222,6 +222,8 @@ recipes:
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: jira_comment
+        recipe: jira-comment
 
   confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
@@ -394,6 +396,8 @@ recipes:
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: jira_comment
+        recipe: jira-comment
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
@@ -426,4 +430,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
     mcp_servers:
       - teams  # For Teams MCP calls
+
+  jira-comment:
+    description: "Post a Jira comment (subagent execution)"
+    files:
+      # CRITICAL: This file tells the subagent what to DO when dispatched
+      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers: []  # Uses shell script, no MCP needed
 
