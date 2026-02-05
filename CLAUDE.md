@@ -11,6 +11,7 @@
 - When I say "commit" or "commit all", commit and push ALL modified files in BOTH repos (don't assume any changes are unrelated):
   1. The rules submodule (./rules) → https://github.com/patrickclery/rules
   2. The parent ruly repo → https://github.com/patrickclery/ruly (update submodule reference)
+- Always use **Mermaid** for diagrams/flowcharts in rules (never graphviz/dot). Exception: Jira/Confluence don't support Mermaid, so use ASCII diagrams there instead.
 
 # Claude Code Instructions
 

@@ -434,6 +434,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
