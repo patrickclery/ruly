@@ -3,6 +3,10 @@
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
 - When I ask to create a skill, add it to `rules/{tag}/skills/{skill-name}.md` (Ruly searches for skills in that structure)
 - Always use `git mv` to move/rename files instead of deleting and re-creating them (preserves git history)
+- When deleting/moving/renaming files in rules/, always search for references to update:
+  - `requires:` frontmatter in other rule files
+  - Recipe files (recipes.yml, ~/.config/ruly/recipes.yml)
+  - Section anchor links that may have changed
 - When I say "commit" or "commit all", commit and push ALL modified files in BOTH repos (don't assume any changes are unrelated):
   1. The rules submodule (./rules) → https://github.com/patrickclery/rules
   2. The parent ruly repo → https://github.com/patrickclery/ruly (update submodule reference)
