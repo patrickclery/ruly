@@ -24,7 +24,8 @@ module Ruly
       def call
         file_stats = build_file_stats
         orphaned = find_orphaned_files
-        write_markdown(file_stats, orphaned)
+        circular = find_circular_dependencies
+        write_markdown(file_stats, orphaned, circular)
 
         build_result(
           success: true,
@@ -34,7 +35,9 @@ module Ruly
             output_file:,
             total_tokens: file_stats.sum { |f| f[:tokens] },
             orphaned_files: orphaned,
-            orphaned_count: orphaned.size
+            orphaned_count: orphaned.size,
+            circular_dependencies: circular,
+            circular_count: circular.size
           }
         )
       rescue StandardError => e
@@ -85,7 +88,79 @@ module Ruly
         all_files.reject { |f| used_files.include?(File.expand_path(f)) }
       end
 
+      # Find circular dependencies in requires
+      # @return [Array<Array<String>>] List of cycles, each cycle is an array of file paths
+      def find_circular_dependencies
+        # Build dependency graph from all source files
+        graph = {}
+        sources.each do |source|
+          next unless source[:type] == 'local'
+
+          path = source[:path]
+          next unless path && File.exist?(path)
+
+          abs_path = File.expand_path(path)
+          graph[abs_path] = extract_requirements(abs_path).map { |r| File.expand_path(r) }
+        end
+
+        # Find cycles using DFS with path tracking
+        cycles = []
+        visited = Set.new
+        rec_stack = Set.new
+
+        graph.each_key do |node|
+          detect_cycles(node, graph, visited, rec_stack, [], cycles) unless visited.include?(node)
+        end
+
+        # Normalize cycles to avoid duplicates (same cycle starting from different nodes)
+        normalize_cycles(cycles)
+      end
+
       private
+
+      # DFS helper to detect cycles
+      def detect_cycles(node, graph, visited, rec_stack, path, cycles)
+        visited.add(node)
+        rec_stack.add(node)
+        path = path + [node]
+
+        (graph[node] || []).each do |neighbor|
+          if rec_stack.include?(neighbor)
+            # Found a cycle - extract it from where the neighbor first appears
+            cycle_start = path.index(neighbor)
+            cycle = path[cycle_start..] + [neighbor]
+            cycles << cycle
+          elsif !visited.include?(neighbor) && graph.key?(neighbor)
+            detect_cycles(neighbor, graph, visited, rec_stack, path, cycles)
+          end
+        end
+
+        rec_stack.delete(node)
+      end
+
+      # Normalize cycles to avoid reporting the same cycle multiple times
+      def normalize_cycles(cycles)
+        seen = Set.new
+        normalized = []
+
+        cycles.each do |cycle|
+          # Remove the duplicate last element (A -> B -> A becomes [A, B])
+          cycle = cycle[0..-2] if cycle.first == cycle.last
+
+          # Normalize by rotating to start with the smallest element
+          min_idx = cycle.each_with_index.min_by { |path, _| path }[1]
+          rotated = cycle.rotate(min_idx)
+
+          # Create a unique key for this cycle
+          key = rotated.join('|')
+          next if seen.include?(key)
+
+          seen.add(key)
+          normalized << rotated
+        end
+
+        normalized
+      end
 
       # Collect all files used by recipes (directly or via directory inclusion)
       # and files required by other files (transitively)
@@ -194,12 +269,13 @@ module Ruly
         requirements
       end
 
-      def write_markdown(file_stats, orphaned_files = [])
+      def write_markdown(file_stats, orphaned_files = [], circular_deps = [])
         total_tokens = file_stats.sum { |f| f[:tokens] }
         total_size = file_stats.sum { |f| f[:size] }
 
         File.open(output_file, 'w') do |f|
           write_header(f, file_stats.size, total_tokens, total_size)
+          write_circular_section(f, circular_deps) if circular_deps.any?
           write_table(f, file_stats)
           write_recipe_sections(f, file_stats)
           write_orphaned_section(f, orphaned_files) if orphaned_files.any?
@@ -318,6 +394,32 @@ module Ruly
           file.puts "- [#{filename}](#{relative_path})"
         end
         file.puts
+      end
+
+      def write_circular_section(file, circular_deps)
+        file.puts '## ⚠️ Circular Dependencies'
+        file.puts
+        file.puts "Found #{circular_deps.size} circular dependency chain(s) in requires:"
+        file.puts
+
+        circular_deps.each_with_index do |cycle, idx|
+          file.puts "### Cycle #{idx + 1}"
+          file.puts
+          file.puts '```'
+          cycle.each_with_index do |path, i|
+            filename = File.basename(path)
+            arrow = i < cycle.size - 1 ? ' →' : ' → (back to start)'
+            file.puts "  #{filename}#{arrow}"
+          end
+          file.puts '```'
+          file.puts
+          file.puts 'Full paths:'
+          cycle.each do |path|
+            relative_path = rules_dir ? path.sub("#{rules_dir}/", '') : path
+            file.puts "- `#{relative_path}`"
+          end
+          file.puts
+        end
       end
 
       def write_footer(file)

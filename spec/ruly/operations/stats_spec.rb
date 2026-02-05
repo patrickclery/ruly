@@ -571,6 +571,177 @@ RSpec.describe Ruly::Operations::Stats do
       end
     end
 
+    describe 'circular dependency detection' do
+      describe '#find_circular_dependencies' do
+        context 'when no circular dependencies exist' do
+          it 'returns empty array' do
+            file_a = create_test_file('rules/a.md', "# A\n@./b.md")
+            file_b = create_test_file('rules/b.md', '# B')
+
+            sources = [
+              { path: file_a, type: 'local' },
+              { path: file_b, type: 'local' }
+            ]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular).to be_empty
+          end
+        end
+
+        context 'when two files require each other' do
+          it 'detects the circular dependency' do
+            file_a = create_test_file('rules/a.md', <<~MARKDOWN)
+              ---
+              requires:
+                - ./b.md
+              ---
+              # A
+            MARKDOWN
+            file_b = create_test_file('rules/b.md', <<~MARKDOWN)
+              ---
+              requires:
+                - ./a.md
+              ---
+              # B
+            MARKDOWN
+
+            sources = [
+              { path: file_a, type: 'local' },
+              { path: file_b, type: 'local' }
+            ]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular.size).to eq(1)
+            expect(circular.first.map { |p| File.basename(p) }).to contain_exactly('a.md', 'b.md')
+          end
+        end
+
+        context 'when a file requires itself' do
+          it 'detects the self-referential dependency' do
+            file_a = create_test_file('rules/a.md', <<~MARKDOWN)
+              ---
+              requires:
+                - ./a.md
+              ---
+              # A
+            MARKDOWN
+
+            sources = [{ path: file_a, type: 'local' }]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular.size).to eq(1)
+            expect(circular.first.map { |p| File.basename(p) }).to eq(['a.md'])
+          end
+        end
+
+        context 'when there is a longer cycle (A -> B -> C -> A)' do
+          it 'detects the full cycle' do
+            file_a = create_test_file('rules/a.md', "@./b.md\n# A")
+            file_b = create_test_file('rules/b.md', "@./c.md\n# B")
+            file_c = create_test_file('rules/c.md', "@./a.md\n# C")
+
+            sources = [
+              { path: file_a, type: 'local' },
+              { path: file_b, type: 'local' },
+              { path: file_c, type: 'local' }
+            ]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular.size).to eq(1)
+            expect(circular.first.map { |p| File.basename(p) }).to contain_exactly('a.md', 'b.md', 'c.md')
+          end
+        end
+
+        context 'when there are multiple independent cycles' do
+          it 'detects all cycles' do
+            # Cycle 1: a <-> b
+            file_a = create_test_file('rules/a.md', "@./b.md\n# A")
+            file_b = create_test_file('rules/b.md', "@./a.md\n# B")
+            # Cycle 2: c <-> d
+            file_c = create_test_file('rules/c.md', "@./d.md\n# C")
+            file_d = create_test_file('rules/d.md', "@./c.md\n# D")
+
+            sources = [
+              { path: file_a, type: 'local' },
+              { path: file_b, type: 'local' },
+              { path: file_c, type: 'local' },
+              { path: file_d, type: 'local' }
+            ]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular.size).to eq(2)
+          end
+        end
+
+        context 'when dependency points to non-existent file' do
+          it 'does not include it in the cycle detection' do
+            file_a = create_test_file('rules/a.md', "@./nonexistent.md\n# A")
+
+            sources = [{ path: file_a, type: 'local' }]
+            operation = described_class.new(sources:, output_file:)
+
+            circular = operation.find_circular_dependencies
+
+            expect(circular).to be_empty
+          end
+        end
+      end
+
+      describe 'circular dependencies in output' do
+        it 'includes circular dependencies section in markdown output' do
+          file_a = create_test_file('rules/a.md', "@./b.md\n# A")
+          file_b = create_test_file('rules/b.md', "@./a.md\n# B")
+
+          sources = [
+            { path: file_a, type: 'local' },
+            { path: file_b, type: 'local' }
+          ]
+
+          described_class.call(sources:, output_file:)
+
+          content = File.read(output_file, encoding: 'UTF-8')
+          expect(content).to include('Circular Dependencies')
+          expect(content).to include('Found 1 circular dependency chain(s)')
+        end
+
+        it 'does not show circular section when no cycles exist' do
+          file_a = create_test_file('rules/a.md', '# A')
+
+          sources = [{ path: file_a, type: 'local' }]
+
+          described_class.call(sources:, output_file:)
+
+          content = File.read(output_file)
+          expect(content).not_to include('Circular Dependencies')
+        end
+
+        it 'includes circular dependencies data in result' do
+          file_a = create_test_file('rules/a.md', "@./b.md\n# A")
+          file_b = create_test_file('rules/b.md', "@./a.md\n# B")
+
+          sources = [
+            { path: file_a, type: 'local' },
+            { path: file_b, type: 'local' }
+          ]
+
+          result = described_class.call(sources:, output_file:)
+
+          expect(result[:data][:circular_dependencies].size).to eq(1)
+          expect(result[:data][:circular_count]).to eq(1)
+        end
+      end
+    end
+
     describe 'per-recipe token counts' do
       it 'generates a Files by Token Count section for each recipe' do
         file1 = create_test_file('rules/file1.md', '# File 1 content here')
