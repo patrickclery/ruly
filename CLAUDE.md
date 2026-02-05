@@ -2,6 +2,7 @@
 - Every time the slash commands are updated. Make sure to update the slash command Section of the read me
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
 - When I ask to create a skill, add it to `rules/{tag}/skills/{skill-name}.md` (Ruly searches for skills in that structure)
+- Skills in rules/ are regular `.md` files, NOT `SKILL.md` - Ruly converts them to SKILL.md format on squash
 - Always use `git mv` to move/rename files instead of deleting and re-creating them (preserves git history)
 - When deleting/moving/renaming files in rules/, always search for references to update:
   - `requires:` frontmatter in other rule files
