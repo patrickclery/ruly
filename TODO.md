@@ -76,6 +76,35 @@
     - Post-processing step to run TOON conversion
     - Fallback behavior if npx/@toon-format/cli not available
 
+### Directives / Skill-Commands
+
+- [ ] Add the option for "directives" or "skill-commands" - a pattern where you can write a directive that can be added to a recipe as either a skill or a subagent
+  - **Use Case**: Skills become more reliable because agents are coerced into using them correctly; subagents get explicit instructions on what success/failure looks like
+  - **Structure**: Each directive is composed of 2 files:
+    1. **Skill file** - The actual skill/command (can also serve as subagent instructions)
+       - Example: `comms/commands/context-fetching.md`
+       - Invoked via `/context-fetching` or as a subagent prompt
+    2. **Standard file** - Explains how the skill/subagent works and coerces the agent into using it correctly
+       - Example: `comms/context-fetcher-subagent.md`
+       - Contains stronger restrictions, failure conditions, and explicit recommendations
+       - Always loaded when the skill is in the recipe
+       - Forces proper usage patterns (e.g., "dispatch subagent instead of running commands yourself")
+  - **Example Directory Structure**:
+    ```
+    comms/
+    ├── commands/
+    │   └── context-fetching.md      # The skill (user-invocable)
+    ├── context-fetcher-subagent.md  # The standard (how the subagent must behave)
+    └── use-context-fetcher.md       # Enforcement (blocks direct command usage)
+    ```
+  - **Implementation Ideas**:
+    - New frontmatter field: `standard: ./context-fetcher-subagent.md`
+    - When squashing a skill, automatically include its standard file
+    - Recipe config could specify: `directives: [context-fetching]` which loads both files
+  - **Benefits**:
+    - Clear separation between "what" (skill) and "how" (standard)
+    - The "standard" file acts as guardrails that are always present when the skill is loaded
+
 ### Context Switching Workflow
 
 - [ ] Add ability to create one set of rules to execute a command, then clear the context and restart Claude with a different set of rules
