@@ -1,5 +1,6 @@
 - always update the ~/.config/ruly/recipes.yml and /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml when you change things it references (they should be identical)
-- Every time the slash commands are updated. Make sure to update the slash command Section of the read me
+- Every time the slash commands are updated, make sure to update the slash command section of README.md
+- When changing `ruly` CLI commands (squash, clean, analyze, mcp, etc.), always update README.md to reflect the changes
 - When I ask to change rules, don't change the rules in .claude/ always look in ./rules/
 - When I ask to create a skill, add it to `rules/{tag}/skills/{skill-name}.md` (Ruly searches for skills in that structure)
 - Skills in rules/ are regular `.md` files, NOT `SKILL.md` - Ruly converts them to SKILL.md format on squash
