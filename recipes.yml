@@ -25,6 +25,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -109,6 +110,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -136,6 +138,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
       # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
