@@ -154,7 +154,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
@@ -214,7 +213,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
-      - /Users/patrick/Projects/ruly/rules/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
@@ -329,7 +328,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
-      - /Users/patrick/Projects/ruly/rules/bug/debugging-patterns.md
+      - /Users/patrick/Projects/ruly/rules/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/
