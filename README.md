@@ -171,12 +171,22 @@ This repository **does not include rule files**. You need to:
    │   └── pr/
    │       └── create.md
    ├── comms/
+   │   ├── jira/
+   │   │   ├── common.md           # Shared Jira patterns
+   │   │   └── bin/                # Shell scripts for Jira operations
+   │   │       └── fetch-jira-details.sh
    │   └── ms-teams/
    │       ├── common.md           # Shared Teams patterns
    │       ├── commands/
    │       │   └── dm.md           # User-facing command
    │       └── agents/
    │           └── ms-teams-dm.md  # Subagent instructions
+   ├── github/
+   │   ├── pr/
+   │   │   └── bin/                # Shell scripts for PR operations
+   │   │       └── fetch-pr-details.sh
+   │   └── bin/                    # General GitHub scripts
+   │       └── git_prettycommit.rb
    └── core/
        └── debugging.md
    ```
@@ -184,6 +194,7 @@ This repository **does not include rule files**. You need to:
    **Directory conventions:**
    - `commands/` - User-invocable slash commands (e.g., `/ms-teams:dm`)
    - `agents/` - Subagent instruction files (dispatched by orchestrator, not user-invocable)
+   - `bin/` - Shell scripts and executables used by rules (add to PATH for CLI access)
    - Root files - Common patterns and shared configuration
 
 ### Option 2: Use Multiple Rule Sources

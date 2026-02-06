@@ -115,8 +115,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-      # Scripts for PR operations
-      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
@@ -144,8 +142,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-      # Scripts for PR operations
-      - /Users/patrick/Projects/ruly/rules/bin/common/countdown-timer.sh
     mcp_servers:
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
