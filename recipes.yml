@@ -622,3 +622,37 @@ recipes:
     mcp_servers:
       - teams  # Uses Teams MCP for DM
 
+  bug-diagnose:
+    description: "Read-only bug investigation subagent - systematic root cause analysis without fixes"
+    files:
+      # === Superpowers: Systematic Debugging (core tenet) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/systematic-debugging/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/systematic-debugging/root-cause-tracing.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/systematic-debugging/defense-in-depth.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/systematic-debugging/condition-based-waiting.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === WorkAxle Core (minimal for reading code) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      # === Frameworks (read-only understanding) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === Bug Investigation (diagnostic only) ===
+      - /Users/patrick/Projects/ruly/rules/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+      - /Users/patrick/Projects/ruly/rules/bug/policies.md
+      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
+      # === Architecture (for root cause analysis) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+    mcp_servers:
+      - task-master-ai # Task management and workflow tracking
+
