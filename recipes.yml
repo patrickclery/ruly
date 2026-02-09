@@ -656,3 +656,42 @@ recipes:
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
 
+  bug-fix:
+    description: "Bug fix subagent - TDD-driven fix implementation after diagnosis is complete"
+    files:
+      # === Superpowers: TDD & Verification (core tenets) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === WorkAxle Core ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      # === Frameworks (for writing code) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === RSpec (for writing tests) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      # === Testing ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-checklist.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-guidelines.md
+      # === Standards (for writing code) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+      # === Bug Fix Command ===
+      - /Users/patrick/Projects/ruly/rules/bug/commands/fix.md
+    mcp_servers:
+      - task-master-ai # Task management and workflow tracking
