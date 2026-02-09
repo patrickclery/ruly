@@ -350,6 +350,9 @@ recipes:
       - playwright # For E2E testing
       - Ref # For documentation lookup
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: code_core
+        recipe: core
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
