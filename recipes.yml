@@ -181,6 +181,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/
       - /Users/patrick/Projects/ruly/rules/workaxle/commands/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/
@@ -188,12 +189,15 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
     mcp_servers:
       - teams # MS Teams integration
+      - mattermost # Mattermost integration
       - playwright # UI testing
       - Ref # Documentation lookup
       - task-master-ai # Task management and workflow tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: mattermost_dm
+        recipe: mattermost-dm
       - name: jira_comment
         recipe: jira-comment
       - name: jira_bug_report
@@ -249,13 +253,17 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - teams # For Teams DM notifications
+      - mattermost # For Mattermost DM notifications
       - task-master-ai # Task management and workflow tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: mattermost_dm
+        recipe: mattermost-dm
       - name: jira_comment
         recipe: jira-comment
       - name: jira_bug_report
@@ -366,15 +374,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
       - teams # For Teams DM notifications
+      - mattermost # For Mattermost DM notifications
       - Ref # For documentation lookup and external research
       - task-master-ai # Task management and spike tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: mattermost_dm
+        recipe: mattermost-dm
       - name: jira_comment
         recipe: jira-comment
       - name: jira_bug_report
@@ -431,13 +443,14 @@ recipes:
       - task-master-ai # Task management and workflow tracking
 
   comms:
-    description: "Communication via Jira, Teams, and GitHub (no code knowledge needed)"
+    description: "Communication via Jira, Teams, Mattermost, and GitHub (no code knowledge needed)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # Communications - Teams, Jira comments, full-context
+      # Communications - Teams, Mattermost, Jira comments, full-context
       - /Users/patrick/Projects/ruly/rules/comms/commands/
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/
       - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
       # Jira operations - details, transitions
@@ -447,11 +460,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
     mcp_servers:
       - teams # For Teams DM notifications
+      - mattermost # For Mattermost DM notifications
       - atlassian # For Confluence page creation
       - task-master-ai # Task management and workflow tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
+      - name: mattermost_dm
+        recipe: mattermost-dm
       - name: jira_comment
         recipe: jira-comment
       - name: jira_bug_report
@@ -495,6 +511,16 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
     mcp_servers:
       - teams  # For Teams MCP calls
+
+  mattermost-dm:
+    description: "Send a Mattermost DM (subagent execution)"
+    files:
+      # CRITICAL: This file tells the subagent what to DO when dispatched
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/agents/mattermost-dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - mattermost  # For Mattermost MCP calls
 
   jira-comment:
     description: "Post a Jira comment (subagent execution)"

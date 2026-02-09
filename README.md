@@ -486,12 +486,18 @@ Subagent instruction files should be organized in `agents/` directories:
 ```
 rules/
 └── comms/
-    └── ms-teams/
+    ├── ms-teams/
+    │   ├── common.md                     # Shared patterns (loaded by both)
+    │   ├── commands/
+    │   │   └── dm.md                     # User command: /ms-teams:dm
+    │   └── agents/
+    │       └── ms-teams-dm.md            # Subagent: dispatched on "send it"
+    └── mattermost/
         ├── common.md                     # Shared patterns (loaded by both)
         ├── commands/
-        │   └── dm.md                     # User command: /ms-teams:dm
+        │   └── dm.md                     # User command: /mattermost:dm
         └── agents/
-            └── ms-teams-dm.md   # Subagent: dispatched on "send it"
+            └── mattermost-dm.md          # Subagent: dispatched on "send it"
 ```
 
 **Key distinction:**
