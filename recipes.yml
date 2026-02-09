@@ -89,6 +89,10 @@ recipes:
     subagents:
       - name: context_fetcher
         recipe: context-fetcher
+      - name: bug_diagnose
+        recipe: bug-diagnose
+      - name: bug_fix
+        recipe: bug-fix
 
   testing:
     description: "WorkAxle RSpec testing and TDD"
