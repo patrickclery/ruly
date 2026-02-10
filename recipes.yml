@@ -57,6 +57,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
       # === Reference ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
@@ -64,8 +66,15 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+      # === Commands ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: bug_diagnose
+        recipe: bug-diagnose
+      - name: bug_fix
+        recipe: bug-fix
 
   bug:
     description: "WorkAxle bug investigation and fixing (coding only)"
