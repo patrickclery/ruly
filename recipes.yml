@@ -52,6 +52,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-diagnose.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
       # === Reference ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
@@ -68,6 +69,8 @@ recipes:
         recipe: bug-diagnose
       - name: bug_fix
         recipe: bug-fix
+      - name: core_debugging
+        recipe: core-debugging
 
   bug:
     description: "WorkAxle bug investigation and fixing (coding only)"
@@ -95,6 +98,8 @@ recipes:
         recipe: bug-diagnose
       - name: bug_fix
         recipe: bug-fix
+      - name: core_debugging
+        recipe: core-debugging
 
   testing:
     description: "WorkAxle RSpec testing and TDD"
@@ -113,6 +118,9 @@ recipes:
     mcp_servers:
       - playwright # For UI/integration testing
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: core_debugging
+        recipe: core-debugging
 
   migration:
     description: "WorkAxle database migrations"
@@ -623,6 +631,24 @@ recipes:
     mcp_servers:
       - teams  # Uses Teams MCP for DM
 
+  core-debugging:
+    description: "WorkAxle debugging subagent - SQL, Ruby, container, and test debugging patterns"
+    files:
+      # === Extracted debugging patterns ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/debugging.md
+      # === Existing bug debugging files ===
+      - /Users/patrick/Projects/ruly/rules/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+      - /Users/patrick/Projects/ruly/rules/bug/policies.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
+      # === WorkAxle context (minimal for reading code) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+    mcp_servers:
+      - task-master-ai
+
   bug-diagnose:
     description: "Read-only bug investigation subagent - systematic root cause analysis without fixes"
     files:
@@ -656,6 +682,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: core_debugging
+        recipe: core-debugging
 
   bug-fix:
     description: "Bug fix subagent - TDD-driven fix implementation after diagnosis is complete"
@@ -689,3 +718,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/commands/fix.md
     mcp_servers:
       - task-master-ai # Task management and workflow tracking
+    subagents:
+      - name: core_debugging
+        recipe: core-debugging
