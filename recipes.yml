@@ -238,6 +238,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/permit-io-schema.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/
       - /Users/patrick/Projects/ruly/rules/bug/
       - /Users/patrick/Projects/ruly/rules/github/pr/
