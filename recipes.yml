@@ -32,8 +32,6 @@ recipes:
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # === Skills ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/add-core-subagent.md
     subagents:
       - name: bug
         recipe: bug
