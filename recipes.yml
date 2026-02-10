@@ -27,13 +27,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      # === Testing (RSpec) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       # === Framework Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
@@ -104,12 +101,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/testing.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-advanced.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
@@ -278,8 +269,8 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
@@ -686,12 +677,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       # === RSpec (for writing tests) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-mocking.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       # === Testing ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
       # === Standards (for writing code) ===
