@@ -23,12 +23,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-feature.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
@@ -43,6 +43,8 @@ recipes:
         recipe: core-debugging
       - name: comms
         recipe: comms
+      - name: merger
+        recipe: merger
 
   bug:
     description: "WorkAxle bug investigation and fixing orchestrator"
