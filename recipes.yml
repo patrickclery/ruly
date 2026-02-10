@@ -28,6 +28,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
+      # === Context Fetching (orchestrator handles context) ===
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     mcp_servers:
       - task-master-ai
     subagents:
@@ -35,6 +39,8 @@ recipes:
         recipe: bug
       - name: feature
         recipe: feature
+      - name: context_fetcher
+        recipe: context-fetcher
       - name: core_debugging
         recipe: core-debugging
 
@@ -59,14 +65,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
       # === Commands ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     mcp_servers:
       - task-master-ai
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
       - name: bug_diagnose
         recipe: bug-diagnose
       - name: bug_fix
@@ -156,15 +157,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     mcp_servers:
       - Ref
       - task-master-ai
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
       - name: core_debugging
         recipe: core-debugging
 
