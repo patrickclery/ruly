@@ -24,6 +24,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -45,6 +46,8 @@ recipes:
         recipe: comms
       - name: merger
         recipe: merger
+      - name: dashboard
+        recipe: dashboard
 
   bug:
     description: "WorkAxle bug investigation and fixing orchestrator"
