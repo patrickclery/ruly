@@ -8,92 +8,62 @@ plan: claude_pro
 recipes:
   # WorkAxle recipes - Dynamic loading based on current task
   core:
-    description: "WorkAxle backend TDD subagent - implements tasks via strict red-green-refactor with verification"
+    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
     files:
-      # === Superpowers: TDD & Verification (core tenets) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
       # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === Essential Patterns ===
+      # === Essential (minimal for routing) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      # === Frameworks ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === Testing (RSpec) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
-      # === Framework Standards ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
-      # === Testing ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/materialized-views-and-test-isolation.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      # === Standards ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-diagnose.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
-      # === Reference ===
+      # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      # === Migrations ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
-      # === Commands ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
+      # === Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-bug.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-feature.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
     mcp_servers:
-      - task-master-ai # Task management and workflow tracking
+      - task-master-ai
     subagents:
-      - name: bug_diagnose
-        recipe: bug-diagnose
-      - name: bug_fix
-        recipe: bug-fix
+      - name: bug
+        recipe: bug
+      - name: feature
+        recipe: feature
       - name: core_debugging
         recipe: core-debugging
 
   bug:
-    description: "WorkAxle bug investigation and fixing (coding only)"
+    description: "WorkAxle bug investigation and fixing orchestrator"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+      # === Essential (no feature-flags, no outbox — bugs don't need these) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      # === Bug Investigation ===
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
       - /Users/patrick/Projects/ruly/rules/bug/bug-workflow.md
       - /Users/patrick/Projects/ruly/rules/bug/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      # Context fetching via subagent (MUST be always loaded)
+      # === Dispatch Rules (moved from core) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
+      # === Commands ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
+      # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # PR operations
+      # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
-      - task-master-ai # Task management and workflow tracking
+      - task-master-ai
     subagents:
       - name: context_fetcher
         recipe: context-fetcher
@@ -101,27 +71,6 @@ recipes:
         recipe: bug-diagnose
       - name: bug_fix
         recipe: bug-fix
-      - name: core_debugging
-        recipe: core-debugging
-
-  testing:
-    description: "WorkAxle RSpec testing and TDD"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/testing.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/archive/testing/commands/require.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    mcp_servers:
-      - playwright # For UI/integration testing
-      - task-master-ai # Task management and workflow tracking
-    subagents:
       - name: core_debugging
         recipe: core-debugging
 
@@ -162,30 +111,68 @@ recipes:
       - task-master-ai # Task management and workflow tracking
 
   feature:
-    description: "WorkAxle new feature development (coding only)"
+    description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
     files:
+      # === Superpowers: TDD & Verification (core tenets) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      # === Essential (ALL — features need feature-flags and outbox) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      # === Frameworks ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === Framework Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
+      # === Testing (RSpec) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/materialized-views-and-test-isolation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
+      # === Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+      # === Migrations ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+      # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # PR operations
+      # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
-      - Ref # For documentation lookup
-      - task-master-ai # Task management and workflow tracking
+      - Ref
+      - task-master-ai
     subagents:
       - name: context_fetcher
         recipe: context-fetcher
+      - name: core_debugging
+        recipe: core-debugging
 
   auth0:
     description: "WorkAxle Auth0 password and session management development"

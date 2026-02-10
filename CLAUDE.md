@@ -23,6 +23,7 @@
 
 - When testing out `ruly squash ...`, always run it from a `mktmpdir` and not the main project directory
 - always update ruly after any changes. for instance, /Users/patrick/.local/share/mise/installs/ruby/3.3.3/bin/ruly is out of sync right now
+- Whenever you want token counts for recipes, run `ruly stats` and read the results from `stats.md`
 
 ## CRITICAL: Never Reference Filenames in Rules
 
