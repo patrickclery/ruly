@@ -22,6 +22,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-bug.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-feature.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
+      # === PR Operations (orchestrator handles PR creation) ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - task-master-ai
     subagents:
@@ -56,12 +62,6 @@ recipes:
       # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - task-master-ai
     subagents:
@@ -159,12 +159,6 @@ recipes:
       # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - Ref
       - task-master-ai
