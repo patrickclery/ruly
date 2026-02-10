@@ -78,7 +78,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/bug-investigation.md
-      - /Users/patrick/Projects/ruly/rules/bug/
+      - /Users/patrick/Projects/ruly/rules/bug/bug-workflow.md
+      - /Users/patrick/Projects/ruly/rules/bug/debugging.md
+      - /Users/patrick/Projects/ruly/rules/bug/policies.md
+      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
