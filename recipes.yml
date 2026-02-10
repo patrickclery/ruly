@@ -47,12 +47,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
       # === Testing ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/materialized-views-and-test-isolation.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-checklist.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-guidelines.md
       # === Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
@@ -697,11 +693,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
       # === Testing ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-checklist.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/testing-guidelines.md
       # === Standards (for writing code) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
