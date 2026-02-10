@@ -275,6 +275,17 @@ module Ruly
         # Save skill files separately if agent is Claude
         save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
 
+        # Collect MCP servers from subagent recipes (recursive) and merge with parent
+        if recipe_config.is_a?(Hash) && recipe_config['subagents']
+          original_servers = Array(recipe_config['mcp_servers'])
+          all_mcp_servers = collect_all_mcp_servers(recipe_config)
+          if all_mcp_servers.any?
+            propagated = all_mcp_servers - original_servers
+            recipe_config['mcp_servers'] = all_mcp_servers
+            puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
+          end
+        end
+
         # Update MCP settings (JSON for Claude, YAML for others)
         update_mcp_settings(recipe_config, agent)
 
@@ -2731,6 +2742,28 @@ module Ruly
     rescue StandardError => e
       puts "⚠️  Warning: Error loading MCP servers: #{e.message}"
       nil
+    end
+
+    def collect_all_mcp_servers(recipe_config, visited = Set.new)
+      servers = Array(recipe_config['mcp_servers']).dup
+
+      return servers unless recipe_config['subagents'].is_a?(Array)
+
+      recipes = load_all_recipes
+
+      recipe_config['subagents'].each do |subagent|
+        recipe_name = subagent['recipe']
+        next unless recipe_name
+        next if visited.include?(recipe_name)
+
+        visited.add(recipe_name)
+        subagent_recipe = recipes[recipe_name]
+        next unless subagent_recipe
+
+        servers.concat(collect_all_mcp_servers(subagent_recipe, visited))
+      end
+
+      servers.uniq
     end
 
     def process_subagents(recipe_config, parent_recipe_name)

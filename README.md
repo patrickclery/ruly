@@ -429,13 +429,16 @@ recipes:
 
 When you run `ruly squash -r full`:
 
-1. **Main rules generated**: `CLAUDE.local.md` with the main recipe content
-2. **Agent files created**: `.claude/agents/{name}.md` for each subagent
-3. **Commands organized**: `.claude/commands/{agent_name}/` for agent-specific commands
+1. **MCP servers collected**: Recursively collects `mcp_servers` from all subagent recipes
+2. **`.mcp.json` written**: Parent's `.mcp.json` includes all collected servers (deduplicated)
+3. **Main rules generated**: `CLAUDE.local.md` with the main recipe content
+4. **Agent files created**: `.claude/agents/{name}.md` for each subagent
+5. **Commands organized**: `.claude/commands/{agent_name}/` for agent-specific commands
 
 ```
 your-project/
 ├── CLAUDE.local.md              # Main rules (from 'full' recipe)
+├── .mcp.json                    # MCP servers (parent + all subagent servers)
 └── .claude/
     ├── agents/
     │   ├── bug_investigator.md  # Squashed 'bug' recipe
@@ -446,6 +449,50 @@ your-project/
         ├── test_runner/         # Commands for testing agent
         └── pr_manager/          # Commands for PR agent
 ```
+
+#### MCP Server Propagation
+
+Claude Code subagents inherit the parent session's MCP configuration — they cannot have independent MCP servers. Ruly handles this automatically: during `ruly squash`, MCP servers from all subagent recipes (recursively, including nested subagents) are collected and merged into the parent's `.mcp.json`.
+
+For example, given this recipe configuration:
+
+```yaml
+recipes:
+  core:
+    description: "Main orchestrator"
+    files:
+      - /path/to/rules/core.md
+    # Note: no mcp_servers defined here
+    subagents:
+      - name: comms
+        recipe: comms
+      - name: feature
+        recipe: feature
+
+  comms:
+    description: "Communication agent"
+    files:
+      - /path/to/rules/comms/
+    mcp_servers:
+      - teams
+      - mattermost
+
+  feature:
+    description: "Feature development"
+    files:
+      - /path/to/rules/feature/
+    mcp_servers:
+      - Ref
+```
+
+Running `ruly squash core` produces a `.mcp.json` containing `teams`, `mattermost`, and `Ref` — all propagated from the subagent recipes — even though `core` itself defines no MCP servers. The console output shows which servers were propagated:
+
+```
+🔌 Propagated MCP servers from subagents: teams, mattermost, Ref
+🔌 Updated .mcp.json with MCP servers
+```
+
+This propagation is recursive: if `comms` itself has subagents with additional MCP servers, those are collected too. Circular references are handled safely.
 
 #### Agent File Format
 
@@ -511,7 +558,7 @@ rules/
 | **Specialized tasks** | Each agent has focused rules for its domain |
 | **Parallel work** | Dispatch multiple agents for independent tasks |
 | **Context isolation** | Agents only load rules they need |
-| **MCP server scoping** | Each agent gets only the MCP servers it needs |
+| **MCP server propagation** | Subagent MCP servers are automatically propagated to parent |
 
 #### Example: Development Workflow
 

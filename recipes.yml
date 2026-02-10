@@ -22,18 +22,16 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-bug.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-feature.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    mcp_servers:
-      - task-master-ai
     subagents:
       - name: bug
         recipe: bug
@@ -43,6 +41,8 @@ recipes:
         recipe: context-fetcher
       - name: core_debugging
         recipe: core-debugging
+      - name: comms
+        recipe: comms
 
   bug:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -65,8 +65,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
       # === Commands ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
-    mcp_servers:
-      - task-master-ai
     subagents:
       - name: bug_diagnose
         recipe: bug-diagnose
@@ -81,8 +79,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
 
   grpc:
     description: "WorkAxle gRPC service development"
@@ -100,7 +96,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - Ref # For API documentation lookup
-      - task-master-ai # Task management and workflow tracking
 
   pr:
     description: "WorkAxle PR creation and management"
@@ -108,8 +103,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/github/pr/
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
 
   feature:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
@@ -159,7 +152,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
     mcp_servers:
       - Ref
-      - task-master-ai
     subagents:
       - name: core_debugging
         recipe: core-debugging
@@ -187,7 +179,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - Ref # For documentation lookup
-      - task-master-ai # Task management and workflow tracking
+
     subagents:
       - name: context_fetcher
         recipe: context-fetcher
@@ -205,8 +197,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
 
   full:
     description: "Complete WorkAxle documentation"
@@ -233,7 +223,7 @@ recipes:
       - mattermost # Mattermost integration
       - playwright # UI testing
       - Ref # Documentation lookup
-      - task-master-ai # Task management and workflow tracking
+
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
@@ -272,7 +262,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
-      - task-master-ai # Task management and workflow tracking
 
   review:
     description: "WorkAxle final review and QA stage"
@@ -299,7 +288,7 @@ recipes:
     mcp_servers:
       - teams # For Teams DM notifications
       - mattermost # For Mattermost DM notifications
-      - task-master-ai # Task management and workflow tracking
+
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
@@ -326,7 +315,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
     mcp_servers:
       - atlassian # Required for Confluence page creation
-      - task-master-ai # Task management and workflow tracking
 
   orchestrator:
     description: "WorkAxle multi-service development and E2E testing"
@@ -338,7 +326,7 @@ recipes:
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
-      - task-master-ai # Task management and workflow tracking
+
     subagents:
       - name: code_core
         recipe: core
@@ -359,7 +347,6 @@ recipes:
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
-      - task-master-ai # Task management and workflow tracking
 
   playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
@@ -372,7 +359,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/
     mcp_servers:
       - playwright # For browser automation and E2E testing
-      - task-master-ai # Task management and workflow tracking
 
   spike:
     description: "WorkAxle spike investigation and research for Jira tasks"
@@ -391,7 +377,6 @@ recipes:
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
       - Ref # For documentation lookup and external research
-      - task-master-ai # Task management and spike tracking
 
   initiative-core:
     description: "WorkAxle initiative investigation and planning"
@@ -405,27 +390,50 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
     mcp_servers:
       - Ref # For documentation lookup and external research
-      - task-master-ai # Task management and spike tracking
 
   agile:
-    description: "WorkAxle agile planning with orchestrator patterns"
+    description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
     files:
+      # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
-      - /Users/patrick/Projects/ruly/rules/comms/
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      # === Reference ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      # === Orchestrator (multi-service patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multi-service-development.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multiple.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
+      # === Shared Communication Files ===
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
+      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+      # === Jira Ticket Creation ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/epic.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/story.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/initiative.md
+      # === Confluence ===
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/how-to.md
+      # === Communication Commands (DMs, commenting) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
       - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
-      - atlassian # For Confluence page creation only (Jira uses CLI)
+      - atlassian # For Confluence page creation and Jira epic/story/initiative creation
       - teams # For Teams DM notifications
       - mattermost # For Mattermost DM notifications
       - Ref # For documentation lookup and external research
-      - task-master-ai # Task management and spike tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
@@ -452,7 +460,6 @@ recipes:
     mcp_servers:
       - playwright # Browser automation and UI testing
       - Ref # Documentation reference lookup
-      - task-master-ai # Task management and workflow tracking
 
   awesomer:
     description: "Local development with Plane and GitHub integration (no Playwright)"
@@ -467,7 +474,6 @@ recipes:
       - playwright # Browser automation and UI testing
       - plane # Plane project management
       - Ref # Documentation reference lookup
-      - task-master-ai # Task management and workflow tracking
 
   merger:
     description: "PR merging commands only (no code knowledge needed)"
@@ -483,30 +489,42 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
 
   comms:
-    description: "Communication via Jira, Teams, Mattermost, and GitHub (no code knowledge needed)"
+    description: "Communication via Jira, Teams, Mattermost, and GitHub — commenting, DMs, reviews, bug reports"
     files:
+      # === WorkAxle Context ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # Communications - Teams, Mattermost, Jira comments, full-context
-      - /Users/patrick/Projects/ruly/rules/comms/commands/
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/
-      - /Users/patrick/Projects/ruly/rules/comms/mattermost/
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
-      # Jira operations - details, transitions
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
-      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      # === Shared Communication Files ===
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
+      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+      # === Jira Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/workflow.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/filters.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
+      # === MS Teams Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      # === Mattermost Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
+      # === GitHub PR Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      # === Context (for review requests that need PR context) ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
-      - teams # For Teams DM notifications
+      - teams # For Teams DM and channel notifications
       - mattermost # For Mattermost DM notifications
-      - atlassian # For Confluence page creation
-      - task-master-ai # Task management and workflow tracking
     subagents:
       - name: ms_teams_dm
         recipe: ms-teams-dm
@@ -516,12 +534,6 @@ recipes:
         recipe: jira-comment
       - name: jira_bug_report
         recipe: jira-bug-report
-      - name: jira_epic
-        recipe: jira-epic
-      - name: jira_initiative
-        recipe: jira-initiative
-      - name: jira_story
-        recipe: jira-story
       - name: jira_ready_for_qa
         recipe: jira-ready-for-qa
 
@@ -626,8 +638,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
-    mcp_servers:
-      - task-master-ai
 
   bug-diagnose:
     description: "Read-only bug investigation subagent - systematic root cause analysis without fixes"
@@ -660,8 +670,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
     subagents:
       - name: core_debugging
         recipe: core-debugging
@@ -696,8 +704,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
       # === Bug Fix Command ===
       - /Users/patrick/Projects/ruly/rules/bug/commands/fix.md
-    mcp_servers:
-      - task-master-ai # Task management and workflow tracking
     subagents:
       - name: core_debugging
         recipe: core-debugging
