@@ -26,6 +26,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-architect.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -51,6 +52,8 @@ recipes:
         recipe: dashboard
       - name: pr_readiness
         recipe: pr-readiness
+      - name: architect
+        recipe: architect
 
   bug:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -555,6 +558,37 @@ recipes:
     subagents:
       - name: context_fetcher
         recipe: context-fetcher
+
+  architect:
+    description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/architect.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      # === Essential (patterns the architect needs to know) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      # === Standards (architecture and code conventions) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      # === Reference (service landscape) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      # === Frameworks (language and ORM patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === Framework Standards (coding conventions) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      # === Migrations (knows when migrations are needed) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
 
   pr-readiness:
     description: "Verify PR readiness against definition of done (subagent execution)"
