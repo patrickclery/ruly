@@ -277,13 +277,34 @@ recipes:
   reviewer:
     description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
     files:
-      # === New reviewing skill (pulls in all requires: dependencies) ===
+      # === Reviewing skill ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
       # === Context fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      # === Jira statuses (for readiness gates) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+      # === WorkAxle standards (review lens) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+      # === WorkAxle frameworks ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      # === WorkAxle Ruby standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
       # === Superpowers code-reviewer ===
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
