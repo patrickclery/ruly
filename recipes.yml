@@ -27,6 +27,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-architect.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -54,6 +55,8 @@ recipes:
         recipe: pr-readiness
       - name: architect
         recipe: architect
+      - name: reviewer
+        recipe: reviewer
 
   bug:
     description: "WorkAxle bug investigation and fixing orchestrator"
