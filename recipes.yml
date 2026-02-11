@@ -274,15 +274,22 @@ recipes:
     mcp_servers:
       - playwright # For UI/integration testing
 
-  review:
-    description: "WorkAxle final review and QA stage"
+  reviewer:
+    description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
     files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
+      # === New reviewing skill (pulls in all requires: dependencies) ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+      # === Context fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/
-    mcp_servers:
-      - atlassian # For Confluence page creation only (Jira uses CLI)
+      # === Superpowers code-reviewer ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
 
   jira:
     description: "Jira operations (uses CLI)"
