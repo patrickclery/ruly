@@ -743,6 +743,7 @@ User recipes:
   optional positional parameter. Supports fetching remote GitHub files and caching for performance.
   Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
   Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
+  Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
 
 - **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
   detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.

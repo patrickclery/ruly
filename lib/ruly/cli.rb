@@ -54,6 +54,7 @@ module Ruly
     option :home_override, default: false,
                            desc: 'Allow running squash in $HOME directory (dangerous)',
                            type: :boolean
+    option :verbose, aliases: '-v', default: false, desc: 'Show detailed per-file processing output', type: :boolean
     # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
     def squash(recipe_name = nil)
       # Safeguard: prevent running in $HOME to avoid deleting ~/.claude/
@@ -1643,7 +1644,7 @@ module Ruly
       sources_to_process = sources.dup
 
       # Show total count
-      puts "\n📚 Processing #{sources.length} sources..."
+      puts "\n📚 Processing #{sources.length} sources..." if verbose?
 
       # Prefetch remote files using GraphQL
       prefetched_content = prefetch_remote_files(sources)
@@ -1687,7 +1688,7 @@ module Ruly
       # Copy bin files to .ruly/bin if any exist
       copy_bin_files(bin_files) unless bin_files.empty? || options[:dry_run]
 
-      puts
+      puts if verbose?
 
       [local_sources, command_files, bin_files, skill_files]
     end
@@ -1712,11 +1713,11 @@ module Ruly
       grouped_remotes.each do |repo_key, repo_sources|
         next unless repo_sources.size > 1 # Use GraphQL for multiple files
 
-        puts "  🔄 Batch fetching #{repo_sources.size} files from #{repo_key}..."
+        puts "  🔄 Batch fetching #{repo_sources.size} files from #{repo_key}..." if verbose?
         batch_content = fetch_github_files_graphql(repo_key, repo_sources)
         if batch_content && !batch_content.empty?
           prefetched_content.merge!(batch_content)
-          puts "    ✅ Successfully fetched #{batch_content.size} files"
+          puts "    ✅ Successfully fetched #{batch_content.size} files" if verbose?
         else
           puts '    ⚠️ Batch fetch failed, will fetch individually'
         end
@@ -1861,7 +1862,7 @@ module Ruly
 
         # Add required sources to the front of the queue (depth-first processing)
         unless required_sources.empty?
-          puts "    → Found #{required_sources.length} requires, adding to queue..."
+          puts "    → Found #{required_sources.length} requires, adding to queue..." if verbose?
           # Mark these sources as being from requires
           required_sources.each { |rs| rs[:from_requires] = true }
           sources_to_process.unshift(*required_sources)
@@ -1886,7 +1887,7 @@ module Ruly
     def process_local_file_with_progress(source, index, total, agent, keep_frontmatter: false)
       # Check if this is from requires and adjust the message
       prefix = source[:from_requires] ? '📚 Required' : '📁 Local'
-      print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..."
+      print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..." if verbose?
       file_path = find_rule_file(source[:path])
 
       if file_path
@@ -1895,7 +1896,7 @@ module Ruly
 
         if is_bin
           # For bin files, we'll copy them directly
-          puts ' ✅ (bin)'
+          puts ' ✅ (bin)' if verbose?
           {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
         else
           content = File.read(file_path, encoding: 'UTF-8')
@@ -1910,19 +1911,26 @@ module Ruly
           tokens = count_tokens(content)
           formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
 
-          if is_skill
-            puts " ✅ (skill, #{formatted_tokens} tokens)"
-          elsif is_command
-            puts " ✅ (command, #{formatted_tokens} tokens)"
-          elsif source[:from_requires]
-            puts " ✅ (from requires, #{formatted_tokens} tokens)"
-          else
-            puts " ✅ (#{formatted_tokens} tokens)"
+          if verbose?
+            if is_skill
+              puts " ✅ (skill, #{formatted_tokens} tokens)"
+            elsif is_command
+              puts " ✅ (command, #{formatted_tokens} tokens)"
+            elsif source[:from_requires]
+              puts " ✅ (from requires, #{formatted_tokens} tokens)"
+            else
+              puts " ✅ (#{formatted_tokens} tokens)"
+            end
           end
           {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
         end
       else
-        puts ' ❌ not found'
+        # Errors always visible
+        if verbose?
+          puts ' ❌ not found'
+        else
+          $stderr.puts "  ⚠️  File not found: #{source[:path]}"
+        end
         nil
       end
     end
@@ -2008,7 +2016,7 @@ module Ruly
       end
 
       prefix = source[:from_requires] ? 'Required' : 'Processing'
-      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
+      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..." if verbose?
 
       # Store original content for requires resolution
       original_content = content
@@ -2022,14 +2030,16 @@ module Ruly
       # Check if remote file is a command file or skill file
       is_command = agent == 'claude' && source[:path].include?('/commands/')
       is_skill = agent == 'claude' && source[:path].include?('/skills/')
-      if is_skill
-        puts " ✅ (skill, #{formatted_tokens} tokens)"
-      elsif is_command
-        puts " ✅ (command, #{formatted_tokens} tokens)"
-      elsif source[:from_requires]
-        puts " ✅ (from requires, #{formatted_tokens} tokens)"
-      else
-        puts " ✅ (#{formatted_tokens} tokens)"
+      if verbose?
+        if is_skill
+          puts " ✅ (skill, #{formatted_tokens} tokens)"
+        elsif is_command
+          puts " ✅ (command, #{formatted_tokens} tokens)"
+        elsif source[:from_requires]
+          puts " ✅ (from requires, #{formatted_tokens} tokens)"
+        else
+          puts " ✅ (#{formatted_tokens} tokens)"
+        end
       end
 
       {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
@@ -2053,7 +2063,7 @@ module Ruly
         icon = source[:from_requires] ? '📚' : '🌐'
       end
       prefix = source[:from_requires] ? 'Required' : 'Fetching'
-      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..."
+      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..." if verbose?
       content = fetch_remote_content(source[:path])
       if content
         # Store original content for requires resolution
@@ -2068,18 +2078,25 @@ module Ruly
         # Check if remote file is a command file or skill file
         is_command = agent == 'claude' && source[:path].include?('/commands/')
         is_skill = agent == 'claude' && source[:path].include?('/skills/')
-        if is_skill
-          puts " ✅ (skill, #{formatted_tokens} tokens)"
-        elsif is_command
-          puts " ✅ (command, #{formatted_tokens} tokens)"
-        elsif source[:from_requires]
-          puts " ✅ (from requires, #{formatted_tokens} tokens)"
-        else
-          puts " ✅ (#{formatted_tokens} tokens)"
+        if verbose?
+          if is_skill
+            puts " ✅ (skill, #{formatted_tokens} tokens)"
+          elsif is_command
+            puts " ✅ (command, #{formatted_tokens} tokens)"
+          elsif source[:from_requires]
+            puts " ✅ (from requires, #{formatted_tokens} tokens)"
+          else
+            puts " ✅ (#{formatted_tokens} tokens)"
+          end
         end
         {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
       else
-        puts ' ❌ failed'
+        # Errors always visible
+        if verbose?
+          puts ' ❌ failed'
+        else
+          $stderr.puts "  ⚠️  Failed to fetch: #{source[:path]}"
+        end
         nil
       end
     end
@@ -2781,7 +2798,11 @@ module Ruly
 
         next unless agent_name && recipe_name
 
-        puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
+        if verbose?
+          puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
+        else
+          puts "  → #{agent_name}"
+        end
 
         # Load the referenced recipe
         recipes = load_all_recipes
@@ -2913,7 +2934,7 @@ module Ruly
         File.write(target_file, file[:content])
       end
 
-      puts "    📁 Saved #{command_files.size} command file(s) to .claude/commands/#{agent_name}/"
+      puts "    📁 Saved #{command_files.size} command file(s) to .claude/commands/#{agent_name}/" if verbose?
     rescue StandardError => e
       puts "    ⚠️  Warning: Could not save commands for '#{agent_name}': #{e.message}"
     end
@@ -3045,6 +3066,10 @@ module Ruly
     rescue StandardError
       # If we can't read the file for any reason, return 0
       0
+    end
+
+    def verbose?
+      options[:verbose] || ENV['DEBUG']
     end
 
     def print_summary(mode, output_file, file_count)
