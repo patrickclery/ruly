@@ -287,6 +287,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
       # === Jira statuses (for readiness gates) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
       # === WorkAxle standards (review lens) ===
