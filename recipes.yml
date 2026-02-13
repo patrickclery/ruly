@@ -793,3 +793,92 @@ recipes:
     subagents:
       - name: core_debugging
         recipe: core-debugging
+
+  # === Frontend Recipes ===
+
+  frontend:
+    description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
+    files:
+      # === Frontend Core (minimal for routing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+      # === Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/standards/use-frontend-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/review-feedback-loop.md
+      # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    subagents:
+      - name: frontend_engineer
+        recipe: frontend-engineer
+      - name: context_fetcher
+        recipe: context-fetcher
+      - name: comms
+        recipe: comms
+      - name: merger
+        recipe: merger
+      - name: pr_readiness
+        recipe: pr-readiness
+      - name: reviewer
+        recipe: frontend-reviewer
+
+  frontend-engineer:
+    description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
+    files:
+      # === Superpowers: TDD & Verification ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === Frontend Rules (all 9) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
+      # === Playwright ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
+    mcp_servers:
+      - playwright
+      - Ref
+
+  frontend-reviewer:
+    description: "WorkAxle frontend PR code review - React/TypeScript standards enforcement"
+    files:
+      # === Superpowers: Code Review ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
+      # === Reviewing skill ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+      # === Frontend Standards (review lens) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
+      # === Context fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      # === PR common ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
+      # === Jira statuses (for readiness gates) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    subagents:
+      - name: context_fetcher
+        recipe: context-fetcher
