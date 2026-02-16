@@ -617,6 +617,64 @@ RSpec.describe Ruly::CLI do
       end
     end
 
+    context 'with omit_command_prefix as array' do
+      let(:prefixes) { ['comms/github', 'github', 'comms', 'workaxle'] }
+
+      it 'strips github from github/pr path' do
+        path = 'rules/github/pr/commands/create.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('pr/create.md')
+      end
+
+      it 'strips comms/github from comms/github/pr path (longest match wins)' do
+        path = 'rules/comms/github/pr/commands/request-review.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('pr/request-review.md')
+      end
+
+      it 'strips comms from comms/jira path' do
+        path = 'rules/comms/jira/commands/comment.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('jira/comment.md')
+      end
+
+      it 'strips comms from comms/ms-teams path' do
+        path = 'rules/comms/ms-teams/commands/dm.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('ms-teams/dm.md')
+      end
+
+      it 'strips workaxle from workaxle/core path' do
+        path = 'rules/workaxle/core/commands/diagnose.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('core/diagnose.md')
+      end
+
+      it 'strips workaxle from workaxle/orchestrator path' do
+        path = 'rules/workaxle/orchestrator/commands/spike.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('orchestrator/spike.md')
+      end
+
+      it 'does not strip from unmatched paths' do
+        path = 'rules/bug/commands/diagnose.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('bug/diagnose.md')
+      end
+
+      it 'picks longest match when multiple prefixes partially match' do
+        path = 'rules/comms/github/pr/commands/resolve.md'
+        result = cli.send(:get_command_relative_path, path, prefixes)
+        expect(result).to eq('pr/resolve.md')
+      end
+
+      it 'works with single-element array (same as string)' do
+        path = 'rules/workaxle/core/testing/commands/pre-commit.md'
+        result = cli.send(:get_command_relative_path, path, ['workaxle/core'])
+        expect(result).to eq('testing/pre-commit.md')
+      end
+    end
+
     it 'handles files without /commands/ in path' do
       path = 'some/regular/file.md'
       result = cli.send(:get_command_relative_path, path)

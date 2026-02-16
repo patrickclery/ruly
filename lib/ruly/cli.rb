@@ -1577,32 +1577,45 @@ module Ruly
                         end
         end
 
-        # Apply omit_command_prefix if specified
+        # Apply omit_command_prefix if specified (string or array)
         if omit_prefix
-          # Split the prefix into parts (e.g., "workaxle/core" -> ["workaxle", "core"])
-          prefix_parts = omit_prefix.split('/')
-          path_parts = result_path.split('/')
-
-          # Remove matching parts from the beginning of the path
-          # This handles both exact matches and partial matches
-          while prefix_parts.any? && path_parts.any? && prefix_parts.first == path_parts.first
-            prefix_parts.shift
-            path_parts.shift
-          end
-
-          # If we consumed the entire prefix (or part of it), use the remaining path
-          result_path = if path_parts.any?
-                          File.join(*path_parts)
-                        else
-                          # If nothing left, just use the filename
-                          File.basename(after_commands)
-                        end
+          result_path = apply_omit_prefix(result_path, after_commands, omit_prefix)
         end
 
         result_path
       else
         File.basename(file_path)
       end
+    end
+
+    def apply_omit_prefix(result_path, after_commands, omit_prefix)
+      prefixes = omit_prefix.is_a?(Array) ? omit_prefix : [omit_prefix]
+
+      best_path = result_path
+      best_stripped = 0
+
+      prefixes.each do |prefix|
+        prefix_parts = prefix.split('/')
+        path_parts = result_path.split('/')
+        stripped = 0
+
+        while prefix_parts.any? && path_parts.any? && prefix_parts.first == path_parts.first
+          prefix_parts.shift
+          path_parts.shift
+          stripped += 1
+        end
+
+        next unless stripped > best_stripped
+
+        best_stripped = stripped
+        best_path = if path_parts.any?
+                      File.join(*path_parts)
+                    else
+                      File.basename(after_commands)
+                    end
+      end
+
+      best_path
     end
 
     def ensure_parent_directory(file_path)
