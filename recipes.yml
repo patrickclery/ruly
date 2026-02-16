@@ -9,6 +9,10 @@ recipes:
   # WorkAxle recipes - Dynamic loading based on current task
   core:
     description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -60,6 +64,7 @@ recipes:
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
+    omit_command_prefix: workaxle
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # === Essential (no feature-flags, no outbox — bugs don't need these) ===
@@ -93,6 +98,10 @@ recipes:
 
   grpc:
     description: "WorkAxle gRPC service development"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
@@ -110,6 +119,7 @@ recipes:
 
   pr:
     description: "WorkAxle PR creation and management"
+    omit_command_prefix: github
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/github/pr/
@@ -169,6 +179,10 @@ recipes:
 
   auth0:
     description: "WorkAxle Auth0 password and session management development"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
@@ -197,6 +211,10 @@ recipes:
 
   refactor:
     description: "WorkAxle code refactoring"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
@@ -255,6 +273,10 @@ recipes:
 
   finalize:
     description: "WorkAxle final testing and cleanup phase"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
@@ -274,6 +296,7 @@ recipes:
 
   reviewer:
     description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
+    omit_command_prefix: github
     files:
       # === Reviewing skill ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
@@ -357,6 +380,7 @@ recipes:
 
   orchestrator:
     description: "WorkAxle multi-service development and E2E testing"
+    omit_command_prefix: github
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
@@ -372,6 +396,10 @@ recipes:
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
@@ -401,6 +429,10 @@ recipes:
 
   spike:
     description: "WorkAxle spike investigation and research for Jira tasks"
+    omit_command_prefix:
+      - comms/github
+      - comms
+      - workaxle
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
@@ -429,6 +461,10 @@ recipes:
 
   agile:
     description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
+    omit_command_prefix:
+      - comms/github
+      - comms
+      - workaxle
     files:
       # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -513,6 +549,7 @@ recipes:
 
   merger:
     description: "PR merging commands only (no code knowledge needed)"
+    omit_command_prefix: github
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # PR details and merging
@@ -528,6 +565,7 @@ recipes:
 
   comms:
     description: "Communication via Jira, Teams, Mattermost, and GitHub — commenting, DMs, reviews, bug reports"
+    omit_command_prefix: comms/github
     files:
       # === WorkAxle Context ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -575,6 +613,7 @@ recipes:
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
+    omit_command_prefix: comms
     files:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
@@ -787,6 +826,10 @@ recipes:
 
   frontend:
     description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
       # === Frontend Core (minimal for routing) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
@@ -843,6 +886,7 @@ recipes:
 
   frontend-reviewer:
     description: "WorkAxle frontend PR code review - React/TypeScript standards enforcement"
+    omit_command_prefix: github
     files:
       # === Superpowers: Code Review ===
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
