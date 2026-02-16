@@ -26,7 +26,7 @@ When `omit_command_prefix` is set:
 2. This handles both complete and partial prefix matches
 3. Other command files that don't match the prefix retain their original structure
 
-### Example
+### String Example
 
 With `omit_command_prefix: workaxle/core`:
 
@@ -36,6 +36,36 @@ With `omit_command_prefix: workaxle/core`:
 - `rules/other/project/commands/tool.md` → `.claude/commands/other/project/tool.md` (no match, retains structure)
 
 The prefix removal works by matching path components from the beginning, removing any parts that match the prefix components.
+
+## Array Syntax
+
+When commands come from multiple source trees, use an array of prefixes:
+
+```yaml
+recipes:
+  my_recipe:
+    description: Multi-source recipe
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+      - workaxle
+    files:
+      - rules/github/pr/commands/create.md
+      - rules/comms/jira/commands/comment.md
+      - rules/comms/github/pr/commands/request-review.md
+      - rules/workaxle/core/commands/diagnose.md
+```
+
+Each prefix is tried against each command path. The prefix that strips the most components wins:
+
+- `github/pr/commands/create.md` → `github` matches 1 component → `pr/create.md`
+- `comms/jira/commands/comment.md` → `comms` matches 1 component → `jira/comment.md`
+- `comms/github/pr/commands/request-review.md` → `comms/github` matches 2 components (longest) → `pr/request-review.md`
+- `workaxle/core/commands/diagnose.md` → `workaxle` matches 1 component → `core/diagnose.md`
+- `bug/commands/fix.md` → no match → `bug/fix.md`
+
+**Ordering doesn't matter** — the longest match always wins regardless of array position.
 
 ## Introspect Support
 
