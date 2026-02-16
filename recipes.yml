@@ -525,13 +525,37 @@ recipes:
         recipe: jira-ready-for-qa
 
   local:
-    description: "Local development with all MCP servers, no rule files"
+    description: "Local development dispatcher - routes media tasks to media_stack subagent"
     files:
-      - /Users/patrick/Projects/ruly/rules/home/
+      # Dispatch rules
+      - /Users/patrick/Projects/ruly/rules/home/use-media-stack.md
+      # Synology infrastructure (shared)
+      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      # Non-media services
+      - /Users/patrick/Projects/ruly/rules/home/homepage.md
+      - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/sso-authelia-traefik-synology.md
+      - /Users/patrick/Projects/ruly/rules/home/immich-synology-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/claude_proxy.md
+      - /Users/patrick/Projects/ruly/rules/home/claude_proxy_context.md
+      # Local dev tools
       - /Users/patrick/Projects/ruly/rules/llmux-tools-setup.md
     mcp_servers:
       - playwright # Browser automation and UI testing
       - Ref # Documentation reference lookup
+    subagents:
+      - name: media_stack
+        recipe: media-stack
+
+  media-stack:
+    description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/home/agents/media-stack.md
+      - /Users/patrick/Projects/ruly/rules/home/synology-arr-stack.md
+      - /Users/patrick/Projects/ruly/rules/home/syn-qbittorrent-management.md
+      - /Users/patrick/Projects/ruly/rules/home/lidarr-music-import.md
+      - /Users/patrick/Projects/ruly/rules/home/synology-monitoring-stack.md
+      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
 
   awesomer:
     description: "Local development with Plane and GitHub integration (no Playwright)"
