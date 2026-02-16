@@ -532,7 +532,6 @@ recipes:
       # Synology infrastructure (shared)
       - /Users/patrick/Projects/ruly/rules/home/network-structure.md
       # Non-media services
-      - /Users/patrick/Projects/ruly/rules/home/homepage.md
       - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
       - /Users/patrick/Projects/ruly/rules/home/sso-authelia-traefik-synology.md
       - /Users/patrick/Projects/ruly/rules/home/immich-synology-setup.md
