@@ -637,6 +637,8 @@ ruly squash -r minimal
 
 Recipes depend on having access to rule files. If you cloned with the default rules submodule, you'll have access to the recipes defined in `recipes.yml`. Otherwise, create your own recipes in `~/.config/ruly/recipes.yml` pointing to your rule sources.
 
+- **qa** — WorkAxle QA acceptance testing. Write and run Playwright specs in the automation-test-qa repo against dev.workaxle.com. Includes skills for running acceptance tests and syncing the QA repo.
+
 #### Custom Recipes
 
 Create a `~/.config/ruly/recipes.yml` file to define your own recipes or override existing ones:
@@ -780,6 +782,8 @@ This ensures proper navigation even when multiple rule files contain headers wit
 
 - `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
 - `/ruly:decompose` - Decompose a markdown file into a directory using git mv (preserves history)
+- `/run-acceptance-test` - Takes acceptance criteria (direct text, Jira ticket `WA-XXXX`, or PR number `PR:NNNN`), reads page objects from automation-test-qa, writes a Playwright spec, runs it, and reports results.
+- `/sync-qa-repo` - Pulls latest from automation-test-qa, reports new/changed page objects, specs, and API helpers.
 
 ### Examples
 

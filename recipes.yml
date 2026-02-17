@@ -33,11 +33,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-architect.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-qa.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Git Skills ===
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
@@ -64,6 +67,8 @@ recipes:
         recipe: reviewer
       - name: pr_review_loop
         recipe: pr-review-loop
+      - name: qa_tester
+        recipe: qa
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -429,6 +434,21 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/
     mcp_servers:
       - playwright # For browser automation and E2E testing
+
+  qa:
+    description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
+    files:
+      # === QA Testing Workflow ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-testing.md
+      # === Playwright Patterns ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
+      # === Skills ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
+      # === Jira (for fetching AC from tickets) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/
+    mcp_servers:
+      - playwright # For exploring UI when page objects are missing
 
   spike:
     description: "WorkAxle spike investigation and research for Jira tasks"
