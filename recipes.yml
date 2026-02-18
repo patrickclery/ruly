@@ -441,7 +441,6 @@ recipes:
       # === Skills ===
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
       # === Jira (for fetching AC from tickets) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/
     mcp_servers:
@@ -898,6 +897,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Skills ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
       # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
