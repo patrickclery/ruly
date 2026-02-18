@@ -387,15 +387,72 @@ recipes:
       - atlassian # Required for Confluence page creation
 
   orchestrator:
-    description: "WorkAxle multi-service dispatcher - routes to core and frontend subagents"
+    description: "WorkAxle multi-service dispatcher - routes directly to specialized subagents"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     files:
+      # === Orchestrator Dispatch ===
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
+      # === WorkAxle Core Context (for understanding routing signals) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      # === Backend Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-architect.md
+      # === Cross-Cutting Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-qa.md
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Git Skills ===
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+      # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
-      - name: core
-        recipe: core
+      # === Backend Subagents (promoted from core) ===
+      - name: core_debugger
+        recipe: core-debugger
+      - name: core_engineer
+        recipe: core-engineer
+      - name: core_debugging
+        recipe: core-debugging
+      - name: core_architect
+        recipe: core-architect
+      # === Frontend Subagent ===
       - name: frontend
         recipe: frontend
-      - name: qa
+      # === Cross-Cutting Subagents (promoted from core) ===
+      - name: context_fetcher
+        recipe: context-fetcher
+      - name: comms
+        recipe: comms
+      - name: merger
+        recipe: merger
+      - name: dashboard
+        recipe: dashboard
+      - name: pr_readiness
+        recipe: pr-readiness
+      - name: reviewer
+        recipe: reviewer
+      - name: pr_review_loop
+        recipe: pr-review-loop
+      - name: qa_tester
         recipe: qa
 
   gateway:
