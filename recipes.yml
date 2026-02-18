@@ -42,15 +42,15 @@ recipes:
       # === Git Skills ===
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching (orchestrator handles context) ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
         recipe: core-debugger
       - name: core_engineer
         recipe: core-engineer
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
       - name: core_debugging
         recipe: core-debugging
       - name: comms
@@ -202,7 +202,7 @@ recipes:
       # Auth0 specific
       - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
       # Context fetching via subagent (MUST be always loaded)
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
@@ -214,8 +214,8 @@ recipes:
       - Ref # For documentation lookup
 
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
 
   refactor:
     description: "WorkAxle code refactoring"
@@ -309,8 +309,7 @@ recipes:
       # === Reviewing skill ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
       # === Context fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
-      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       # === PR readiness chart ===
@@ -340,8 +339,8 @@ recipes:
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
 
   jira:
     description: "Jira operations (uses CLI)"
@@ -422,7 +421,7 @@ recipes:
       # === Git Skills ===
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       # === Backend Subagents (promoted from core) ===
@@ -438,8 +437,8 @@ recipes:
       - name: frontend
         recipe: frontend
       # === Cross-Cutting Subagents (promoted from core) ===
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
       - name: comms
         recipe: comms
       - name: merger
@@ -717,10 +716,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
       # MUST include the rule that enforces subagent usage
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
 
   core-architect:
     description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
@@ -758,32 +757,60 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
 
   pr-review-loop:
     description: "Automated PR review feedback loop - monitors reviews, fixes issues, re-checks"
     omit_command_prefix: github
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
-      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
 
-  context-fetcher:
-    description: "Fetch and cache Jira/PR/Teams context for a ticket"
+  context-grabber:
+    description: "Orchestrates context fetching and summarization"
     files:
-      # CRITICAL: This file tells the subagent what to DO when dispatched
-      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
+    subagents:
+      - name: context_downloader_jira
+        recipe: context-downloader-jira
+      - name: context_downloader_github
+        recipe: context-downloader-github
+      - name: context_downloader_teams
+        recipe: context-downloader-teams
+      - name: context_summarizer
+        recipe: context-summarizer
+
+  context-downloader-jira:
+    description: "Download Jira context for a ticket (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-jira.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
+
+  context-downloader-github:
+    description: "Download GitHub PR context for a ticket (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-github.md
+
+  context-downloader-teams:
+    description: "Download Teams thread context for a ticket (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-teams.md
     mcp_servers:
-      - teams  # For fetching Teams threads
+      - teams
+
+  context-summarizer:
+    description: "Summarize cached context files into concise summary (subagent execution)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-summarizer.md
+      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
 
   ms-teams-dm:
     description: "Send a Teams DM (subagent execution)"
@@ -957,13 +984,13 @@ recipes:
       # === Skills ===
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: frontend_engineer
         recipe: frontend-engineer
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
       - name: comms
         recipe: comms
       - name: merger
@@ -1016,8 +1043,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
       # === Context fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-fetcher.md
-      - /Users/patrick/Projects/ruly/rules/comms/context-fetcher-subagent.md
+      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       # === PR readiness chart ===
@@ -1025,5 +1051,5 @@ recipes:
       # === Jira statuses (for readiness gates) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
     subagents:
-      - name: context_fetcher
-        recipe: context-fetcher
+      - name: context_grabber
+        recipe: context-grabber
