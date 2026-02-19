@@ -105,6 +105,33 @@
     - Clear separation between "what" (skill) and "how" (standard)
     - The "standard" file acts as guardrails that are always present when the skill is loaded
 
+### PR Review Fixer Agent
+
+- [ ] Build an agent that scans all open PRs, finds unresolved review comments, and auto-fixes them
+  - **Use Case**: After reviews come in across multiple PRs, run one command to address all unresolved feedback instead of manually switching between branches
+  - **Workflow**:
+    1. List all open PRs (authored by `@me`)
+    2. For each PR, fetch unresolved review threads
+    3. For each unresolved comment, check out the branch and attempt a fix
+    4. Commit, push, and reply to the comment with the fix details
+    5. Mark thread as resolved
+  - **Architecture**:
+    - Orchestrator agent lists PRs and parses unresolved comments into discrete tasks
+    - Uses parallel fix dispatch pattern (one worktree per PR branch)
+    - Each fix agent gets: file path, line range, reviewer comment, suggested fix (if any)
+    - Ralph loop for retries (fresh agent per attempt, progress.txt for continuity)
+  - **Command**: `/fix-all-reviews` or `/review-sweep`
+  - **Safety**:
+    - Preview mode: show what would be fixed before executing
+    - Skip comments that require architectural decisions (flag for manual review)
+    - Only fix comments with clear, actionable feedback
+  - **Components Needed**:
+    - PR listing + unresolved thread extraction
+    - Comment classification (auto-fixable vs needs-human)
+    - Parallel worktree checkout per PR branch
+    - Fix dispatch using existing parallel fix orchestration pattern
+    - Comment reply + thread resolution
+
 ### Context Switching Workflow
 
 - [ ] Add ability to create one set of rules to execute a command, then clear the context and restart Claude with a different set of rules
@@ -119,6 +146,34 @@
     - Context clearing mechanism
     - State persistence between contexts
     - Rules for transitioning between contexts
+
+### Contacts MCP / External Team Directory
+
+- [ ] Replace `accounts.md` with an external contacts lookup system to eliminate ~5K tokens from context
+  - **Problem**: `accounts.md` is a 180-line markdown table loaded into context whenever comms rules are active. Most of that data (Jira IDs, Teams IDs, GitHub handles, squads) is only needed at lookup time, not always.
+  - **Use Case**: Instead of burning context tokens on a static directory, agents look up contacts on demand via an MCP tool or CLI command
+  - **Options**:
+    1. **Contacts MCP server** - Custom MCP that serves team directory from a JSON/SQLite file
+       - Tools: `contacts_lookup(name)`, `contacts_by_squad(squad)`, `contacts_by_role(role)`
+       - Returns: Jira ID, GitHub handle, Teams ID, Mattermost ID, squad, role
+       - Source of truth: JSON file synced via chezmoi (replaces accounts.md)
+    2. **CLI command** - `ruly contacts lookup "Patrick Clery"` returns all IDs
+       - Simpler to implement, agents call via Bash tool
+       - Less discoverable than MCP but no server to run
+    3. **Hybrid** - Keep a minimal accounts.md with just names + squads (for context), full IDs via MCP lookup
+       - Best of both: agents know who's on which squad without lookup, but IDs are fetched on demand
+  - **Migration Path**:
+    - Extract accounts.md table into structured data (JSON/YAML)
+    - Build MCP server or CLI with lookup commands
+    - Update comms rules to use lookup instead of referencing the table directly
+    - Remove accounts.md from recipes (or replace with minimal version)
+    - Update `use-context-grabber.md` and comms subagent to use lookup
+  - **Token Savings**: ~5,000 tokens eliminated from every comms-enabled recipe
+  - **Components Needed**:
+    - Structured data file (JSON/YAML) for team directory
+    - MCP server or CLI tool for lookups
+    - Migration of all rules that reference accounts.md
+    - Sync mechanism (chezmoi or similar)
 
 ## Completed Features
 
