@@ -2827,7 +2827,8 @@ module Ruly
         end
 
         # Generate the agent file
-        generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name)
+        generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
+                            subagent_config: subagent, parent_recipe_config: recipe_config)
       end
 
       puts "✅ Generated #{recipe_config['subagents'].size} subagent(s)"
@@ -2835,11 +2836,13 @@ module Ruly
       puts "⚠️  Warning: Could not process subagents: #{e.message}"
     end
 
-    def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name)
+    def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, subagent_config: {},
+                             parent_recipe_config: {})
       agent_file = ".claude/agents/#{agent_name}.md"
       local_sources, command_files = load_agent_sources(recipe_name, recipe_config)
 
-      context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources)
+      context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
+                                    subagent_config:, parent_recipe_config:)
       write_agent_file(agent_file, context)
       save_subagent_commands(command_files, agent_name, recipe_config) unless command_files.empty?
     rescue StandardError => e
@@ -2852,16 +2855,26 @@ module Ruly
       [local_sources, command_files]
     end
 
-    def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources)
+    def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
+                             subagent_config: {}, parent_recipe_config: {})
       {
         agent_name:,
         description: recipe_config['description'] || "Subagent for #{recipe_name}",
         local_sources:,
+        model: resolve_agent_model(subagent_config, parent_recipe_config),
         parent_recipe_name:,
         recipe_config:,
         recipe_name:,
         timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
       }
+    end
+
+    def resolve_agent_model(subagent_config, parent_recipe_config)
+      # Priority: subagent model > parent recipe model > 'inherit'
+      return subagent_config['model'] if subagent_config['model']
+      return parent_recipe_config['model'] if parent_recipe_config.is_a?(Hash) && parent_recipe_config['model']
+
+      'inherit'
     end
 
     def write_agent_file(agent_file, context)
@@ -2879,7 +2892,7 @@ module Ruly
         name: #{context[:agent_name]}
         description: #{context[:description]}
         tools: Bash, Read, Write, Edit, Glob, Grep
-        model: inherit
+        model: #{context[:model]}
         permissionMode: bypassPermissions
         # Auto-generated from recipe: #{context[:recipe_name]}
         # Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'
