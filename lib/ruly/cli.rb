@@ -2796,20 +2796,25 @@ module Ruly
       servers.uniq
     end
 
-    def process_subagents(recipe_config, parent_recipe_name)
+    def process_subagents(recipe_config, parent_recipe_name, visited: Set.new, top_level: true)
       return unless recipe_config['subagents'].is_a?(Array)
 
-      puts "\n🤖 Processing subagents..."
+      puts "\n🤖 Processing subagents..." if top_level
 
       # Ensure .claude/agents directory exists
       agents_dir = '.claude/agents'
       FileUtils.mkdir_p(agents_dir)
+
+      generated_count = 0
 
       recipe_config['subagents'].each do |subagent|
         agent_name = subagent['name']
         recipe_name = subagent['recipe']
 
         next unless agent_name && recipe_name
+        next if visited.include?(recipe_name)
+
+        visited.add(recipe_name)
 
         if verbose?
           puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
@@ -2829,9 +2834,15 @@ module Ruly
         # Generate the agent file
         generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
                             subagent_config: subagent, parent_recipe_config: recipe_config)
+        generated_count += 1
+
+        # Recursively process nested subagents
+        if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents']
+          process_subagents(subagent_recipe, parent_recipe_name, visited:, top_level: false)
+        end
       end
 
-      puts "✅ Generated #{recipe_config['subagents'].size} subagent(s)"
+      puts "✅ Generated #{visited.size} subagent(s)" if top_level
     rescue StandardError => e
       puts "⚠️  Warning: Could not process subagents: #{e.message}"
     end

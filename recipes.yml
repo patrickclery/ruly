@@ -51,6 +51,7 @@ recipes:
         recipe: core-engineer
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
       - name: core_debugging
         recipe: core-debugging
       - name: comms
@@ -216,6 +217,7 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
 
   refactor:
     description: "WorkAxle code refactoring"
@@ -341,6 +343,7 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
 
   jira:
     description: "Jira operations (uses CLI)"
@@ -439,6 +442,7 @@ recipes:
       # === Cross-Cutting Subagents (promoted from core) ===
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
       - name: comms
         recipe: comms
       - name: merger
@@ -720,6 +724,7 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
 
   core-architect:
     description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
@@ -762,6 +767,7 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
 
   pr-review-loop:
     description: "Automated PR review feedback loop - monitors reviews, fixes issues, re-checks"
@@ -772,6 +778,7 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
 
   context-grabber:
     description: "Orchestrates context fetching and summarization"
@@ -781,12 +788,16 @@ recipes:
     subagents:
       - name: context_downloader_jira
         recipe: context-downloader-jira
+        model: haiku
       - name: context_downloader_github
         recipe: context-downloader-github
+        model: haiku
       - name: context_downloader_teams
         recipe: context-downloader-teams
+        model: haiku
       - name: context_summarizer
         recipe: context-summarizer
+        model: sonnet
 
   context-downloader-jira:
     description: "Download Jira context for a ticket (subagent execution)"
@@ -991,6 +1002,7 @@ recipes:
         recipe: frontend-engineer
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
       - name: comms
         recipe: comms
       - name: merger
@@ -1053,3 +1065,4 @@ recipes:
     subagents:
       - name: context_grabber
         recipe: context-grabber
+        model: sonnet
