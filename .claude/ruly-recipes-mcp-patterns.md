@@ -61,6 +61,35 @@ mcp_servers:
   - task-master-ai  # Task management and workflow tracking
 ```
 
+### 4. Model Specification
+
+Assign models to subagents for cost/speed optimization:
+
+```yaml
+subagents:
+  - name: context_grabber
+    recipe: context-grabber
+    model: haiku          # Lightweight fetch tasks
+  - name: core_engineer
+    recipe: core-engineer
+    model: opus           # Complex implementation
+  - name: comms
+    recipe: comms
+    # Omitted — inherits from recipe 'model' or defaults to 'inherit'
+```
+
+Recipe-level default:
+```yaml
+core:
+  model: sonnet           # All subagents default to sonnet
+  subagents:
+    - name: fast_agent
+      recipe: fast
+      model: haiku        # Override: haiku beats sonnet here
+```
+
+Inheritance chain: subagent `model` > recipe `model` > `inherit`
+
 ## Examples
 
 ### Complete WorkAxle Recipe Example
