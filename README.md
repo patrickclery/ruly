@@ -503,7 +503,7 @@ Generated agent files have YAML frontmatter that Claude understands:
 name: bug_investigator
 description: Bug investigation and debugging
 tools: inherit
-model: inherit
+model: haiku                # Set via subagent or recipe config (default: inherit)
 # Auto-generated from recipe: bug
 # Do not edit manually - regenerate using 'ruly squash full'
 ---
@@ -525,6 +525,58 @@ This subagent has access to the following MCP servers:
 *Last generated: 2026-02-04 12:30:00*
 *Source recipe: bug*
 ```
+
+#### Model Specification
+
+Control which Claude model each subagent uses. Route lightweight tasks (context fetching, DMs) to faster/cheaper models while keeping complex tasks on the most capable model.
+
+##### Subagent-Level Model
+
+Specify `model` directly on a subagent entry:
+
+```yaml
+subagents:
+  - name: context_grabber
+    recipe: context-grabber
+    model: haiku          # Fast, cheap — just fetching data
+  - name: core_engineer
+    recipe: core-engineer
+    model: opus           # Most capable — complex implementation
+  - name: comms
+    recipe: comms         # No model — inherits from recipe or defaults to 'inherit'
+```
+
+##### Recipe-Level Default Model
+
+Set a default model for all subagents in a recipe:
+
+```yaml
+recipes:
+  core:
+    description: "Main orchestrator"
+    model: sonnet         # Default for all subagents
+    files:
+      - /path/to/rules/core.md
+    subagents:
+      - name: fast_agent
+        recipe: fast-tasks
+        model: haiku      # Overrides recipe default
+      - name: smart_agent
+        recipe: complex-tasks
+                           # Uses recipe default (sonnet)
+```
+
+##### Inheritance Chain
+
+Model is resolved in this order:
+
+1. **Subagent `model`** — if specified on the subagent entry
+2. **Parent recipe `model`** — if set on the recipe containing the subagents
+3. **`inherit`** — the default (inherits from the calling session)
+
+Valid values: `haiku`, `sonnet`, `opus`, or `inherit`.
+
+> **Note:** Skills can also specify `model` in their frontmatter — this is already supported and preserved during squash.
 
 #### Directory Structure for Subagents
 
