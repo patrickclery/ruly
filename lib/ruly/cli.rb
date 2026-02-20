@@ -1799,16 +1799,20 @@ module Ruly
         # Use original content (with requires intact) for dependency resolution
         content_for_requires = result[:data][:original_content] || result[:data][:content]
 
-        # Resolve requires for this source
-        required_sources = resolve_requires_for_source(source, content_for_requires, processed_files,
-                                                       sources_to_process)
+        # For skill files, skip adding requires to the main queue — they'll be
+        # compiled into the skill output by save_skill_files instead
+        unless result[:is_skill]
+          # Resolve requires for this source
+          required_sources = resolve_requires_for_source(source, content_for_requires, processed_files,
+                                                         sources_to_process)
 
-        # Add required sources to the front of the queue (depth-first processing)
-        unless required_sources.empty?
-          puts "    → Found #{required_sources.length} requires, adding to queue..." if verbose?
-          # Mark these sources as being from requires
-          required_sources.each { |rs| rs[:from_requires] = true }
-          sources_to_process.unshift(*required_sources)
+          # Add required sources to the front of the queue (depth-first processing)
+          unless required_sources.empty?
+            puts "    → Found #{required_sources.length} requires, adding to queue..." if verbose?
+            # Mark these sources as being from requires
+            required_sources.each { |rs| rs[:from_requires] = true }
+            sources_to_process.unshift(*required_sources)
+          end
         end
 
         # Resolve skills: frontmatter references (with validation)
@@ -2645,7 +2649,7 @@ module Ruly
       FileUtils.cp(output_file, cache_file)
     end
 
-    def save_skill_files(skill_files)
+    def save_skill_files(skill_files) # rubocop:disable Metrics/MethodLength
       return if skill_files.empty?
 
       skill_files.each do |file|
@@ -2656,9 +2660,44 @@ module Ruly
         skill_dir = ".claude/skills/#{skill_name}"
         FileUtils.mkdir_p(skill_dir)
 
+        # Compile requires into the skill content
+        content = compile_skill_with_requires(file)
+
         # Write content to SKILL.md
-        File.write(File.join(skill_dir, 'SKILL.md'), file[:content])
+        File.write(File.join(skill_dir, 'SKILL.md'), content)
       end
+    end
+
+    def compile_skill_with_requires(file)
+      original = file[:original_content] || file[:content]
+      frontmatter, = parse_frontmatter(original)
+      requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
+
+      return file[:content] if requires.empty?
+
+      # Resolve and inline each required file
+      source_full_path = find_rule_file(file[:path])
+      return file[:content] unless source_full_path
+
+      source_dir = File.dirname(source_full_path)
+      compiled_parts = [file[:content]]
+
+      requires.each do |required_path|
+        resolved_path = File.expand_path(required_path, source_dir)
+        next unless File.file?(resolved_path)
+
+        raw_content = File.read(resolved_path, encoding: 'UTF-8')
+        _fm, stripped = strip_requires_and_metadata(raw_content)
+        compiled_parts << stripped
+      end
+
+      compiled_parts.join("\n\n---\n\n")
+    end
+
+    def strip_requires_and_metadata(content)
+      frontmatter, = parse_frontmatter(content)
+      stripped = strip_metadata_from_frontmatter(content)
+      [frontmatter, stripped]
     end
 
     def collect_mcp_servers_from_sources(local_sources)

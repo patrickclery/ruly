@@ -190,6 +190,64 @@ recipes:
     mcp_servers:
       - Ref
 
+  core-engineer-skilled:
+    description: "WorkAxle engineer with on-demand skills for reviewing, debugging, and fixing"
+    model: sonnet
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    files:
+      # === Core (always loaded) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+      # === Frameworks (always loaded — needed for daily coding) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === Standards (always loaded — core coding patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      # === TDD (always loaded — engineer always uses TDD) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === Compiled Skills (loaded on demand via Skill tool) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/code-review.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-diagnosis.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-fix.md
+      # === Existing skills ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+      # === Dispatch rules for agents that remain agents ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Context ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    subagents:
+      # Only agents that genuinely need fresh context / isolation
+      - name: comms
+        recipe: comms
+      - name: merger
+        recipe: merger
+      - name: context_jira
+        recipe: context-jira
+        model: haiku
+      - name: context_github
+        recipe: context-github
+        model: haiku
+      - name: context_teams
+        recipe: context-teams
+        model: haiku
+      - name: context_summarizer
+        recipe: context-summarizer
+        model: haiku
+
   auth0:
     description: "WorkAxle Auth0 password and session management development"
     omit_command_prefix:
