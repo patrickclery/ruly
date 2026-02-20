@@ -818,18 +818,7 @@ module Ruly
         sources: resolved_sources
       )
 
-      if result[:success]
-        data = result[:data]
-        formatted_tokens = data[:total_tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-        puts "✅ Generated #{data[:output_file]}"
-        puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
-        if data[:orphaned_count].positive?
-          puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
-        end
-      else
-        puts "❌ Error: #{result[:error]}"
-        exit 1
-      end
+      display_stats_result(result)
     end
 
     private
@@ -3734,6 +3723,21 @@ module Ruly
         puts "🔌 Appended #{selected_servers.size} server(s) to .mcp.json"
       else
         puts "🔌 Created .mcp.json with #{selected_servers.size} server(s)"
+      end
+    end
+
+    def display_stats_result(result)
+      if result[:success]
+        data = result[:data]
+        formatted_tokens = data[:total_tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+        puts "✅ Generated #{data[:output_file]}"
+        puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
+        if data[:orphaned_count].positive?
+          puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
+        end
+      else
+        puts "❌ Error: #{result[:error]}"
+        exit 1
       end
     end
 
