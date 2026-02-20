@@ -765,37 +765,13 @@ module Ruly
                     type: :boolean
     option :recipe, aliases: '-r', desc: 'Use MCP servers from specified recipe', type: :string
     def mcp(*servers)
-      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
+      all_servers = load_mcp_server_definitions
+      return unless all_servers
 
-      # Check if config file exists
-      unless File.exist?(mcp_config_file)
-        puts '❌ Error: ~/.config/ruly/mcp.json not found'
-        puts '   Create this file with your MCP server definitions.'
-        return
-      end
+      recipe_servers = collect_recipe_mcp_servers
+      return if recipe_servers.nil?
 
-      # Load all available MCP server definitions
-      all_servers = JSON.parse(File.read(mcp_config_file))
-
-      # Collect server names from recipe if specified
-      recipe_servers = []
-      if options[:recipe]
-        recipes = load_all_recipes
-        recipe_config = recipes[options[:recipe]]
-
-        if recipe_config.nil?
-          puts "❌ Error: Recipe '#{options[:recipe]}' not found"
-          return
-        end
-
-        recipe_servers = recipe_config['mcp_servers'] || []
-        puts "⚠️  Warning: Recipe '#{options[:recipe]}' has no MCP servers defined" if recipe_servers.empty?
-      end
-
-      # Combine explicit servers with recipe servers
       all_requested = (servers + recipe_servers).uniq
-
-      # Check if we have any servers to add
       if all_requested.empty?
         puts '❌ Error: No servers specified'
         puts '   Usage: ruly mcp server1 server2 ...'
@@ -803,40 +779,8 @@ module Ruly
         return
       end
 
-      # Build selected servers hash
-      selected_servers = {}
-      all_requested.each do |name|
-        if all_servers[name]
-          server_config = all_servers[name].dup
-          # Filter out fields starting with underscore (metadata/comments)
-          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
-          # Ensure 'type' field is present for stdio servers (required by Claude)
-          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
-          selected_servers[name] = server_config
-        else
-          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
-        end
-      end
-
-      # Load existing .mcp.json if append mode
-      existing_settings = {}
-      existing_settings = JSON.parse(File.read('.mcp.json')) if options[:append] && File.exist?('.mcp.json')
-
-      # Merge or create mcpServers
-      existing_servers = existing_settings['mcpServers'] || {}
-      merged_servers = existing_servers.merge(selected_servers)
-
-      # Write output
-      output = {'mcpServers' => merged_servers}
-      File.write('.mcp.json', JSON.pretty_generate(output))
-
-      if selected_servers.empty?
-        puts '⚠️  No valid servers found, created empty .mcp.json'
-      elsif options[:append]
-        puts "🔌 Appended #{selected_servers.size} server(s) to .mcp.json"
-      else
-        puts "🔌 Created .mcp.json with #{selected_servers.size} server(s)"
-      end
+      selected_servers = build_selected_servers(all_servers, all_requested)
+      write_mcp_json(selected_servers)
     rescue JSON::ParserError => e
       puts "❌ Error parsing JSON: #{e.message}"
     end
@@ -889,6 +833,76 @@ module Ruly
     end
 
     private
+
+    # Loads MCP server definitions from ~/.config/ruly/mcp.json.
+    # Returns the parsed hash, or nil if the file is missing.
+    def load_mcp_server_definitions
+      mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
+
+      unless File.exist?(mcp_config_file)
+        puts '❌ Error: ~/.config/ruly/mcp.json not found'
+        puts '   Create this file with your MCP server definitions.'
+        return nil
+      end
+
+      JSON.parse(File.read(mcp_config_file))
+    end
+
+    # Collects MCP server names from the recipe specified by --recipe option.
+    # Returns an array of server names, or an empty array if no recipe specified.
+    # Returns nil if the recipe was specified but not found (signals early exit).
+    def collect_recipe_mcp_servers
+      return [] unless options[:recipe]
+
+      recipes = load_all_recipes
+      recipe_config = recipes[options[:recipe]]
+
+      if recipe_config.nil?
+        puts "❌ Error: Recipe '#{options[:recipe]}' not found"
+        return nil
+      end
+
+      recipe_servers = recipe_config['mcp_servers'] || []
+      puts "⚠️  Warning: Recipe '#{options[:recipe]}' has no MCP servers defined" if recipe_servers.empty?
+      recipe_servers
+    end
+
+    # Builds a hash of selected server configurations from the requested server names.
+    # Filters metadata fields (underscore-prefixed) and ensures stdio type is set.
+    def build_selected_servers(all_servers, requested_names)
+      selected_servers = {}
+      requested_names.each do |name|
+        if all_servers[name]
+          server_config = all_servers[name].dup
+          server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
+          server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
+          selected_servers[name] = server_config
+        else
+          puts "⚠️  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
+        end
+      end
+      selected_servers
+    end
+
+    # Writes selected servers to .mcp.json, optionally merging with existing file in append mode.
+    def write_mcp_json(selected_servers)
+      existing_settings = {}
+      existing_settings = JSON.parse(File.read('.mcp.json')) if options[:append] && File.exist?('.mcp.json')
+
+      existing_servers = existing_settings['mcpServers'] || {}
+      merged_servers = existing_servers.merge(selected_servers)
+
+      output = {'mcpServers' => merged_servers}
+      File.write('.mcp.json', JSON.pretty_generate(output))
+
+      if selected_servers.empty?
+        puts '⚠️  No valid servers found, created empty .mcp.json'
+      elsif options[:append]
+        puts "🔌 Appended #{selected_servers.size} server(s) to .mcp.json"
+      else
+        puts "🔌 Created .mcp.json with #{selected_servers.size} server(s)"
+      end
+    end
 
     def load_recipe_sources(recipe_name)
       validate_recipes_file!
