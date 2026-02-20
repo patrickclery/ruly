@@ -790,6 +790,34 @@ recipes:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
+  ruly:
+    description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
+    files:
+      # === WorkAxle Core ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      # === Framework Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
+      # === Testing (RSpec) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
+      # === Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      # === Debugging (inlined as skill, not subagent) ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+
   # === Frontend Recipes ===
 
   frontend:
