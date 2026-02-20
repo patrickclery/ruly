@@ -141,6 +141,12 @@ module Ruly
         local_sources, command_files, bin_files, skill_files = process_sources_for_squash(sources, agent,
                                                                                           recipe_config, options)
 
+        # Validate that any dispatches: in source files match registered subagents
+        if recipe_name && recipe_config.is_a?(Hash)
+          collected_dispatches = collect_dispatches_from_sources(local_sources)
+          validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
+        end
+
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
 
@@ -1918,6 +1924,9 @@ module Ruly
       # Remove the skills field and its values (same format as requires)
       frontmatter = frontmatter.gsub(/^skills:.*?(?=^\w|\z)/m, '')
 
+      # Remove the dispatches field and its values (same format as requires)
+      frontmatter = frontmatter.gsub(/^dispatches:.*?(?=^\w|\z)/m, '')
+
       # Clean up any extra blank lines
       frontmatter = frontmatter.gsub(/\n\n+/, "\n").strip
 
@@ -2834,6 +2843,9 @@ module Ruly
       # Reject subagent recipes that have their own subagents (nested subagents)
       validate_no_nested_subagents!(subagent_recipe, agent_name, recipe_name)
 
+      # Reject subagent recipes that contain files dispatching other subagents
+      validate_no_subagent_dispatches!(subagent_recipe, agent_name, recipe_name)
+
       # Generate the agent file
       generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
                           parent_recipe_config: recipe_config, subagent_config: subagent)
@@ -2849,6 +2861,82 @@ module Ruly
             "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
             'Claude Code subagents cannot spawn other subagents. ' \
             "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
+    end
+
+    def collect_dispatches_from_sources(local_sources)
+      dispatches = {}
+
+      local_sources.each do |source|
+        content = source[:original_content] || source[:content]
+        next unless content
+
+        frontmatter, = parse_frontmatter(content)
+        next unless frontmatter.is_a?(Hash) && frontmatter['dispatches'].is_a?(Array)
+
+        filename = File.basename(source[:path])
+        dispatches[filename] = frontmatter['dispatches']
+      end
+
+      dispatches
+    end
+
+    def validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
+      return if collected_dispatches.empty?
+
+      registered_subagents = if recipe_config['subagents'].is_a?(Array)
+                               recipe_config['subagents'].filter_map { |s| s['name'] }
+                             else
+                               []
+                             end
+
+      collected_dispatches.each_value do |dispatch_names|
+        dispatch_names.each do |dispatch_name|
+          next if registered_subagents.include?(dispatch_name)
+
+          raise Ruly::Error,
+                "Recipe '#{recipe_name}' dispatches: #{dispatch_name}\n" \
+                "       but does not register it as a subagent.\n" \
+                "       Add to recipe:\n" \
+                "         subagents:\n" \
+                "           - name: #{dispatch_name}\n" \
+                "             recipe: #{dispatch_name.tr('_', '-')}"
+        end
+      end
+    end
+
+    def validate_no_subagent_dispatches!(subagent_recipe, agent_name, recipe_name)
+      return unless subagent_recipe.is_a?(Hash)
+
+      # Load and process sources to check for dispatches
+      sources, = load_recipe_sources(recipe_name)
+      dispatching_files = []
+
+      sources.each do |source|
+        next unless source[:type] == 'local'
+
+        file_path = find_rule_file(source[:path])
+        next unless file_path
+
+        content = File.read(file_path, encoding: 'UTF-8')
+        frontmatter, = parse_frontmatter(content)
+        next unless frontmatter.is_a?(Hash) && frontmatter['dispatches'].is_a?(Array) && frontmatter['dispatches'].any?
+
+        filename = File.basename(source[:path])
+        frontmatter['dispatches'].each do |dispatch_name|
+          dispatching_files << { file: filename, dispatch: dispatch_name }
+        end
+      end
+
+      return if dispatching_files.empty?
+
+      file_list = dispatching_files.map { |f| "  - #{f[:file]} dispatches: #{f[:dispatch]}" }.join("\n")
+      raise Ruly::Error,
+            "Subagent '#{agent_name}' (recipe: #{recipe_name})\n" \
+            "contains files that dispatch other subagents:\n\n" \
+            "#{file_list}\n\n" \
+            "Subagents cannot dispatch other subagents.\n" \
+            "Remove these files from the recipe, or inline\n" \
+            'the functionality without subagent dispatch.'
     end
 
     def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, parent_recipe_config: {},

@@ -23,17 +23,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
       # === Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-architect.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-dashboard.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-diagnose.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-fix.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -42,16 +44,25 @@ recipes:
       # === Git Skills ===
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching (orchestrator handles context) ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
         recipe: core-debugger
       - name: core_engineer
         recipe: core-engineer
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
+      - name: context_jira
+        recipe: context-jira
+        model: haiku
+      - name: context_github
+        recipe: context-github
+        model: haiku
+      - name: context_teams
+        recipe: context-teams
+        model: haiku
+      - name: context_summarizer
+        recipe: context-summarizer
+        model: haiku
       - name: core_debugging
         recipe: core-debugging
       - name: comms
@@ -64,8 +75,8 @@ recipes:
         recipe: pr-readiness
       - name: core_architect
         recipe: core-architect
-      - name: reviewer
-        recipe: reviewer
+      - name: core_reviewer
+        recipe: core-reviewer
       - name: pr_review_loop
         recipe: pr-review-loop
       - name: qa_tester
@@ -89,9 +100,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      # === Dispatch Rules (moved from core) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-diagnose.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
       # === Commands ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
 
@@ -199,7 +207,7 @@ recipes:
       # Auth0 specific
       - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
       # Context fetching via subagent (MUST be always loaded)
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
@@ -211,9 +219,18 @@ recipes:
       - Ref # For documentation lookup
 
     subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
+      - name: context_jira
+        recipe: context-jira
+        model: haiku
+      - name: context_github
+        recipe: context-github
+        model: haiku
+      - name: context_teams
+        recipe: context-teams
+        model: haiku
+      - name: context_summarizer
+        recipe: context-summarizer
+        model: haiku
 
   refactor:
     description: "WorkAxle code refactoring"
@@ -282,14 +299,12 @@ recipes:
     mcp_servers:
       - playwright # For UI/integration testing
 
-  reviewer:
+  core-reviewer:
     description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
     omit_command_prefix: github
     files:
       # === Reviewing skill ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
-      # === Context fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       # === PR readiness chart ===
@@ -360,18 +375,18 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
       # === Backend Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-debugging.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-core-architect.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
       # === Cross-Cutting Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-dashboard.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-dashboard.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -380,7 +395,7 @@ recipes:
       # === Git Skills ===
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       # === Backend Subagents (promoted from core) ===
@@ -392,17 +407,24 @@ recipes:
         recipe: core-debugging
       - name: core_architect
         recipe: core-architect
-      # === Frontend Subagents (promoted from frontend) ===
-      - name: frontend
-        recipe: frontend
+      # === Frontend Subagents ===
       - name: frontend_engineer
         recipe: frontend-engineer
       - name: frontend_reviewer
         recipe: frontend-reviewer
-      # === Cross-Cutting Subagents (promoted from core) ===
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
+      # === Context Subagents ===
+      - name: context_jira
+        recipe: context-jira
+        model: haiku
+      - name: context_github
+        recipe: context-github
+        model: haiku
+      - name: context_teams
+        recipe: context-teams
+        model: haiku
+      - name: context_summarizer
+        recipe: context-summarizer
+        model: haiku
       - name: comms
         recipe: comms
       - name: merger
@@ -411,8 +433,8 @@ recipes:
         recipe: dashboard
       - name: pr_readiness
         recipe: pr-readiness
-      - name: reviewer
-        recipe: reviewer
+      - name: core_reviewer
+        recipe: core-reviewer
       - name: pr_review_loop
         recipe: pr-review-loop
       - name: qa_tester
@@ -655,8 +677,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
-      # MUST include the rule that enforces subagent usage
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
 
   core-architect:
     description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
@@ -694,7 +714,6 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
 
   pr-review-loop:
@@ -702,15 +721,28 @@ recipes:
     omit_command_prefix: github
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
 
-  context-grabber:
-    description: "Orchestrates context fetching and summarization"
+  context-jira:
+    description: "Downloads Jira ticket details"
     files:
-      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-grabber.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-jira.md
+
+  context-github:
+    description: "Downloads GitHub PR details for a ticket"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-github.md
+
+  context-teams:
+    description: "Searches Teams threads for ticket/PR references"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-teams.md
     mcp_servers:
-      - teams  # Required by context-downloader-teams skill
+      - teams
+
+  context-summarizer:
+    description: "Reads cached .toon files and produces ticket summary"
+    files:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-summarizer.md
 
   core-debugging:
     description: "WorkAxle debugging subagent - SQL, Ruby, container, and test debugging patterns"
@@ -830,11 +862,11 @@ recipes:
       # === Frontend Core (minimal for routing) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
       # === Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/standards/use-frontend-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/dispatches/use-frontend-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -843,8 +875,31 @@ recipes:
       # === Skills ===
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    subagents:
+      - name: frontend_engineer
+        recipe: frontend-engineer
+      - name: comms
+        recipe: comms
+      - name: merger
+        recipe: merger
+      - name: pr_readiness
+        recipe: pr-readiness
+      - name: core_reviewer
+        recipe: core-reviewer
+      - name: context_jira
+        recipe: context-jira
+        model: haiku
+      - name: context_github
+        recipe: context-github
+        model: haiku
+      - name: context_teams
+        recipe: context-teams
+        model: haiku
+      - name: context_summarizer
+        recipe: context-summarizer
+        model: haiku
 
   frontend-engineer:
     description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
@@ -888,8 +943,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
-      # === Context fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       # === PR readiness chart ===
