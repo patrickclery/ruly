@@ -70,6 +70,10 @@ recipes:
         recipe: pr-review-loop
       - name: qa_tester
         recipe: qa
+      - name: bug_diagnose
+        recipe: bug-diagnose
+      - name: bug_fix
+        recipe: bug-fix
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -90,13 +94,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/bug-fix.md
       # === Commands ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
-    subagents:
-      - name: bug_diagnose
-        recipe: bug-diagnose
-      - name: bug_fix
-        recipe: bug-fix
-      - name: core_debugging
-        recipe: core-debugging
 
   migration:
     description: "WorkAxle database migrations"
@@ -180,11 +177,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+      # === Debugging (inlined as skill, not subagent) ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
     mcp_servers:
       - Ref
-    subagents:
-      - name: core_debugging
-        recipe: core-debugging
 
   auth0:
     description: "WorkAxle Auth0 password and session management development"
@@ -263,24 +259,6 @@ recipes:
       - playwright # UI testing
       - Ref # Documentation lookup
 
-    subagents:
-      - name: ms_teams_dm
-        recipe: ms-teams-dm
-      - name: mattermost_dm
-        recipe: mattermost-dm
-      - name: jira_comment
-        recipe: jira-comment
-      - name: jira_bug_report
-        recipe: jira-bug-report
-      - name: jira_epic
-        recipe: jira-epic
-      - name: jira_initiative
-        recipe: jira-initiative
-      - name: jira_story
-        recipe: jira-story
-      - name: jira_ready_for_qa
-        recipe: jira-ready-for-qa
-
   finalize:
     description: "WorkAxle final testing and cleanup phase"
     omit_command_prefix:
@@ -340,10 +318,6 @@ recipes:
       # === Superpowers code-reviewer ===
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
-    subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
 
   jira:
     description: "Jira operations (uses CLI)"
@@ -360,24 +334,6 @@ recipes:
     mcp_servers:
       - teams # For Teams DM notifications
       - mattermost # For Mattermost DM notifications
-
-    subagents:
-      - name: ms_teams_dm
-        recipe: ms-teams-dm
-      - name: mattermost_dm
-        recipe: mattermost-dm
-      - name: jira_comment
-        recipe: jira-comment
-      - name: jira_bug_report
-        recipe: jira-bug-report
-      - name: jira_epic
-        recipe: jira-epic
-      - name: jira_initiative
-        recipe: jira-initiative
-      - name: jira_story
-        recipe: jira-story
-      - name: jira_ready_for_qa
-        recipe: jira-ready-for-qa
 
   confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
@@ -436,9 +392,13 @@ recipes:
         recipe: core-debugging
       - name: core_architect
         recipe: core-architect
-      # === Frontend Subagent ===
+      # === Frontend Subagents (promoted from frontend) ===
       - name: frontend
         recipe: frontend
+      - name: frontend_engineer
+        recipe: frontend-engineer
+      - name: frontend_reviewer
+        recipe: frontend-reviewer
       # === Cross-Cutting Subagents (promoted from core) ===
       - name: context_grabber
         recipe: context-grabber
@@ -457,6 +417,10 @@ recipes:
         recipe: pr-review-loop
       - name: qa_tester
         recipe: qa
+      - name: bug_diagnose
+        recipe: bug-diagnose
+      - name: bug_fix
+        recipe: bug-fix
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
@@ -585,23 +549,6 @@ recipes:
       - teams # For Teams DM notifications
       - mattermost # For Mattermost DM notifications
       - Ref # For documentation lookup and external research
-    subagents:
-      - name: ms_teams_dm
-        recipe: ms-teams-dm
-      - name: mattermost_dm
-        recipe: mattermost-dm
-      - name: jira_comment
-        recipe: jira-comment
-      - name: jira_bug_report
-        recipe: jira-bug-report
-      - name: jira_epic
-        recipe: jira-epic
-      - name: jira_initiative
-        recipe: jira-initiative
-      - name: jira_story
-        recipe: jira-story
-      - name: jira_ready_for_qa
-        recipe: jira-ready-for-qa
 
   local:
     description: "Local development dispatcher - routes media tasks to media_stack subagent"
@@ -701,17 +648,6 @@ recipes:
     mcp_servers:
       - teams # For Teams DM and channel notifications
       - mattermost # For Mattermost DM notifications
-    subagents:
-      - name: ms_teams_dm
-        recipe: ms-teams-dm
-      - name: mattermost_dm
-        recipe: mattermost-dm
-      - name: jira_comment
-        recipe: jira-comment
-      - name: jira_bug_report
-        recipe: jira-bug-report
-      - name: jira_ready_for_qa
-        recipe: jira-ready-for-qa
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
@@ -721,10 +657,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
       # MUST include the rule that enforces subagent usage
       - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
-    subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
 
   core-architect:
     description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
@@ -764,10 +696,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-    subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
 
   pr-review-loop:
     description: "Automated PR review feedback loop - monitors reviews, fixes issues, re-checks"
@@ -775,118 +703,14 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
-    subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
 
   context-grabber:
     description: "Orchestrates context fetching and summarization"
     files:
       - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/context-fetching.md
-    subagents:
-      - name: context_downloader_jira
-        recipe: context-downloader-jira
-        model: haiku
-      - name: context_downloader_github
-        recipe: context-downloader-github
-        model: haiku
-      - name: context_downloader_teams
-        recipe: context-downloader-teams
-        model: haiku
-      - name: context_summarizer
-        recipe: context-summarizer
-        model: sonnet
-
-  context-downloader-jira:
-    description: "Download Jira context for a ticket (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-jira.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
-
-  context-downloader-github:
-    description: "Download GitHub PR context for a ticket (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-github.md
-
-  context-downloader-teams:
-    description: "Download Teams thread context for a ticket (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-downloader-teams.md
     mcp_servers:
-      - teams
-
-  context-summarizer:
-    description: "Summarize cached context files into concise summary (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/context/agents/context-summarizer.md
-      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
-
-  ms-teams-dm:
-    description: "Send a Teams DM (subagent execution)"
-    files:
-      # CRITICAL: This file tells the subagent what to DO when dispatched
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/agents/ms-teams-dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - teams  # For Teams MCP calls
-
-  mattermost-dm:
-    description: "Send a Mattermost DM (subagent execution)"
-    files:
-      # CRITICAL: This file tells the subagent what to DO when dispatched
-      - /Users/patrick/Projects/ruly/rules/comms/mattermost/agents/mattermost-dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - mattermost  # For Mattermost MCP calls
-
-  jira-comment:
-    description: "Post a Jira comment (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-
-  jira-bug-report:
-    description: "Create a Jira bug report (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-bug-report.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-
-  jira-epic:
-    description: "Create a Jira epic (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-epic.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - atlassian  # Uses Atlassian MCP for issue creation
-
-  jira-initiative:
-    description: "Create a Jira initiative (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-initiative.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - atlassian  # Uses Atlassian MCP for issue creation
-
-  jira-story:
-    description: "Create a Jira story (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-story.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - atlassian  # Uses Atlassian MCP for issue creation
-
-  jira-ready-for-qa:
-    description: "Notify QA - comment, transition, and Teams DM (subagent execution)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/agents/jira-ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
-    mcp_servers:
-      - teams  # Uses Teams MCP for DM
+      - teams  # Required by context-downloader-teams skill
 
   core-debugging:
     description: "WorkAxle debugging subagent - SQL, Ruby, container, and test debugging patterns"
@@ -932,9 +756,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-    subagents:
-      - name: core_debugging
-        recipe: core-debugging
 
   bug-fix:
     description: "Bug fix subagent - TDD-driven fix implementation after diagnosis is complete"
@@ -966,9 +787,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
       # === Bug Fix Command ===
       - /Users/patrick/Projects/ruly/rules/bug/commands/fix.md
-    subagents:
-      - name: core_debugging
-        recipe: core-debugging
+      # === Debugging (inlined as skill, not subagent) ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
   # === Frontend Recipes ===
 
@@ -997,20 +817,6 @@ recipes:
       # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    subagents:
-      - name: frontend_engineer
-        recipe: frontend-engineer
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet
-      - name: comms
-        recipe: comms
-      - name: merger
-        recipe: merger
-      - name: pr_readiness
-        recipe: pr-readiness
-      - name: reviewer
-        recipe: frontend-reviewer
 
   frontend-engineer:
     description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
@@ -1062,7 +868,3 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
       # === Jira statuses (for readiness gates) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-    subagents:
-      - name: context_grabber
-        recipe: context-grabber
-        model: sonnet

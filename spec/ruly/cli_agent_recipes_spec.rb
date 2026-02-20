@@ -258,6 +258,14 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
 
     context 'with no recipe specified' do
+      before do
+        # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return({})
+        allow_any_instance_of(described_class).to receive(:rules_dir).and_return(File.join(test_dir, 'rules'))
+        allow_any_instance_of(described_class).to receive(:gem_root).and_return(test_dir)
+        # rubocop:enable RSpec/AnyInstance
+      end
+
       it 'uses default behavior without recipe' do
         cli.invoke(:squash)
 

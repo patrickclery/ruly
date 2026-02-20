@@ -276,6 +276,16 @@ module Ruly
         # Save skill files separately if agent is Claude
         save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
 
+        # Collect MCP servers from rule-file frontmatter and merge with recipe config
+        rule_mcp_servers = collect_mcp_servers_from_sources(local_sources)
+        if rule_mcp_servers.any?
+          recipe_config = {} unless recipe_config.is_a?(Hash)
+          existing = Array(recipe_config['mcp_servers'])
+          new_servers = rule_mcp_servers - existing
+          recipe_config['mcp_servers'] = (existing + rule_mcp_servers).uniq
+          puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
+        end
+
         # Collect MCP servers from subagent recipes (recursive) and merge with parent
         if recipe_config.is_a?(Hash) && recipe_config['subagents']
           original_servers = Array(recipe_config['mcp_servers'])
@@ -1880,6 +1890,16 @@ module Ruly
           required_sources.each { |rs| rs[:from_requires] = true }
           sources_to_process.unshift(*required_sources)
         end
+
+        # Resolve skills: frontmatter references (with validation)
+        skill_sources = resolve_skills_for_source(source, content_for_requires, processed_files)
+
+        # Add skill sources to the queue — they'll be categorized as skill_files
+        # because their paths contain /skills/
+        unless skill_sources.empty?
+          puts "    → Found #{skill_sources.length} skills, adding to queue..." if verbose?
+          sources_to_process.unshift(*skill_sources)
+        end
       end
 
       result
@@ -1994,6 +2014,12 @@ module Ruly
 
       # Remove the essential field (single line: "essential: true" or "essential: false")
       frontmatter = frontmatter.gsub(/^essential:.*?(?=\n|\z)/m, '')
+
+      # Remove the mcp_servers field and its values (same format as requires)
+      frontmatter = frontmatter.gsub(/^mcp_servers:.*?(?=^\w|\z)/m, '')
+
+      # Remove the skills field and its values (same format as requires)
+      frontmatter = frontmatter.gsub(/^skills:.*?(?=^\w|\z)/m, '')
 
       # Clean up any extra blank lines
       frontmatter = frontmatter.gsub(/\n\n+/, "\n").strip
@@ -2222,6 +2248,42 @@ module Ruly
       end
 
       required_sources
+    end
+
+    def resolve_skills_for_source(source, content, processed_files)
+      frontmatter, = parse_frontmatter(content)
+      skills = frontmatter['skills'] || []
+
+      return [] if skills.empty?
+
+      skill_sources = []
+
+      skills.each do |skill_path|
+        # Resolve the path based on the source context
+        resolved_source = resolve_required_path(source, skill_path)
+
+        # VALIDATE: skill file must exist (unlike requires which silently skips)
+        unless resolved_source
+          raise Ruly::Error, "Skill file not found: '#{skill_path}' referenced from '#{source[:path]}'"
+        end
+
+        # VALIDATE: resolved file must be in a /skills/ directory
+        resolved_full_path = find_rule_file(resolved_source[:path])
+        unless resolved_full_path && resolved_full_path.include?('/skills/')
+          raise Ruly::Error,
+                "Skill reference '#{skill_path}' must be in a /skills/ directory (resolved to '#{resolved_source[:path]}')"
+        end
+
+        # Check if already processed (deduplication)
+        source_key = get_source_key(resolved_source)
+        next if processed_files.include?(source_key)
+
+        # Mark as from skills resolution
+        resolved_source[:from_skills] = true
+        skill_sources << resolved_source
+      end
+
+      skill_sources
     end
 
     def resolve_required_path(source, required_path)
@@ -2796,6 +2858,22 @@ module Ruly
       servers.uniq
     end
 
+    def collect_mcp_servers_from_sources(local_sources)
+      servers = []
+
+      local_sources.each do |source|
+        content = source[:original_content] || source[:content]
+        next unless content
+
+        frontmatter, = parse_frontmatter(content)
+        next unless frontmatter.is_a?(Hash) && frontmatter['mcp_servers'].is_a?(Array)
+
+        servers.concat(frontmatter['mcp_servers'])
+      end
+
+      servers.uniq
+    end
+
     def process_subagents(recipe_config, parent_recipe_name, visited: Set.new, top_level: true)
       return unless recipe_config['subagents'].is_a?(Array)
 
@@ -2831,18 +2909,24 @@ module Ruly
           next
         end
 
+        # Reject subagent recipes that have their own subagents (nested subagents)
+        if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents'].is_a?(Array) && subagent_recipe['subagents'].any?
+          nested_names = subagent_recipe['subagents'].map { |s| s['name'] }.compact.join(', ')
+          raise Ruly::Error,
+                "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
+                "Claude Code subagents cannot spawn other subagents. " \
+                "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
+        end
+
         # Generate the agent file
         generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
                             subagent_config: subagent, parent_recipe_config: recipe_config)
         generated_count += 1
-
-        # Recursively process nested subagents
-        if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents']
-          process_subagents(subagent_recipe, parent_recipe_name, visited:, top_level: false)
-        end
       end
 
       puts "✅ Generated #{visited.size} subagent(s)" if top_level
+    rescue Ruly::Error
+      raise # Re-raise validation errors (e.g., nested subagents)
     rescue StandardError => e
       puts "⚠️  Warning: Could not process subagents: #{e.message}"
     end
@@ -2850,32 +2934,53 @@ module Ruly
     def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, subagent_config: {},
                              parent_recipe_config: {})
       agent_file = ".claude/agents/#{agent_name}.md"
-      local_sources, command_files = load_agent_sources(recipe_name, recipe_config)
+      local_sources, command_files, skill_files = load_agent_sources(recipe_name, recipe_config)
+
+      # Collect MCP servers from both recipe config and rule-file frontmatter
+      mcp_servers = collect_agent_mcp_servers(recipe_config, local_sources)
+
+      # Extract skill names and save skill files
+      skill_names = extract_skill_names(skill_files)
+      save_skill_files(skill_files) unless skill_files.empty?
 
       context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-                                    subagent_config:, parent_recipe_config:)
+                                    subagent_config:, parent_recipe_config:, mcp_servers:, skill_names:)
       write_agent_file(agent_file, context)
       save_subagent_commands(command_files, agent_name, recipe_config) unless command_files.empty?
     rescue StandardError => e
       puts "    ⚠️  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
     end
 
+    def collect_agent_mcp_servers(recipe_config, local_sources)
+      servers = []
+      servers.concat(recipe_config['mcp_servers']) if recipe_config['mcp_servers'].is_a?(Array)
+      servers.concat(collect_mcp_servers_from_sources(local_sources))
+      servers.uniq
+    end
+
     def load_agent_sources(recipe_name, recipe_config)
       sources, = load_recipe_sources(recipe_name)
-      local_sources, command_files, = process_sources_for_squash(sources, 'claude', recipe_config, {})
-      [local_sources, command_files]
+      local_sources, command_files, _bin_files, skill_files = process_sources_for_squash(sources, 'claude',
+                                                                                         recipe_config, {})
+      [local_sources, command_files, skill_files]
+    end
+
+    def extract_skill_names(skill_files)
+      skill_files.map { |file| file[:path].split('/skills/').last.sub(/\.md$/, '') }
     end
 
     def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-                             subagent_config: {}, parent_recipe_config: {})
+                             subagent_config: {}, parent_recipe_config: {}, mcp_servers: [], skill_names: [])
       {
         agent_name:,
         description: recipe_config['description'] || "Subagent for #{recipe_name}",
         local_sources:,
+        mcp_servers:,
         model: resolve_agent_model(subagent_config, parent_recipe_config),
         parent_recipe_name:,
         recipe_config:,
         recipe_name:,
+        skill_names:,
         timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
       }
     end
@@ -2892,18 +2997,27 @@ module Ruly
       File.open(agent_file, 'w') do |output|
         write_agent_frontmatter(output, context)
         write_agent_content(output, context)
-        write_agent_mcp_servers(output, context[:recipe_config])
         write_agent_footer(output, context[:timestamp], context[:recipe_name])
       end
     end
 
     def write_agent_frontmatter(output, context)
+      skills_line = if context[:skill_names]&.any?
+                      "\nskills: [#{context[:skill_names].join(', ')}]"
+                    else
+                      ''
+                    end
+      mcp_line = if context[:mcp_servers]&.any?
+                   "\nmcpServers: [#{context[:mcp_servers].join(', ')}]"
+                 else
+                   ''
+                 end
       output.puts <<~YAML
         ---
         name: #{context[:agent_name]}
         description: #{context[:description]}
         tools: Bash, Read, Write, Edit, Glob, Grep
-        model: #{context[:model]}
+        model: #{context[:model]}#{skills_line}#{mcp_line}
         permissionMode: bypassPermissions
         # Auto-generated from recipe: #{context[:recipe_name]}
         # Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'
@@ -2928,18 +3042,6 @@ module Ruly
         output.puts '---'
         output.puts
       end
-    end
-
-    def write_agent_mcp_servers(output, recipe_config)
-      return unless recipe_config['mcp_servers']&.any?
-
-      output.puts '## MCP Servers'
-      output.puts
-      output.puts 'This subagent has access to the following MCP servers:'
-      recipe_config['mcp_servers'].each do |server|
-        output.puts "- #{server}"
-      end
-      output.puts
     end
 
     def write_agent_footer(output, timestamp, recipe_name)
