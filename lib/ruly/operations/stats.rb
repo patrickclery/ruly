@@ -9,6 +9,9 @@ module Ruly
     class Stats < Base
       attr_reader :sources, :output_file, :recipes_file, :rules_dir
 
+      # State object for DFS cycle detection to reduce parameter count
+      DfsState = Struct.new(:visited, :rec_stack, :cycles, keyword_init: true)
+
       # @param sources [Array<Hash>] Array of source hashes with :path and :type keys
       # @param output_file [String] Path to output markdown file
       # @param recipes_file [String, nil] Path to recipes.yml file for orphan detection
@@ -105,16 +108,14 @@ module Ruly
         end
 
         # Find cycles using DFS with path tracking
-        cycles = []
-        visited = Set.new
-        rec_stack = Set.new
+        state = DfsState.new(cycles: [], rec_stack: Set.new, visited: Set.new)
 
         graph.each_key do |node|
-          detect_cycles(node, graph, visited, rec_stack, [], cycles) unless visited.include?(node)
+          detect_cycles(node, graph, state, []) unless state.visited.include?(node)
         end
 
         # Normalize cycles to avoid duplicates (same cycle starting from different nodes)
-        normalize_cycles(cycles)
+        normalize_cycles(state.cycles)
       end
 
       private
@@ -233,23 +234,23 @@ module Ruly
       end
 
       # DFS helper to detect cycles
-      def detect_cycles(node, graph, visited, rec_stack, path, cycles)
-        visited.add(node)
-        rec_stack.add(node)
+      def detect_cycles(node, graph, state, path)
+        state.visited.add(node)
+        state.rec_stack.add(node)
         path += [node]
 
         (graph[node] || []).each do |neighbor|
-          if rec_stack.include?(neighbor)
+          if state.rec_stack.include?(neighbor)
             # Found a cycle - extract it from where the neighbor first appears
             cycle_start = path.index(neighbor)
             cycle = path[cycle_start..] + [neighbor]
-            cycles << cycle
-          elsif !visited.include?(neighbor) && graph.key?(neighbor)
-            detect_cycles(neighbor, graph, visited, rec_stack, path, cycles)
+            state.cycles << cycle
+          elsif !state.visited.include?(neighbor) && graph.key?(neighbor)
+            detect_cycles(neighbor, graph, state, path)
           end
         end
 
-        rec_stack.delete(node)
+        state.rec_stack.delete(node)
       end
 
       # Normalize cycles to avoid reporting the same cycle multiple times
@@ -346,12 +347,18 @@ module Ruly
       def write_table(file, file_stats)
         file.puts '## Files by Token Count'
         file.puts
+        write_stats_table(file, file_stats)
+      end
+
+      def write_stats_table(file, stats)
         file.puts '| # | Tokens | Size | File |'
         file.puts '|--:|-------:|-----:|:-----|'
 
-        file_stats.each_with_index do |stat, idx|
+        stats.each_with_index do |stat, idx|
           filename = File.basename(stat[:path])
-          file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
+          tokens = format_number(stat[:tokens])
+          size = format_bytes(stat[:size])
+          file.puts "| #{idx + 1} | #{tokens} | #{size} | [#{filename}](#{stat[:path]}) |"
         end
 
         file.puts
@@ -369,37 +376,7 @@ module Ruly
         end
 
         recipe_files_map.keys.sort.each do |recipe_name|
-          recipe_file_paths = recipe_files_map[recipe_name]
-
-          # Get stats for files in this recipe
-          recipe_stats = recipe_file_paths.filter_map do |path|
-            stats_by_path[File.expand_path(path)]
-          end
-
-          # Skip recipes with no valid files
-          next if recipe_stats.empty?
-
-          # Sort by token count descending
-          recipe_stats = recipe_stats.sort_by { |s| -s[:tokens] }
-
-          recipe_total_tokens = recipe_stats.sum { |s| s[:tokens] }
-          recipe_total_size = recipe_stats.sum { |s| s[:size] }
-
-          file.puts "## Recipe: #{recipe_name}"
-          file.puts
-          file.puts "- **Files**: #{recipe_stats.size}"
-          file.puts "- **Total Tokens**: #{format_number(recipe_total_tokens)}"
-          file.puts "- **Total Size**: #{format_bytes(recipe_total_size)}"
-          file.puts
-          file.puts '| # | Tokens | Size | File |'
-          file.puts '|--:|-------:|-----:|:-----|'
-
-          recipe_stats.each_with_index do |stat, idx|
-            filename = File.basename(stat[:path])
-            file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
-          end
-
-          file.puts
+          write_recipe_section(file, recipe_name, recipe_files_map[recipe_name], stats_by_path)
         end
       end
 
@@ -428,6 +405,24 @@ module Ruly
         end
 
         recipe_files_map
+      end
+
+      def write_recipe_section(file, recipe_name, recipe_file_paths, stats_by_path)
+        recipe_stats = recipe_file_paths.filter_map do |path|
+          stats_by_path[File.expand_path(path)]
+        end
+
+        return if recipe_stats.empty?
+
+        recipe_stats = recipe_stats.sort_by { |s| -s[:tokens] }
+
+        file.puts "## Recipe: #{recipe_name}"
+        file.puts
+        file.puts "- **Files**: #{recipe_stats.size}"
+        file.puts "- **Total Tokens**: #{format_number(recipe_stats.sum { |s| s[:tokens] })}"
+        file.puts "- **Total Size**: #{format_bytes(recipe_stats.sum { |s| s[:size] })}"
+        file.puts
+        write_stats_table(file, recipe_stats)
       end
 
       def write_orphaned_section(file, orphaned_files)
