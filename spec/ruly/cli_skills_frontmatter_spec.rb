@@ -385,6 +385,9 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
 
     context 'when subagent has both skills and mcp_servers' do
+      let(:mcp_config_file) { File.join(Dir.home, '.config', 'ruly', 'mcp.json') }
+      let(:mcp_config_backup) { File.exist?(mcp_config_file) ? File.read(mcp_config_file) : nil }
+
       before do
         # Create a rule file with both skills and mcp_servers
         File.write(File.join(test_dir, 'rules', 'agent', 'full.md'), <<~MD)
@@ -403,11 +406,10 @@ RSpec.describe Ruly::CLI, type: :cli do
         # Create MCP config file
         mcp_config_dir = File.join(Dir.home, '.config', 'ruly')
         FileUtils.mkdir_p(mcp_config_dir)
-        @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
-        @mcp_config_backup = nil
-        @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
+        # Trigger let to capture backup before overwriting
+        mcp_config_backup
 
-        File.write(@mcp_config_file, JSON.generate({
+        File.write(mcp_config_file, JSON.generate({
           'teams' => {'command' => 'teams-mcp', 'type' => 'stdio'}
         }))
 
@@ -431,7 +433,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       after do
-        File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
+        File.write(mcp_config_file, mcp_config_backup) if mcp_config_backup
       end
 
       it 'includes both skills: and mcpServers: in agent frontmatter' do

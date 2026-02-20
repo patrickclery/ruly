@@ -23,6 +23,9 @@ RSpec.describe Ruly::CLI, type: :cli do
   end
 
   describe 'mcp_servers in rule-file frontmatter' do
+    let(:mcp_config_file) { File.join(Dir.home, '.config', 'ruly', 'mcp.json') }
+    let(:mcp_config_backup) { File.exist?(mcp_config_file) ? File.read(mcp_config_file) : nil }
+
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules'))
 
@@ -65,11 +68,10 @@ RSpec.describe Ruly::CLI, type: :cli do
       # Create MCP config file
       mcp_config_dir = File.join(Dir.home, '.config', 'ruly')
       FileUtils.mkdir_p(mcp_config_dir)
-      @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
-      @mcp_config_backup = nil
-      @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
+      # Trigger let to capture backup before overwriting
+      mcp_config_backup
 
-      File.write(@mcp_config_file, JSON.generate({
+      File.write(mcp_config_file, JSON.generate({
         'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'},
         'atlassian' => {'type' => 'sse', 'url' => 'https://mcp.atlassian.com/v1/sse'},
         'playwright' => {'command' => 'playwright-mcp', 'type' => 'stdio'},
@@ -83,7 +85,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     after do
       # Restore MCP config
-      File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
+      File.write(mcp_config_file, mcp_config_backup) if mcp_config_backup
     end
 
     context 'when squashing a recipe with rule-file mcp_servers' do
@@ -205,6 +207,9 @@ RSpec.describe Ruly::CLI, type: :cli do
   end
 
   describe 'mcpServers in agent frontmatter' do
+    let(:mcp_config_file) { File.join(Dir.home, '.config', 'ruly', 'mcp.json') }
+    let(:mcp_config_backup) { File.exist?(mcp_config_file) ? File.read(mcp_config_file) : nil }
+
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules'))
 
@@ -233,11 +238,10 @@ RSpec.describe Ruly::CLI, type: :cli do
       # Create MCP config file
       mcp_config_dir = File.join(Dir.home, '.config', 'ruly')
       FileUtils.mkdir_p(mcp_config_dir)
-      @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
-      @mcp_config_backup = nil
-      @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
+      # Trigger let to capture backup before overwriting
+      mcp_config_backup
 
-      File.write(@mcp_config_file, JSON.generate({
+      File.write(mcp_config_file, JSON.generate({
         'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'},
         'atlassian' => {'type' => 'sse', 'url' => 'https://mcp.atlassian.com/v1/sse'},
         'playwright' => {'command' => 'playwright-mcp', 'type' => 'stdio'},
@@ -251,7 +255,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     after do
       # Restore MCP config
-      File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
+      File.write(mcp_config_file, mcp_config_backup) if mcp_config_backup
     end
 
     context 'when subagent recipe has mcp_servers and rule files also have mcp_servers' do
