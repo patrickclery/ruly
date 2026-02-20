@@ -15,7 +15,6 @@ require 'tiktoken_ruby'
 require 'base64'
 require 'tempfile'
 require 'shellwords'
-require 'set'
 require_relative 'version'
 require_relative 'operations'
 
@@ -139,7 +138,8 @@ module Ruly
         end
 
         # Process sources and separate command files and bin files
-        local_sources, command_files, bin_files, skill_files = process_sources_for_squash(sources, agent, recipe_config, options)
+        local_sources, command_files, bin_files, skill_files = process_sources_for_squash(sources, agent,
+                                                                                          recipe_config, options)
 
         if dry_run
           puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
@@ -761,17 +761,16 @@ module Ruly
     end
 
     desc 'mcp [SERVERS...]', 'Generate .mcp.json with specified MCP servers'
-    option :append, aliases: '-a', default: false, type: :boolean,
-                    desc: 'Append to existing .mcp.json instead of overwriting'
-    option :recipe, aliases: '-r', type: :string,
-                    desc: 'Use MCP servers from specified recipe'
+    option :append, aliases: '-a', default: false, desc: 'Append to existing .mcp.json instead of overwriting',
+                    type: :boolean
+    option :recipe, aliases: '-r', desc: 'Use MCP servers from specified recipe', type: :string
     def mcp(*servers)
       mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
 
       # Check if config file exists
       unless File.exist?(mcp_config_file)
-        puts "❌ Error: ~/.config/ruly/mcp.json not found"
-        puts "   Create this file with your MCP server definitions."
+        puts '❌ Error: ~/.config/ruly/mcp.json not found'
+        puts '   Create this file with your MCP server definitions.'
         return
       end
 
@@ -790,9 +789,7 @@ module Ruly
         end
 
         recipe_servers = recipe_config['mcp_servers'] || []
-        if recipe_servers.empty?
-          puts "⚠️  Warning: Recipe '#{options[:recipe]}' has no MCP servers defined"
-        end
+        puts "⚠️  Warning: Recipe '#{options[:recipe]}' has no MCP servers defined" if recipe_servers.empty?
       end
 
       # Combine explicit servers with recipe servers
@@ -800,9 +797,9 @@ module Ruly
 
       # Check if we have any servers to add
       if all_requested.empty?
-        puts "❌ Error: No servers specified"
-        puts "   Usage: ruly mcp server1 server2 ..."
-        puts "   Or:    ruly mcp -r <recipe>"
+        puts '❌ Error: No servers specified'
+        puts '   Usage: ruly mcp server1 server2 ...'
+        puts '   Or:    ruly mcp -r <recipe>'
         return
       end
 
@@ -823,20 +820,18 @@ module Ruly
 
       # Load existing .mcp.json if append mode
       existing_settings = {}
-      if options[:append] && File.exist?('.mcp.json')
-        existing_settings = JSON.parse(File.read('.mcp.json'))
-      end
+      existing_settings = JSON.parse(File.read('.mcp.json')) if options[:append] && File.exist?('.mcp.json')
 
       # Merge or create mcpServers
       existing_servers = existing_settings['mcpServers'] || {}
       merged_servers = existing_servers.merge(selected_servers)
 
       # Write output
-      output = { 'mcpServers' => merged_servers }
+      output = {'mcpServers' => merged_servers}
       File.write('.mcp.json', JSON.pretty_generate(output))
 
       if selected_servers.empty?
-        puts "⚠️  No valid servers found, created empty .mcp.json"
+        puts '⚠️  No valid servers found, created empty .mcp.json'
       elsif options[:append]
         puts "🔌 Appended #{selected_servers.size} server(s) to .mcp.json"
       else
@@ -847,7 +842,8 @@ module Ruly
     end
 
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
-    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path (default: rules/stats.md)', type: :string
+    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path (default: rules/stats.md)',
+                    type: :string
     def stats(recipe_name = nil)
       # Collect sources and resolve paths
       sources = if recipe_name
@@ -858,12 +854,12 @@ module Ruly
                 end
 
       # Resolve file paths for the operation
-      resolved_sources = sources.map do |source|
+      resolved_sources = sources.filter_map do |source|
         next source unless source[:type] == 'local'
 
         resolved_path = find_rule_file(source[:path])
         source.merge(path: resolved_path) if resolved_path
-      end.compact
+      end
 
       puts "📊 Analyzing #{resolved_sources.size} files..."
 
@@ -872,10 +868,10 @@ module Ruly
       output_file = File.join(rules_dir, output_file) if output_file == 'stats.md'
 
       result = Operations::Stats.call(
-        sources: resolved_sources,
-        output_file: output_file,
-        recipes_file: recipes_file,
-        rules_dir: rules_dir
+        output_file:,
+        recipes_file:,
+        rules_dir:,
+        sources: resolved_sources
       )
 
       if result[:success]
@@ -1334,72 +1330,6 @@ module Ruly
       {files: [], remote: []}
     end
 
-    # Extract require_shell_commands from frontmatter
-    # @param content [String] The file content with potential frontmatter
-    # @return [Array<String>] List of required shell commands
-    def extract_require_shell_commands_from_frontmatter(content)
-      return [] unless content.start_with?('---')
-
-      parts = content.split(/^---\s*$/, 3)
-      return [] if parts.length < 3
-
-      frontmatter = YAML.safe_load(parts[1])
-      commands = frontmatter&.dig('require_shell_commands')
-      return [] unless commands
-
-      # Handle both array and single string
-      Array(commands)
-    rescue StandardError
-      []
-    end
-
-    # Check if a shell command is available in PATH and executable
-    # @param command [String] The command name to check
-    # @return [Boolean] true if command is available and executable
-    def check_shell_command_available(command)
-      # Use 'which' to find the command in PATH
-      system("which #{command.shellescape} > /dev/null 2>&1")
-    end
-
-    # Collect all require_shell_commands from sources
-    # @param sources [Array<Hash>] Array of source hashes
-    # @return [Array<String>] Unique list of required commands
-    def collect_required_shell_commands(sources)
-      commands = Set.new
-
-      sources.each do |source|
-        next unless source[:type] == 'local'
-
-        file_path = source[:path]
-        file_path = find_rule_file(file_path) unless File.exist?(file_path)
-        next unless file_path && File.exist?(file_path)
-
-        content = File.read(file_path, encoding: 'UTF-8')
-        cmds = extract_require_shell_commands_from_frontmatter(content)
-        commands.merge(cmds)
-      end
-
-      commands.to_a
-    end
-
-    # Check which required shell commands are available
-    # @param commands [Array<String>] List of commands to check
-    # @return [Hash] Hash with :available and :missing arrays
-    def check_required_shell_commands(commands)
-      available = []
-      missing = []
-
-      commands.each do |cmd|
-        if check_shell_command_available(cmd)
-          available << cmd
-        else
-          missing << cmd
-        end
-      end
-
-      { available: available, missing: missing }
-    end
-
     # Collect local script files and add to script_files hash
     def collect_local_scripts(script_paths, source_path, script_files)
       script_paths.each do |script_path|
@@ -1437,6 +1367,84 @@ module Ruly
       else
         url
       end
+    end
+
+    # Build a mapping from absolute script paths to relative filenames
+    # Used for rewriting references in the squashed output
+    def build_script_mappings(script_files)
+      mappings = {}
+
+      (script_files[:local] || []).each do |script|
+        mappings[script[:source_path]] = script[:relative_path]
+      end
+
+      mappings
+    end
+
+    # Collect all require_shell_commands from sources
+    # @param sources [Array<Hash>] Array of source hashes
+    # @return [Array<String>] Unique list of required commands
+    def collect_required_shell_commands(sources)
+      commands = Set.new
+
+      sources.each do |source|
+        next unless source[:type] == 'local'
+
+        file_path = source[:path]
+        file_path = find_rule_file(file_path) unless File.exist?(file_path)
+        next unless file_path && File.exist?(file_path)
+
+        content = File.read(file_path, encoding: 'UTF-8')
+        cmds = extract_require_shell_commands_from_frontmatter(content)
+        commands.merge(cmds)
+      end
+
+      commands.to_a
+    end
+
+    # Extract require_shell_commands from frontmatter
+    # @param content [String] The file content with potential frontmatter
+    # @return [Array<String>] List of required shell commands
+    def extract_require_shell_commands_from_frontmatter(content)
+      return [] unless content.start_with?('---')
+
+      parts = content.split(/^---\s*$/, 3)
+      return [] if parts.length < 3
+
+      frontmatter = YAML.safe_load(parts[1])
+      commands = frontmatter&.dig('require_shell_commands')
+      return [] unless commands
+
+      # Handle both array and single string
+      Array(commands)
+    rescue StandardError
+      []
+    end
+
+    # Check which required shell commands are available
+    # @param commands [Array<String>] List of commands to check
+    # @return [Hash] Hash with :available and :missing arrays
+    def check_required_shell_commands(commands)
+      available = []
+      missing = []
+
+      commands.each do |cmd|
+        if check_shell_command_available(cmd)
+          available << cmd
+        else
+          missing << cmd
+        end
+      end
+
+      {available:, missing:}
+    end
+
+    # Check if a shell command is available in PATH and executable
+    # @param command [String] The command name to check
+    # @return [Boolean] true if command is available and executable
+    def check_shell_command_available(command)
+      # Use 'which' to find the command in PATH
+      system("which #{command.shellescape} > /dev/null 2>&1")
     end
 
     def check_cache(recipe_name, agent)
@@ -1533,23 +1541,7 @@ module Ruly
       end
     end
 
-    def save_skill_files(skill_files)
-      return if skill_files.empty?
-
-      skill_files.each do |file|
-        # Extract skill name from path: /rules/skills/deploy-to-production.md -> deploy-to-production
-        skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
-
-        # Create .claude/skills/{name}/ directory
-        skill_dir = ".claude/skills/#{skill_name}"
-        FileUtils.mkdir_p(skill_dir)
-
-        # Write content to SKILL.md
-        File.write(File.join(skill_dir, 'SKILL.md'), file[:content])
-      end
-    end
-
-    def get_command_relative_path(file_path, omit_prefix = nil) # rubocop:disable Metrics/MethodLength
+    def get_command_relative_path(file_path, omit_prefix = nil)
       if file_path.include?('/commands/')
         # Split on /commands/ to get everything before and after
         parts = file_path.split('/commands/')
@@ -1588,9 +1580,7 @@ module Ruly
         end
 
         # Apply omit_command_prefix if specified (string or array)
-        if omit_prefix
-          result_path = apply_omit_prefix(result_path, after_commands, omit_prefix)
-        end
+        result_path = apply_omit_prefix(result_path, after_commands, omit_prefix) if omit_prefix
 
         result_path
       else
@@ -1684,10 +1674,10 @@ module Ruly
         # Process the source
         context = {
           agent: agent, # rubocop:disable Style/HashSyntax
+          keep_frontmatter: options[:front_matter],
           prefetched_content: prefetched_content, # rubocop:disable Style/HashSyntax
           processed_files: processed_files, # rubocop:disable Style/HashSyntax
-          sources_to_process: sources_to_process, # rubocop:disable Style/HashSyntax
-          keep_frontmatter: options[:front_matter] # rubocop:disable Style/HashSyntax
+          sources_to_process: sources_to_process # rubocop:disable Style/HashSyntax
         }
         result = process_single_source_with_requires(source, index, sources.length + index, context)
 
@@ -1714,6 +1704,10 @@ module Ruly
       puts if verbose?
 
       [local_sources, command_files, bin_files, skill_files]
+    end
+
+    def verbose?
+      options[:verbose] || ENV.fetch('DEBUG', nil)
     end
 
     def prefetch_remote_files(sources)
@@ -1962,7 +1956,7 @@ module Ruly
         if verbose?
           puts ' ❌ not found'
         else
-          $stderr.puts "  ⚠️  File not found: #{source[:path]}"
+          warn "  ⚠️  File not found: #{source[:path]}"
         end
         nil
       end
@@ -1984,9 +1978,7 @@ module Ruly
         # Extract Claude Code directives to preserve
         claude_directives = {}
         %w[name description permissionMode allowed_tools model].each do |key|
-          if frontmatter =~ /^#{key}:\s*(.+)$/
-            claude_directives[key] = Regexp.last_match(1).strip
-          end
+          claude_directives[key] = Regexp.last_match(1).strip if frontmatter =~ /^#{key}:\s*(.+)$/
         end
 
         # If we have Claude Code directives, keep only those
@@ -2134,7 +2126,7 @@ module Ruly
         if verbose?
           puts ' ❌ failed'
         else
-          $stderr.puts "  ⚠️  Failed to fetch: #{source[:path]}"
+          warn "  ⚠️  Failed to fetch: #{source[:path]}"
         end
         nil
       end
@@ -2250,42 +2242,6 @@ module Ruly
       required_sources
     end
 
-    def resolve_skills_for_source(source, content, processed_files)
-      frontmatter, = parse_frontmatter(content)
-      skills = frontmatter['skills'] || []
-
-      return [] if skills.empty?
-
-      skill_sources = []
-
-      skills.each do |skill_path|
-        # Resolve the path based on the source context
-        resolved_source = resolve_required_path(source, skill_path)
-
-        # VALIDATE: skill file must exist (unlike requires which silently skips)
-        unless resolved_source
-          raise Ruly::Error, "Skill file not found: '#{skill_path}' referenced from '#{source[:path]}'"
-        end
-
-        # VALIDATE: resolved file must be in a /skills/ directory
-        resolved_full_path = find_rule_file(resolved_source[:path])
-        unless resolved_full_path && resolved_full_path.include?('/skills/')
-          raise Ruly::Error,
-                "Skill reference '#{skill_path}' must be in a /skills/ directory (resolved to '#{resolved_source[:path]}')"
-        end
-
-        # Check if already processed (deduplication)
-        source_key = get_source_key(resolved_source)
-        next if processed_files.include?(source_key)
-
-        # Mark as from skills resolution
-        resolved_source[:from_skills] = true
-        skill_sources << resolved_source
-      end
-
-      skill_sources
-    end
-
     def resolve_required_path(source, required_path)
       if source[:type] == 'local'
         resolve_local_require(source[:path], required_path)
@@ -2390,6 +2346,42 @@ module Ruly
         end
         parts
       end.join('/')
+    end
+
+    def resolve_skills_for_source(source, content, processed_files)
+      frontmatter, = parse_frontmatter(content)
+      skills = frontmatter['skills'] || []
+
+      return [] if skills.empty?
+
+      skill_sources = []
+
+      skills.each do |skill_path|
+        # Resolve the path based on the source context
+        resolved_source = resolve_required_path(source, skill_path)
+
+        # VALIDATE: skill file must exist (unlike requires which silently skips)
+        unless resolved_source
+          raise Ruly::Error, "Skill file not found: '#{skill_path}' referenced from '#{source[:path]}'"
+        end
+
+        # VALIDATE: resolved file must be in a /skills/ directory
+        resolved_full_path = find_rule_file(resolved_source[:path])
+        unless resolved_full_path&.include?('/skills/')
+          raise Ruly::Error,
+                "Skill reference '#{skill_path}' must be in a /skills/ directory (resolved to '#{resolved_source[:path]}')"
+        end
+
+        # Check if already processed (deduplication)
+        source_key = get_source_key(resolved_source)
+        next if processed_files.include?(source_key)
+
+        # Mark as from skills resolution
+        resolved_source[:from_skills] = true
+        skill_sources << resolved_source
+      end
+
+      skill_sources
     end
 
     def copy_bin_files(bin_files)
@@ -2615,6 +2607,21 @@ module Ruly
       'Command description not available'
     end
 
+    # Rewrite absolute script paths to relative .claude/scripts/ paths
+    # @param content [String] The content to rewrite
+    # @param script_mappings [Hash] Map of absolute path => relative filename
+    # @return [String] Content with rewritten paths
+    def rewrite_script_references(content, script_mappings)
+      result = content.dup
+
+      script_mappings.each do |abs_path, relative_path|
+        # Replace absolute path with .claude/scripts/filename
+        result.gsub!(abs_path, ".claude/scripts/#{relative_path}")
+      end
+
+      result
+    end
+
     def add_anchor_ids_to_content(content, source_path)
       # Add HTML anchor tags before headers to make them linkable
       # This ensures the TOC links work correctly
@@ -2737,6 +2744,60 @@ module Ruly
       FileUtils.cp(output_file, cache_file)
     end
 
+    def save_skill_files(skill_files)
+      return if skill_files.empty?
+
+      skill_files.each do |file|
+        # Extract skill name from path: /rules/skills/deploy-to-production.md -> deploy-to-production
+        skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
+
+        # Create .claude/skills/{name}/ directory
+        skill_dir = ".claude/skills/#{skill_name}"
+        FileUtils.mkdir_p(skill_dir)
+
+        # Write content to SKILL.md
+        File.write(File.join(skill_dir, 'SKILL.md'), file[:content])
+      end
+    end
+
+    def collect_mcp_servers_from_sources(local_sources)
+      servers = []
+
+      local_sources.each do |source|
+        content = source[:original_content] || source[:content]
+        next unless content
+
+        frontmatter, = parse_frontmatter(content)
+        next unless frontmatter.is_a?(Hash) && frontmatter['mcp_servers'].is_a?(Array)
+
+        servers.concat(frontmatter['mcp_servers'])
+      end
+
+      servers.uniq
+    end
+
+    def collect_all_mcp_servers(recipe_config, visited = Set.new)
+      servers = Array(recipe_config['mcp_servers']).dup
+
+      return servers unless recipe_config['subagents'].is_a?(Array)
+
+      recipes = load_all_recipes
+
+      recipe_config['subagents'].each do |subagent|
+        recipe_name = subagent['recipe']
+        next unless recipe_name
+        next if visited.include?(recipe_name)
+
+        visited.add(recipe_name)
+        subagent_recipe = recipes[recipe_name]
+        next unless subagent_recipe
+
+        servers.concat(collect_all_mcp_servers(subagent_recipe, visited))
+      end
+
+      servers.uniq
+    end
+
     def update_mcp_settings(recipe_config = nil, agent = 'claude') # rubocop:disable Metrics/MethodLength
       require 'yaml'
       require 'json'
@@ -2836,45 +2897,7 @@ module Ruly
       nil
     end
 
-    def collect_all_mcp_servers(recipe_config, visited = Set.new)
-      servers = Array(recipe_config['mcp_servers']).dup
-
-      return servers unless recipe_config['subagents'].is_a?(Array)
-
-      recipes = load_all_recipes
-
-      recipe_config['subagents'].each do |subagent|
-        recipe_name = subagent['recipe']
-        next unless recipe_name
-        next if visited.include?(recipe_name)
-
-        visited.add(recipe_name)
-        subagent_recipe = recipes[recipe_name]
-        next unless subagent_recipe
-
-        servers.concat(collect_all_mcp_servers(subagent_recipe, visited))
-      end
-
-      servers.uniq
-    end
-
-    def collect_mcp_servers_from_sources(local_sources)
-      servers = []
-
-      local_sources.each do |source|
-        content = source[:original_content] || source[:content]
-        next unless content
-
-        frontmatter, = parse_frontmatter(content)
-        next unless frontmatter.is_a?(Hash) && frontmatter['mcp_servers'].is_a?(Array)
-
-        servers.concat(frontmatter['mcp_servers'])
-      end
-
-      servers.uniq
-    end
-
-    def process_subagents(recipe_config, parent_recipe_name, visited: Set.new, top_level: true)
+    def process_subagents(recipe_config, parent_recipe_name, top_level: true, visited: Set.new)
       return unless recipe_config['subagents'].is_a?(Array)
 
       puts "\n🤖 Processing subagents..." if top_level
@@ -2911,16 +2934,16 @@ module Ruly
 
         # Reject subagent recipes that have their own subagents (nested subagents)
         if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents'].is_a?(Array) && subagent_recipe['subagents'].any?
-          nested_names = subagent_recipe['subagents'].map { |s| s['name'] }.compact.join(', ')
+          nested_names = subagent_recipe['subagents'].filter_map { |s| s['name'] }.join(', ')
           raise Ruly::Error,
                 "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
-                "Claude Code subagents cannot spawn other subagents. " \
+                'Claude Code subagents cannot spawn other subagents. ' \
                 "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
         end
 
         # Generate the agent file
         generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
-                            subagent_config: subagent, parent_recipe_config: recipe_config)
+                            parent_recipe_config: recipe_config, subagent_config: subagent)
         generated_count += 1
       end
 
@@ -2931,8 +2954,8 @@ module Ruly
       puts "⚠️  Warning: Could not process subagents: #{e.message}"
     end
 
-    def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, subagent_config: {},
-                             parent_recipe_config: {})
+    def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, parent_recipe_config: {},
+                            subagent_config: {})
       agent_file = ".claude/agents/#{agent_name}.md"
       local_sources, command_files, skill_files = load_agent_sources(recipe_name, recipe_config)
 
@@ -2944,18 +2967,11 @@ module Ruly
       save_skill_files(skill_files) unless skill_files.empty?
 
       context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-                                    subagent_config:, parent_recipe_config:, mcp_servers:, skill_names:)
+                                    mcp_servers:, parent_recipe_config:, skill_names:, subagent_config:)
       write_agent_file(agent_file, context)
       save_subagent_commands(command_files, agent_name, recipe_config) unless command_files.empty?
     rescue StandardError => e
       puts "    ⚠️  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
-    end
-
-    def collect_agent_mcp_servers(recipe_config, local_sources)
-      servers = []
-      servers.concat(recipe_config['mcp_servers']) if recipe_config['mcp_servers'].is_a?(Array)
-      servers.concat(collect_mcp_servers_from_sources(local_sources))
-      servers.uniq
     end
 
     def load_agent_sources(recipe_name, recipe_config)
@@ -2965,12 +2981,19 @@ module Ruly
       [local_sources, command_files, skill_files]
     end
 
+    def collect_agent_mcp_servers(recipe_config, local_sources)
+      servers = []
+      servers.concat(recipe_config['mcp_servers']) if recipe_config['mcp_servers'].is_a?(Array)
+      servers.concat(collect_mcp_servers_from_sources(local_sources))
+      servers.uniq
+    end
+
     def extract_skill_names(skill_files)
       skill_files.map { |file| file[:path].split('/skills/').last.sub(/\.md$/, '') }
     end
 
     def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-                             subagent_config: {}, parent_recipe_config: {}, mcp_servers: [], skill_names: [])
+                            mcp_servers: [], parent_recipe_config: {}, skill_names: [], subagent_config: {})
       {
         agent_name:,
         description: recipe_config['description'] || "Subagent for #{recipe_name}",
@@ -3169,33 +3192,6 @@ module Ruly
       fetched_scripts
     end
 
-    # Build a mapping from absolute script paths to relative filenames
-    # Used for rewriting references in the squashed output
-    def build_script_mappings(script_files)
-      mappings = {}
-
-      (script_files[:local] || []).each do |script|
-        mappings[script[:source_path]] = script[:relative_path]
-      end
-
-      mappings
-    end
-
-    # Rewrite absolute script paths to relative .claude/scripts/ paths
-    # @param content [String] The content to rewrite
-    # @param script_mappings [Hash] Map of absolute path => relative filename
-    # @return [String] Content with rewritten paths
-    def rewrite_script_references(content, script_mappings)
-      result = content.dup
-
-      script_mappings.each do |abs_path, relative_path|
-        # Replace absolute path with .claude/scripts/filename
-        result.gsub!(abs_path, ".claude/scripts/#{relative_path}")
-      end
-
-      result
-    end
-
     def cached_file_count(output_file)
       # Count the number of sections in the output file
       return 0 unless File.exist?(output_file)
@@ -3205,10 +3201,6 @@ module Ruly
     rescue StandardError
       # If we can't read the file for any reason, return 0
       0
-    end
-
-    def verbose?
-      options[:verbose] || ENV['DEBUG']
     end
 
     def print_summary(mode, output_file, file_count)

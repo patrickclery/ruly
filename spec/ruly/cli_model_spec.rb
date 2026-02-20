@@ -35,16 +35,16 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when subagent entry has model' do
       before do
         recipes_content = {
+          'child-recipe' => {
+            'description' => 'Child recipe',
+            'files' => ['rules/test.md']
+          },
           'parent' => {
             'description' => 'Parent recipe',
             'files' => ['rules/test.md'],
             'subagents' => [
-              { 'name' => 'child_agent', 'recipe' => 'child-recipe', 'model' => 'haiku' }
+              {'model' => 'haiku', 'name' => 'child_agent', 'recipe' => 'child-recipe'}
             ]
-          },
-          'child-recipe' => {
-            'description' => 'Child recipe',
-            'files' => ['rules/test.md']
           }
         }
 
@@ -64,17 +64,17 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when recipe has model but subagent does not' do
       before do
         recipes_content = {
-          'parent' => {
-            'description' => 'Parent recipe',
-            'model' => 'sonnet',
-            'files' => ['rules/test.md'],
-            'subagents' => [
-              { 'name' => 'child_agent', 'recipe' => 'child-recipe' }
-            ]
-          },
           'child-recipe' => {
             'description' => 'Child recipe',
             'files' => ['rules/test.md']
+          },
+          'parent' => {
+            'description' => 'Parent recipe',
+            'files' => ['rules/test.md'],
+            'model' => 'sonnet',
+            'subagents' => [
+              {'name' => 'child_agent', 'recipe' => 'child-recipe'}
+            ]
           }
         }
 
@@ -94,17 +94,17 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when subagent model overrides recipe model' do
       before do
         recipes_content = {
-          'parent' => {
-            'description' => 'Parent recipe',
-            'model' => 'sonnet',
-            'files' => ['rules/test.md'],
-            'subagents' => [
-              { 'name' => 'child_agent', 'recipe' => 'child-recipe', 'model' => 'haiku' }
-            ]
-          },
           'child-recipe' => {
             'description' => 'Child recipe',
             'files' => ['rules/test.md']
+          },
+          'parent' => {
+            'description' => 'Parent recipe',
+            'files' => ['rules/test.md'],
+            'model' => 'sonnet',
+            'subagents' => [
+              {'model' => 'haiku', 'name' => 'child_agent', 'recipe' => 'child-recipe'}
+            ]
           }
         }
 
@@ -125,16 +125,16 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when neither subagent nor recipe has model' do
       before do
         recipes_content = {
+          'child-recipe' => {
+            'description' => 'Child recipe',
+            'files' => ['rules/test.md']
+          },
           'parent' => {
             'description' => 'Parent recipe',
             'files' => ['rules/test.md'],
             'subagents' => [
-              { 'name' => 'child_agent', 'recipe' => 'child-recipe' }
+              {'name' => 'child_agent', 'recipe' => 'child-recipe'}
             ]
-          },
-          'child-recipe' => {
-            'description' => 'Child recipe',
-            'files' => ['rules/test.md']
           }
         }
 

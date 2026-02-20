@@ -61,12 +61,12 @@ RSpec.describe Ruly::CLI do
     it 'returns true for commands that exist in PATH' do
       # 'ls' should exist on all systems
       result = cli.send(:check_shell_command_available, 'ls')
-      expect(result).to be true
+      expect(result).to be(true)
     end
 
     it 'returns false for commands that do not exist' do
       result = cli.send(:check_shell_command_available, 'nonexistent-command-xyz-123')
-      expect(result).to be false
+      expect(result).to be(false)
     end
 
     it 'returns true for executable scripts in PATH' do
@@ -76,12 +76,12 @@ RSpec.describe Ruly::CLI do
         File.chmod(0o755, script_path)
 
         # Temporarily add to PATH
-        original_path = ENV['PATH']
+        original_path = ENV.fetch('PATH', nil)
         ENV['PATH'] = "#{tmpdir}:#{original_path}"
 
         begin
           result = cli.send(:check_shell_command_available, 'test-script.sh')
-          expect(result).to be true
+          expect(result).to be(true)
         ensure
           ENV['PATH'] = original_path
         end
@@ -94,12 +94,12 @@ RSpec.describe Ruly::CLI do
         File.write(script_path, '#!/bin/bash\necho "test"')
         File.chmod(0o644, script_path) # Not executable
 
-        original_path = ENV['PATH']
+        original_path = ENV.fetch('PATH', nil)
         ENV['PATH'] = "#{tmpdir}:#{original_path}"
 
         begin
           result = cli.send(:check_shell_command_available, 'non-executable-script.sh')
-          expect(result).to be false
+          expect(result).to be(false)
         ensure
           ENV['PATH'] = original_path
         end
@@ -141,9 +141,9 @@ RSpec.describe Ruly::CLI do
         MD
 
         sources = [
-          { type: 'local', path: rule1 },
-          { type: 'local', path: rule2 },
-          { type: 'local', path: rule3 }
+          {path: rule1, type: 'local'},
+          {path: rule2, type: 'local'},
+          {path: rule3, type: 'local'}
         ]
 
         commands = cli.send(:collect_required_shell_commands, sources)
@@ -174,8 +174,8 @@ RSpec.describe Ruly::CLI do
         MD
 
         sources = [
-          { type: 'local', path: rule1 },
-          { type: 'local', path: rule2 }
+          {path: rule1, type: 'local'},
+          {path: rule2, type: 'local'}
         ]
 
         commands = cli.send(:collect_required_shell_commands, sources)
@@ -192,7 +192,7 @@ RSpec.describe Ruly::CLI do
         File.write(script_path, '#!/bin/bash\necho "test"')
         File.chmod(0o755, script_path)
 
-        original_path = ENV['PATH']
+        original_path = ENV.fetch('PATH', nil)
         ENV['PATH'] = "#{tmpdir}:#{original_path}"
 
         begin
@@ -261,7 +261,7 @@ RSpec.describe Ruly::CLI do
           # Test Rule Content
         MD
 
-        sources = [{ type: 'local', path: rule_file }]
+        sources = [{path: rule_file, type: 'local'}]
 
         # Collect commands
         commands = cli.send(:collect_required_shell_commands, sources)
@@ -293,11 +293,11 @@ RSpec.describe Ruly::CLI do
           # Test Rule Content
         MD
 
-        original_path = ENV['PATH']
+        original_path = ENV.fetch('PATH', nil)
         ENV['PATH'] = "#{tmpdir}:#{original_path}"
 
         begin
-          sources = [{ type: 'local', path: rule_file }]
+          sources = [{path: rule_file, type: 'local'}]
           commands = cli.send(:collect_required_shell_commands, sources)
           result = cli.send(:check_required_shell_commands, commands)
 

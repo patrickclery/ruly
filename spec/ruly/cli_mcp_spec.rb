@@ -15,30 +15,30 @@ RSpec.describe Ruly::CLI do
   # Sample MCP server configurations
   let(:mcp_servers_config) do
     {
+      'Ref' => {
+        'args' => ['-y', '@anthropic/mcp-ref'],
+        'command' => 'npx'
+      },
       'atlassian' => {
-        'command' => 'npx',
+        '_description' => 'Atlassian integration',
         'args' => ['-y', '@anthropic/mcp-atlassian'],
-        '_description' => 'Atlassian integration'
-      },
-      'teams' => {
-        'command' => 'npx',
-        'args' => ['-y', '@anthropic/mcp-teams']
-      },
-      'playwright' => {
-        'command' => 'npx',
-        'args' => ['-y', '@anthropic/mcp-playwright']
-      },
-      'task-master-ai' => {
-        'command' => 'node',
-        'args' => ['/path/to/task-master']
+        'command' => 'npx'
       },
       'mattermost' => {
-        'command' => 'npx',
-        'args' => ['-y', '@anthropic/mcp-mattermost']
+        'args' => ['-y', '@anthropic/mcp-mattermost'],
+        'command' => 'npx'
       },
-      'Ref' => {
-        'command' => 'npx',
-        'args' => ['-y', '@anthropic/mcp-ref']
+      'playwright' => {
+        'args' => ['-y', '@anthropic/mcp-playwright'],
+        'command' => 'npx'
+      },
+      'task-master-ai' => {
+        'args' => ['/path/to/task-master'],
+        'command' => 'node'
+      },
+      'teams' => {
+        'args' => ['-y', '@anthropic/mcp-teams'],
+        'command' => 'npx'
       }
     }
   end
@@ -62,7 +62,7 @@ RSpec.describe Ruly::CLI do
 
   around do |example|
     original_dir = Dir.pwd
-    original_home = ENV.fetch('HOME', nil)
+    original_home = Dir.home
 
     begin
       # Set up fake HOME for mcp.json lookup
@@ -87,7 +87,7 @@ RSpec.describe Ruly::CLI do
       it 'creates .mcp.json with specified servers' do
         cli.mcp('atlassian', 'teams')
 
-        expect(File.exist?('.mcp.json')).to be true
+        expect(File.exist?('.mcp.json')).to be(true)
         content = JSON.parse(File.read('.mcp.json'))
         expect(content['mcpServers'].keys).to contain_exactly('atlassian', 'teams')
       end
@@ -123,14 +123,14 @@ RSpec.describe Ruly::CLI do
         # Create existing .mcp.json
         existing = {
           'mcpServers' => {
-            'playwright' => { 'command' => 'existing', 'type' => 'stdio' }
+            'playwright' => {'command' => 'existing', 'type' => 'stdio'}
           }
         }
         File.write('.mcp.json', JSON.pretty_generate(existing))
       end
 
       it 'merges with existing .mcp.json' do
-        cli.options = { append: true }
+        cli.options = {append: true}
         cli.mcp('atlassian')
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -138,7 +138,7 @@ RSpec.describe Ruly::CLI do
       end
 
       it 'overwrites existing server if same name' do
-        cli.options = { append: true }
+        cli.options = {append: true}
         cli.mcp('playwright')
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -152,7 +152,7 @@ RSpec.describe Ruly::CLI do
       end
 
       it 'loads MCP servers from recipe' do
-        cli.options = { recipe: 'test-recipe' }
+        cli.options = {recipe: 'test-recipe'}
         cli.mcp
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -160,12 +160,12 @@ RSpec.describe Ruly::CLI do
       end
 
       it 'warns when recipe has no mcp_servers' do
-        cli.options = { recipe: 'test-recipe-no-mcp' }
+        cli.options = {recipe: 'test-recipe-no-mcp'}
         expect { cli.mcp }.to output(/no MCP servers/i).to_stdout
       end
 
       it 'warns when recipe is not found' do
-        cli.options = { recipe: 'nonexistent-recipe' }
+        cli.options = {recipe: 'nonexistent-recipe'}
         expect { cli.mcp }.to output(/not found/i).to_stdout
       end
     end
@@ -176,14 +176,14 @@ RSpec.describe Ruly::CLI do
 
         existing = {
           'mcpServers' => {
-            'playwright' => { 'command' => 'existing', 'type' => 'stdio' }
+            'playwright' => {'command' => 'existing', 'type' => 'stdio'}
           }
         }
         File.write('.mcp.json', JSON.pretty_generate(existing))
       end
 
       it 'appends recipe servers to existing .mcp.json' do
-        cli.options = { recipe: 'test-recipe', append: true }
+        cli.options = {append: true, recipe: 'test-recipe'}
         cli.mcp
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -197,7 +197,7 @@ RSpec.describe Ruly::CLI do
       end
 
       it 'combines explicit servers with recipe servers' do
-        cli.options = { recipe: 'test-recipe' }
+        cli.options = {recipe: 'test-recipe'}
         cli.mcp('playwright')
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -227,15 +227,6 @@ RSpec.describe Ruly::CLI do
     let(:recipes_with_subagents) do
       {
         'recipes' => {
-          'parent' => {
-            'description' => 'Parent recipe',
-            'files' => [],
-            'mcp_servers' => ['playwright'],
-            'subagents' => [
-              { 'name' => 'child_a', 'recipe' => 'child-a' },
-              { 'name' => 'child_b', 'recipe' => 'child-b' }
-            ]
-          },
           'child-a' => {
             'description' => 'Child A with MCP',
             'files' => [],
@@ -246,13 +237,22 @@ RSpec.describe Ruly::CLI do
             'files' => [],
             'mcp_servers' => ['atlassian'],
             'subagents' => [
-              { 'name' => 'grandchild', 'recipe' => 'grandchild' }
+              {'name' => 'grandchild', 'recipe' => 'grandchild'}
             ]
           },
           'grandchild' => {
             'description' => 'Grandchild with MCP',
             'files' => [],
             'mcp_servers' => ['Ref']
+          },
+          'parent' => {
+            'description' => 'Parent recipe',
+            'files' => [],
+            'mcp_servers' => ['playwright'],
+            'subagents' => [
+              {'name' => 'child_a', 'recipe' => 'child-a'},
+              {'name' => 'child_b', 'recipe' => 'child-b'}
+            ]
           }
         }
       }
@@ -300,13 +300,13 @@ RSpec.describe Ruly::CLI do
             'description' => 'Recipe A',
             'files' => [],
             'mcp_servers' => ['teams'],
-            'subagents' => [{ 'name' => 'b', 'recipe' => 'recipe-b' }]
+            'subagents' => [{'name' => 'b', 'recipe' => 'recipe-b'}]
           },
           'recipe-b' => {
             'description' => 'Recipe B',
             'files' => [],
             'mcp_servers' => ['mattermost'],
-            'subagents' => [{ 'name' => 'a', 'recipe' => 'recipe-a' }]
+            'subagents' => [{'name' => 'a', 'recipe' => 'recipe-a'}]
           }
         }
       }
@@ -324,7 +324,7 @@ RSpec.describe Ruly::CLI do
             'description' => 'Parent',
             'files' => [],
             'mcp_servers' => ['teams'],
-            'subagents' => [{ 'name' => 'missing', 'recipe' => 'nonexistent' }]
+            'subagents' => [{'name' => 'missing', 'recipe' => 'nonexistent'}]
           }
         }
       }
@@ -340,19 +340,19 @@ RSpec.describe Ruly::CLI do
     let(:propagation_recipes) do
       {
         'recipes' => {
-          'parent-no-mcp' => {
-            'description' => 'Parent with no MCP but subagents that have MCP',
-            'files' => [],
-            'subagents' => [
-              { 'name' => 'comms', 'recipe' => 'comms-sub' }
-            ]
-          },
           'comms-sub' => {
             'description' => 'Comms subagent with MCP servers',
             'files' => [],
             'mcp_servers' => %w[teams mattermost],
             'subagents' => [
-              { 'name' => 'teams_dm', 'recipe' => 'teams-dm-sub' }
+              {'name' => 'teams_dm', 'recipe' => 'teams-dm-sub'}
+            ]
+          },
+          'parent-no-mcp' => {
+            'description' => 'Parent with no MCP but subagents that have MCP',
+            'files' => [],
+            'subagents' => [
+              {'name' => 'comms', 'recipe' => 'comms-sub'}
             ]
           },
           'teams-dm-sub' => {

@@ -30,15 +30,15 @@ RSpec.describe Ruly::Operations::Stats do
   describe '.call' do
     context 'with valid sources' do
       it 'returns success with file statistics' do
-        file1 = create_test_file('rules/large.md', '# Large File' + "\n\nContent " * 100)
+        file1 = create_test_file('rules/large.md', "# Large File#{"\n\nContent " * 100}")
         file2 = create_test_file('rules/small.md', '# Small File')
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'}
         ]
 
-        result = described_class.call(sources:, output_file:)
+        result = described_class.call(output_file:, sources:)
 
         expect(result[:success]).to be(true)
         expect(result[:data][:file_count]).to eq(2)
@@ -49,9 +49,9 @@ RSpec.describe Ruly::Operations::Stats do
       it 'generates a markdown file' do
         file1 = create_test_file('rules/test.md', '# Test Content')
 
-        sources = [{ path: file1, type: 'local' }]
+        sources = [{path: file1, type: 'local'}]
 
-        described_class.call(sources:, output_file:)
+        described_class.call(output_file:, sources:)
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -61,15 +61,15 @@ RSpec.describe Ruly::Operations::Stats do
       end
 
       it 'sorts files by token count descending' do
-        large_file = create_test_file('rules/large.md', '# Large' + "\nContent " * 500)
+        large_file = create_test_file('rules/large.md', "# Large#{"\nContent " * 500}")
         small_file = create_test_file('rules/small.md', '# Small')
 
         sources = [
-          { path: small_file, type: 'local' },
-          { path: large_file, type: 'local' }
+          {path: small_file, type: 'local'},
+          {path: large_file, type: 'local'}
         ]
 
-        result = described_class.call(sources:, output_file:)
+        result = described_class.call(output_file:, sources:)
         files = result[:data][:files]
 
         expect(files.first[:tokens]).to be > files.last[:tokens]
@@ -79,9 +79,9 @@ RSpec.describe Ruly::Operations::Stats do
       it 'includes file sizes in the output' do
         file1 = create_test_file('rules/test.md', 'Some test content here')
 
-        sources = [{ path: file1, type: 'local' }]
+        sources = [{path: file1, type: 'local'}]
 
-        described_class.call(sources:, output_file:)
+        described_class.call(output_file:, sources:)
 
         content = File.read(output_file)
         expect(content).to match(/\d+(\.\d+)?\s*(B|KB|MB)/)
@@ -90,7 +90,7 @@ RSpec.describe Ruly::Operations::Stats do
 
     context 'with empty sources' do
       it 'returns success with zero counts' do
-        result = described_class.call(sources: [], output_file:)
+        result = described_class.call(output_file:, sources: [])
 
         expect(result[:success]).to be(true)
         expect(result[:data][:file_count]).to eq(0)
@@ -98,7 +98,7 @@ RSpec.describe Ruly::Operations::Stats do
       end
 
       it 'generates a valid markdown file' do
-        described_class.call(sources: [], output_file:)
+        described_class.call(output_file:, sources: [])
 
         expect(File.exist?(output_file)).to be(true)
         content = File.read(output_file)
@@ -111,11 +111,11 @@ RSpec.describe Ruly::Operations::Stats do
         local_file = create_test_file('rules/local.md', '# Local')
 
         sources = [
-          { path: local_file, type: 'local' },
-          { path: 'https://example.com/remote.md', type: 'remote' }
+          {path: local_file, type: 'local'},
+          {path: 'https://example.com/remote.md', type: 'remote'}
         ]
 
-        result = described_class.call(sources:, output_file:)
+        result = described_class.call(output_file:, sources:)
 
         expect(result[:data][:file_count]).to eq(1)
       end
@@ -126,11 +126,11 @@ RSpec.describe Ruly::Operations::Stats do
         existing_file = create_test_file('rules/exists.md', '# Exists')
 
         sources = [
-          { path: existing_file, type: 'local' },
-          { path: '/nonexistent/file.md', type: 'local' }
+          {path: existing_file, type: 'local'},
+          {path: '/nonexistent/file.md', type: 'local'}
         ]
 
-        result = described_class.call(sources:, output_file:)
+        result = described_class.call(output_file:, sources:)
 
         expect(result[:success]).to be(true)
         expect(result[:data][:file_count]).to eq(1)
@@ -142,8 +142,8 @@ RSpec.describe Ruly::Operations::Stats do
     it 'returns an array of file statistics' do
       file1 = create_test_file('rules/test.md', '# Test')
 
-      sources = [{ path: file1, type: 'local' }]
-      operation = described_class.new(sources:, output_file:)
+      sources = [{path: file1, type: 'local'}]
+      operation = described_class.new(output_file:, sources:)
       stats = operation.build_file_stats
 
       expect(stats).to be_an(Array)
@@ -153,8 +153,8 @@ RSpec.describe Ruly::Operations::Stats do
     it 'calculates tokens using tiktoken' do
       file1 = create_test_file('rules/test.md', 'Hello world')
 
-      sources = [{ path: file1, type: 'local' }]
-      operation = described_class.new(sources:, output_file:)
+      sources = [{path: file1, type: 'local'}]
+      operation = described_class.new(output_file:, sources:)
       stats = operation.build_file_stats
 
       # "Hello world" should be ~2 tokens
@@ -168,9 +168,9 @@ RSpec.describe Ruly::Operations::Stats do
       large_content = 'word ' * 10_000
       large_file = create_test_file('rules/large.md', large_content)
 
-      sources = [{ path: large_file, type: 'local' }]
+      sources = [{path: large_file, type: 'local'}]
 
-      described_class.call(sources:, output_file:)
+      described_class.call(output_file:, sources:)
 
       content = File.read(output_file)
       # Should have comma-formatted numbers
@@ -182,9 +182,9 @@ RSpec.describe Ruly::Operations::Stats do
     it 'formats bytes as B for small files' do
       small_file = create_test_file('rules/tiny.md', 'Hi')
 
-      sources = [{ path: small_file, type: 'local' }]
+      sources = [{path: small_file, type: 'local'}]
 
-      described_class.call(sources:, output_file:)
+      described_class.call(output_file:, sources:)
 
       content = File.read(output_file)
       expect(content).to include(' B')
@@ -194,9 +194,9 @@ RSpec.describe Ruly::Operations::Stats do
       medium_content = 'x' * 2000
       medium_file = create_test_file('rules/medium.md', medium_content)
 
-      sources = [{ path: medium_file, type: 'local' }]
+      sources = [{path: medium_file, type: 'local'}]
 
-      described_class.call(sources:, output_file:)
+      described_class.call(output_file:, sources:)
 
       content = File.read(output_file)
       expect(content).to include(' KB')
@@ -208,7 +208,7 @@ RSpec.describe Ruly::Operations::Stats do
     let(:rules_dir) { File.join(test_dir, 'rules') }
 
     def create_recipes_file(recipes_hash)
-      File.write(recipes_file, YAML.dump({ 'recipes' => recipes_hash }))
+      File.write(recipes_file, YAML.dump({'recipes' => recipes_hash}))
     end
 
     describe '#find_orphaned_files' do
@@ -222,8 +222,8 @@ RSpec.describe Ruly::Operations::Stats do
                                 }
                               })
 
-          sources = [{ path: used_file, type: 'local' }]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          sources = [{path: used_file, type: 'local'}]
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -243,10 +243,10 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: used_file, type: 'local' },
-            { path: orphaned_file, type: 'local' }
+            {path: used_file, type: 'local'},
+            {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -267,10 +267,10 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: file_in_dir, type: 'local' },
-            { path: orphaned_file, type: 'local' }
+            {path: file_in_dir, type: 'local'},
+            {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -290,10 +290,10 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: parent_file, type: 'local' },
-            { path: child_file, type: 'local' }
+            {path: parent_file, type: 'local'},
+            {path: child_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -314,10 +314,10 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: parent_file, type: 'local' },
-            { path: sibling_file, type: 'local' }
+            {path: parent_file, type: 'local'},
+            {path: sibling_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -345,10 +345,10 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: parent_file, type: 'local' },
-            { path: child_file, type: 'local' }
+            {path: parent_file, type: 'local'},
+            {path: child_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -376,11 +376,11 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: parent_file, type: 'local' },
-            { path: sibling_file, type: 'local' },
-            { path: cousin_file, type: 'local' }
+            {path: parent_file, type: 'local'},
+            {path: sibling_file, type: 'local'},
+            {path: cousin_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -408,11 +408,11 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: parent_file, type: 'local' },
-            { path: frontmatter_child, type: 'local' },
-            { path: at_child, type: 'local' }
+            {path: parent_file, type: 'local'},
+            {path: frontmatter_child, type: 'local'},
+            {path: at_child, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -433,11 +433,11 @@ RSpec.describe Ruly::Operations::Stats do
                               })
 
           sources = [
-            { path: file_a, type: 'local' },
-            { path: file_b, type: 'local' },
-            { path: file_c, type: 'local' }
+            {path: file_a, type: 'local'},
+            {path: file_b, type: 'local'},
+            {path: file_c, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -451,14 +451,14 @@ RSpec.describe Ruly::Operations::Stats do
           file2 = create_test_file('rules/file2.md', '# File 2')
 
           sources = [
-            { path: file1, type: 'local' },
-            { path: file2, type: 'local' }
+            {path: file1, type: 'local'},
+            {path: file2, type: 'local'}
           ]
           operation = described_class.new(
-            sources:,
             output_file:,
             recipes_file: '/nonexistent/recipes.yml',
-            rules_dir:
+            rules_dir:,
+            sources:
           )
 
           orphaned = operation.find_orphaned_files
@@ -474,16 +474,16 @@ RSpec.describe Ruly::Operations::Stats do
           orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
 
           create_recipes_file({
-                                'recipe1' => { 'files' => [file1] },
-                                'recipe2' => { 'files' => [file2] }
+                                'recipe1' => {'files' => [file1]},
+                                'recipe2' => {'files' => [file2]}
                               })
 
           sources = [
-            { path: file1, type: 'local' },
-            { path: file2, type: 'local' },
-            { path: orphaned_file, type: 'local' }
+            {path: file1, type: 'local'},
+            {path: file2, type: 'local'},
+            {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -504,11 +504,11 @@ RSpec.describe Ruly::Operations::Stats do
                             })
 
         sources = [
-          { path: used_file, type: 'local' },
-          { path: orphaned_file, type: 'local' }
+          {path: used_file, type: 'local'},
+          {path: orphaned_file, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Orphaned Files')
@@ -521,16 +521,16 @@ RSpec.describe Ruly::Operations::Stats do
         orphan2 = create_test_file('rules/orphan2.md', '# Orphan 2')
 
         create_recipes_file({
-                              'test-recipe' => { 'files' => [used_file] }
+                              'test-recipe' => {'files' => [used_file]}
                             })
 
         sources = [
-          { path: used_file, type: 'local' },
-          { path: orphan1, type: 'local' },
-          { path: orphan2, type: 'local' }
+          {path: used_file, type: 'local'},
+          {path: orphan1, type: 'local'},
+          {path: orphan2, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('2 files not used')
@@ -540,12 +540,12 @@ RSpec.describe Ruly::Operations::Stats do
         used_file = create_test_file('rules/used.md', '# Used file')
 
         create_recipes_file({
-                              'test-recipe' => { 'files' => [used_file] }
+                              'test-recipe' => {'files' => [used_file]}
                             })
 
-        sources = [{ path: used_file, type: 'local' }]
+        sources = [{path: used_file, type: 'local'}]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).not_to include('## Orphaned Files')
@@ -556,15 +556,15 @@ RSpec.describe Ruly::Operations::Stats do
         orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
 
         create_recipes_file({
-                              'test-recipe' => { 'files' => [used_file] }
+                              'test-recipe' => {'files' => [used_file]}
                             })
 
         sources = [
-          { path: used_file, type: 'local' },
-          { path: orphaned_file, type: 'local' }
+          {path: used_file, type: 'local'},
+          {path: orphaned_file, type: 'local'}
         ]
 
-        result = described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        result = described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         expect(result[:data][:orphaned_files]).to contain_exactly(orphaned_file)
         expect(result[:data][:orphaned_count]).to eq(1)
@@ -579,10 +579,10 @@ RSpec.describe Ruly::Operations::Stats do
             file_b = create_test_file('rules/b.md', '# B')
 
             sources = [
-              { path: file_a, type: 'local' },
-              { path: file_b, type: 'local' }
+              {path: file_a, type: 'local'},
+              {path: file_b, type: 'local'}
             ]
-            operation = described_class.new(sources:, output_file:)
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -608,10 +608,10 @@ RSpec.describe Ruly::Operations::Stats do
             MARKDOWN
 
             sources = [
-              { path: file_a, type: 'local' },
-              { path: file_b, type: 'local' }
+              {path: file_a, type: 'local'},
+              {path: file_b, type: 'local'}
             ]
-            operation = described_class.new(sources:, output_file:)
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -630,8 +630,8 @@ RSpec.describe Ruly::Operations::Stats do
               # A
             MARKDOWN
 
-            sources = [{ path: file_a, type: 'local' }]
-            operation = described_class.new(sources:, output_file:)
+            sources = [{path: file_a, type: 'local'}]
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -647,11 +647,11 @@ RSpec.describe Ruly::Operations::Stats do
             file_c = create_test_file('rules/c.md', "@./a.md\n# C")
 
             sources = [
-              { path: file_a, type: 'local' },
-              { path: file_b, type: 'local' },
-              { path: file_c, type: 'local' }
+              {path: file_a, type: 'local'},
+              {path: file_b, type: 'local'},
+              {path: file_c, type: 'local'}
             ]
-            operation = described_class.new(sources:, output_file:)
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -670,12 +670,12 @@ RSpec.describe Ruly::Operations::Stats do
             file_d = create_test_file('rules/d.md', "@./c.md\n# D")
 
             sources = [
-              { path: file_a, type: 'local' },
-              { path: file_b, type: 'local' },
-              { path: file_c, type: 'local' },
-              { path: file_d, type: 'local' }
+              {path: file_a, type: 'local'},
+              {path: file_b, type: 'local'},
+              {path: file_c, type: 'local'},
+              {path: file_d, type: 'local'}
             ]
-            operation = described_class.new(sources:, output_file:)
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -687,8 +687,8 @@ RSpec.describe Ruly::Operations::Stats do
           it 'does not include it in the cycle detection' do
             file_a = create_test_file('rules/a.md', "@./nonexistent.md\n# A")
 
-            sources = [{ path: file_a, type: 'local' }]
-            operation = described_class.new(sources:, output_file:)
+            sources = [{path: file_a, type: 'local'}]
+            operation = described_class.new(output_file:, sources:)
 
             circular = operation.find_circular_dependencies
 
@@ -703,11 +703,11 @@ RSpec.describe Ruly::Operations::Stats do
           file_b = create_test_file('rules/b.md', "@./a.md\n# B")
 
           sources = [
-            { path: file_a, type: 'local' },
-            { path: file_b, type: 'local' }
+            {path: file_a, type: 'local'},
+            {path: file_b, type: 'local'}
           ]
 
-          described_class.call(sources:, output_file:)
+          described_class.call(output_file:, sources:)
 
           content = File.read(output_file, encoding: 'UTF-8')
           expect(content).to include('Circular Dependencies')
@@ -717,9 +717,9 @@ RSpec.describe Ruly::Operations::Stats do
         it 'does not show circular section when no cycles exist' do
           file_a = create_test_file('rules/a.md', '# A')
 
-          sources = [{ path: file_a, type: 'local' }]
+          sources = [{path: file_a, type: 'local'}]
 
-          described_class.call(sources:, output_file:)
+          described_class.call(output_file:, sources:)
 
           content = File.read(output_file)
           expect(content).not_to include('Circular Dependencies')
@@ -730,11 +730,11 @@ RSpec.describe Ruly::Operations::Stats do
           file_b = create_test_file('rules/b.md', "@./a.md\n# B")
 
           sources = [
-            { path: file_a, type: 'local' },
-            { path: file_b, type: 'local' }
+            {path: file_a, type: 'local'},
+            {path: file_b, type: 'local'}
           ]
 
-          result = described_class.call(sources:, output_file:)
+          result = described_class.call(output_file:, sources:)
 
           expect(result[:data][:circular_dependencies].size).to eq(1)
           expect(result[:data][:circular_count]).to eq(1)
@@ -749,17 +749,17 @@ RSpec.describe Ruly::Operations::Stats do
         file3 = create_test_file('rules/file3.md', '# File 3 more content')
 
         create_recipes_file({
-                              'recipe-alpha' => { 'files' => [file1, file2] },
-                              'recipe-beta' => { 'files' => [file2, file3] }
+                              'recipe-alpha' => {'files' => [file1, file2]},
+                              'recipe-beta' => {'files' => [file2, file3]}
                             })
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' },
-          { path: file3, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'},
+          {path: file3, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Recipe: recipe-alpha')
@@ -771,15 +771,15 @@ RSpec.describe Ruly::Operations::Stats do
         file2 = create_test_file('rules/file2.md', 'Much longer content ' * 50)
 
         create_recipes_file({
-                              'test-recipe' => { 'files' => [file1, file2] }
+                              'test-recipe' => {'files' => [file1, file2]}
                             })
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Recipe: test-recipe')
@@ -795,15 +795,15 @@ RSpec.describe Ruly::Operations::Stats do
         file2 = create_test_file('rules/file2.md', 'Content two')
 
         create_recipes_file({
-                              'my-recipe' => { 'files' => [file1, file2] }
+                              'my-recipe' => {'files' => [file1, file2]}
                             })
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         # Should show total tokens for the recipe
@@ -816,15 +816,15 @@ RSpec.describe Ruly::Operations::Stats do
         file2 = create_test_file('rules/subdir/file2.md', '# File 2')
 
         create_recipes_file({
-                              'dir-recipe' => { 'files' => [File.join(test_dir, 'rules', 'subdir/')] }
+                              'dir-recipe' => {'files' => [File.join(test_dir, 'rules', 'subdir/')]}
                             })
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'}
         ]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Recipe: dir-recipe')
@@ -837,16 +837,16 @@ RSpec.describe Ruly::Operations::Stats do
         file2 = create_test_file('rules/file2.md', '# File 2')
 
         create_recipes_file({
-                              'recipe1' => { 'files' => [file1] },
-                              'recipe2' => { 'files' => [file1, file2] }
+                              'recipe1' => {'files' => [file1]},
+                              'recipe2' => {'files' => [file1, file2]}
                             })
 
         sources = [
-          { path: file1, type: 'local' },
-          { path: file2, type: 'local' }
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'}
         ]
 
-        operation = described_class.new(sources:, output_file:, recipes_file:, rules_dir:)
+        operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
 
         # Mock count_tokens to track calls
         call_count = 0
@@ -865,14 +865,14 @@ RSpec.describe Ruly::Operations::Stats do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
         create_recipes_file({
-                              'zebra-recipe' => { 'files' => [file1] },
-                              'alpha-recipe' => { 'files' => [file1] },
-                              'middle-recipe' => { 'files' => [file1] }
+                              'alpha-recipe' => {'files' => [file1]},
+                              'middle-recipe' => {'files' => [file1]},
+                              'zebra-recipe' => {'files' => [file1]}
                             })
 
-        sources = [{ path: file1, type: 'local' }]
+        sources = [{path: file1, type: 'local'}]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         alpha_pos = content.index('## Recipe: alpha-recipe')
@@ -886,9 +886,9 @@ RSpec.describe Ruly::Operations::Stats do
       it 'does not generate recipe sections when no recipes file exists' do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
-        sources = [{ path: file1, type: 'local' }]
+        sources = [{path: file1, type: 'local'}]
 
-        described_class.call(sources:, output_file:)
+        described_class.call(output_file:, sources:)
 
         content = File.read(output_file)
         expect(content).not_to include('## Recipe:')
@@ -898,13 +898,13 @@ RSpec.describe Ruly::Operations::Stats do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
         create_recipes_file({
-                              'valid-recipe' => { 'files' => [file1] },
-                              'empty-recipe' => { 'files' => ['/nonexistent/file.md'] }
+                              'empty-recipe' => {'files' => ['/nonexistent/file.md']},
+                              'valid-recipe' => {'files' => [file1]}
                             })
 
-        sources = [{ path: file1, type: 'local' }]
+        sources = [{path: file1, type: 'local'}]
 
-        described_class.call(sources:, output_file:, recipes_file:, rules_dir:)
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Recipe: valid-recipe')

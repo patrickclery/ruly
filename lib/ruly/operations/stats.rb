@@ -28,20 +28,20 @@ module Ruly
         write_markdown(file_stats, orphaned, circular)
 
         build_result(
-          success: true,
           data: {
+            circular_count: circular.size,
+            circular_dependencies: circular,
             file_count: file_stats.size,
             files: file_stats,
-            output_file:,
-            total_tokens: file_stats.sum { |f| f[:tokens] },
-            orphaned_files: orphaned,
             orphaned_count: orphaned.size,
-            circular_dependencies: circular,
-            circular_count: circular.size
-          }
+            orphaned_files: orphaned,
+            output_file:,
+            total_tokens: file_stats.sum { |f| f[:tokens] }
+          },
+          success: true
         )
       rescue StandardError => e
-        build_result(success: false, error: e.message)
+        build_result(error: e.message, success: false)
       end
 
       # Build stats without writing to file (useful for testing)
@@ -78,6 +78,7 @@ module Ruly
           path = s[:path]
           # Skip stats.md (generated file)
           next if File.basename(path) == 'stats.md'
+
           # Normalize to absolute path for comparison
           abs_path = File.expand_path(path, rules_dir&.sub(%r{/rules$}, ''))
           abs_path if File.exist?(abs_path)
@@ -118,48 +119,10 @@ module Ruly
 
       private
 
-      # DFS helper to detect cycles
-      def detect_cycles(node, graph, visited, rec_stack, path, cycles)
-        visited.add(node)
-        rec_stack.add(node)
-        path = path + [node]
-
-        (graph[node] || []).each do |neighbor|
-          if rec_stack.include?(neighbor)
-            # Found a cycle - extract it from where the neighbor first appears
-            cycle_start = path.index(neighbor)
-            cycle = path[cycle_start..] + [neighbor]
-            cycles << cycle
-          elsif !visited.include?(neighbor) && graph.key?(neighbor)
-            detect_cycles(neighbor, graph, visited, rec_stack, path, cycles)
-          end
-        end
-
-        rec_stack.delete(node)
-      end
-
-      # Normalize cycles to avoid reporting the same cycle multiple times
-      def normalize_cycles(cycles)
-        seen = Set.new
-        normalized = []
-
-        cycles.each do |cycle|
-          # Remove the duplicate last element (A -> B -> A becomes [A, B])
-          cycle = cycle[0..-2] if cycle.first == cycle.last
-
-          # Normalize by rotating to start with the smallest element
-          min_idx = cycle.each_with_index.min_by { |path, _| path }[1]
-          rotated = cycle.rotate(min_idx)
-
-          # Create a unique key for this cycle
-          key = rotated.join('|')
-          next if seen.include?(key)
-
-          seen.add(key)
-          normalized << rotated
-        end
-
-        normalized
+      def count_tokens(text)
+        encoder = Tiktoken.get_encoding('cl100k_base')
+        utf8_text = text.encode('UTF-8', invalid: :replace, replace: '?', undef: :replace)
+        encoder.encode(utf8_text).length
       end
 
       # Collect all files used by recipes (directly or via directory inclusion)
@@ -229,7 +192,7 @@ module Ruly
         requirements = []
 
         # Extract from @./path syntax
-        content.scan(/^@(\.\.?\/[^\s]+)/).each do |match|
+        content.scan(%r{^@(\.\.?/[^\s]+)}).each do |match|
           relative_path = match[0]
           absolute_path = File.expand_path(relative_path, base_dir)
           requirements << absolute_path if File.exist?(absolute_path)
@@ -269,6 +232,50 @@ module Ruly
         requirements
       end
 
+      # DFS helper to detect cycles
+      def detect_cycles(node, graph, visited, rec_stack, path, cycles)
+        visited.add(node)
+        rec_stack.add(node)
+        path += [node]
+
+        (graph[node] || []).each do |neighbor|
+          if rec_stack.include?(neighbor)
+            # Found a cycle - extract it from where the neighbor first appears
+            cycle_start = path.index(neighbor)
+            cycle = path[cycle_start..] + [neighbor]
+            cycles << cycle
+          elsif !visited.include?(neighbor) && graph.key?(neighbor)
+            detect_cycles(neighbor, graph, visited, rec_stack, path, cycles)
+          end
+        end
+
+        rec_stack.delete(node)
+      end
+
+      # Normalize cycles to avoid reporting the same cycle multiple times
+      def normalize_cycles(cycles)
+        seen = Set.new
+        normalized = []
+
+        cycles.each do |cycle|
+          # Remove the duplicate last element (A -> B -> A becomes [A, B])
+          cycle = cycle[0..-2] if cycle.first == cycle.last
+
+          # Normalize by rotating to start with the smallest element
+          min_idx = cycle.each_with_index.min_by { |path, _| path }[1]
+          rotated = cycle.rotate(min_idx)
+
+          # Create a unique key for this cycle
+          key = rotated.join('|')
+          next if seen.include?(key)
+
+          seen.add(key)
+          normalized << rotated
+        end
+
+        normalized
+      end
+
       def write_markdown(file_stats, orphaned_files = [], circular_deps = [])
         total_tokens = file_stats.sum { |f| f[:tokens] }
         total_size = file_stats.sum { |f| f[:size] }
@@ -281,6 +288,73 @@ module Ruly
           write_orphaned_section(f, orphaned_files) if orphaned_files.any?
           write_footer(f)
         end
+      end
+
+      def write_header(file, file_count, total_tokens, total_size)
+        file.puts '# Ruly Token Statistics'
+        file.puts
+        file.puts "Generated: #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
+        file.puts
+        file.puts '## Summary'
+        file.puts
+        file.puts "- **Total Files**: #{file_count}"
+        file.puts "- **Total Tokens**: #{format_number(total_tokens)}"
+        file.puts "- **Total Size**: #{format_bytes(total_size)}"
+        file.puts
+      end
+
+      def format_number(num)
+        num.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+      end
+
+      def format_bytes(bytes)
+        if bytes >= 1_048_576
+          "#{(bytes / 1_048_576.0).round(1)} MB"
+        elsif bytes >= 1024
+          "#{(bytes / 1024.0).round(1)} KB"
+        else
+          "#{bytes} B"
+        end
+      end
+
+      def write_circular_section(file, circular_deps)
+        file.puts '## ⚠️ Circular Dependencies'
+        file.puts
+        file.puts "Found #{circular_deps.size} circular dependency chain(s) in requires:"
+        file.puts
+
+        circular_deps.each_with_index do |cycle, idx|
+          file.puts "### Cycle #{idx + 1}"
+          file.puts
+          file.puts '```'
+          cycle.each_with_index do |path, i|
+            filename = File.basename(path)
+            arrow = i < cycle.size - 1 ? ' →' : ' → (back to start)'
+            file.puts "  #{filename}#{arrow}"
+          end
+          file.puts '```'
+          file.puts
+          file.puts 'Full paths:'
+          cycle.each do |path|
+            relative_path = rules_dir ? path.sub("#{rules_dir}/", '') : path
+            file.puts "- `#{relative_path}`"
+          end
+          file.puts
+        end
+      end
+
+      def write_table(file, file_stats)
+        file.puts '## Files by Token Count'
+        file.puts
+        file.puts '| # | Tokens | Size | File |'
+        file.puts '|--:|-------:|-----:|:-----|'
+
+        file_stats.each_with_index do |stat, idx|
+          filename = File.basename(stat[:path])
+          file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
+        end
+
+        file.puts
       end
 
       def write_recipe_sections(file, file_stats)
@@ -356,33 +430,6 @@ module Ruly
         recipe_files_map
       end
 
-      def write_header(file, file_count, total_tokens, total_size)
-        file.puts '# Ruly Token Statistics'
-        file.puts
-        file.puts "Generated: #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
-        file.puts
-        file.puts '## Summary'
-        file.puts
-        file.puts "- **Total Files**: #{file_count}"
-        file.puts "- **Total Tokens**: #{format_number(total_tokens)}"
-        file.puts "- **Total Size**: #{format_bytes(total_size)}"
-        file.puts
-      end
-
-      def write_table(file, file_stats)
-        file.puts '## Files by Token Count'
-        file.puts
-        file.puts '| # | Tokens | Size | File |'
-        file.puts '|--:|-------:|-----:|:-----|'
-
-        file_stats.each_with_index do |stat, idx|
-          filename = File.basename(stat[:path])
-          file.puts "| #{idx + 1} | #{format_number(stat[:tokens])} | #{format_bytes(stat[:size])} | [#{filename}](#{stat[:path]}) |"
-        end
-
-        file.puts
-      end
-
       def write_orphaned_section(file, orphaned_files)
         file.puts '## Orphaned Files'
         file.puts
@@ -396,55 +443,9 @@ module Ruly
         file.puts
       end
 
-      def write_circular_section(file, circular_deps)
-        file.puts '## ⚠️ Circular Dependencies'
-        file.puts
-        file.puts "Found #{circular_deps.size} circular dependency chain(s) in requires:"
-        file.puts
-
-        circular_deps.each_with_index do |cycle, idx|
-          file.puts "### Cycle #{idx + 1}"
-          file.puts
-          file.puts '```'
-          cycle.each_with_index do |path, i|
-            filename = File.basename(path)
-            arrow = i < cycle.size - 1 ? ' →' : ' → (back to start)'
-            file.puts "  #{filename}#{arrow}"
-          end
-          file.puts '```'
-          file.puts
-          file.puts 'Full paths:'
-          cycle.each do |path|
-            relative_path = rules_dir ? path.sub("#{rules_dir}/", '') : path
-            file.puts "- `#{relative_path}`"
-          end
-          file.puts
-        end
-      end
-
       def write_footer(file)
         file.puts '---'
         file.puts '*Generated by [ruly](https://github.com/patrickclery/ruly)*'
-      end
-
-      def count_tokens(text)
-        encoder = Tiktoken.get_encoding('cl100k_base')
-        utf8_text = text.encode('UTF-8', invalid: :replace, replace: '?', undef: :replace)
-        encoder.encode(utf8_text).length
-      end
-
-      def format_number(num)
-        num.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-      end
-
-      def format_bytes(bytes)
-        if bytes >= 1_048_576
-          "#{(bytes / 1_048_576.0).round(1)} MB"
-        elsif bytes >= 1024
-          "#{(bytes / 1024.0).round(1)} KB"
-        else
-          "#{bytes} B"
-        end
       end
     end
   end

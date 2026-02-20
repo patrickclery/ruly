@@ -34,23 +34,23 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when a subagent recipe has its own subagents' do
       before do
         recipes_content = {
-          'parent' => {
-            'description' => 'Parent recipe',
-            'files' => ['rules/test.md'],
-            'subagents' => [
-              { 'name' => 'nested_one', 'recipe' => 'child-with-subagents' }
-            ]
-          },
           'child-with-subagents' => {
             'description' => 'Child that has its own subagents',
             'files' => ['rules/test.md'],
             'subagents' => [
-              { 'name' => 'grandchild', 'recipe' => 'grandchild-recipe' }
+              {'name' => 'grandchild', 'recipe' => 'grandchild-recipe'}
             ]
           },
           'grandchild-recipe' => {
             'description' => 'Grandchild recipe',
             'files' => ['rules/test.md']
+          },
+          'parent' => {
+            'description' => 'Parent recipe',
+            'files' => ['rules/test.md'],
+            'subagents' => [
+              {'name' => 'nested_one', 'recipe' => 'child-with-subagents'}
+            ]
           }
         }
 
@@ -60,7 +60,9 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'raises an error rejecting nested subagents' do
-        expect { cli.invoke(:squash, ['parent']) }.to raise_error(Ruly::Error, /child-with-subagents.*subagents.*skills/i)
+        expect do
+          cli.invoke(:squash, ['parent'])
+        end.to raise_error(Ruly::Error, /child-with-subagents.*subagents.*skills/i)
       end
 
       it 'includes the sub-subagent name in the error message' do
@@ -71,16 +73,16 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when a subagent recipe has no subagents (leaf node)' do
       before do
         recipes_content = {
+          'leaf-recipe' => {
+            'description' => 'Leaf recipe with no subagents',
+            'files' => ['rules/test.md']
+          },
           'parent' => {
             'description' => 'Parent recipe',
             'files' => ['rules/test.md'],
             'subagents' => [
-              { 'name' => 'leaf_agent', 'recipe' => 'leaf-recipe' }
+              {'name' => 'leaf_agent', 'recipe' => 'leaf-recipe'}
             ]
-          },
-          'leaf-recipe' => {
-            'description' => 'Leaf recipe with no subagents',
-            'files' => ['rules/test.md']
           }
         }
 

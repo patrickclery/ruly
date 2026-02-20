@@ -95,8 +95,8 @@ RSpec.describe Ruly::CLI do
       MARKDOWN
 
       script_mappings = {
-        '/Users/patrick/Projects/ruly/rules/bin/post-jira-comment.sh' => 'post-jira-comment.sh',
-        '/Users/patrick/Projects/ruly/rules/bin/markdown-to-adf.mjs' => 'markdown-to-adf.mjs'
+        '/Users/patrick/Projects/ruly/rules/bin/markdown-to-adf.mjs' => 'markdown-to-adf.mjs',
+        '/Users/patrick/Projects/ruly/rules/bin/post-jira-comment.sh' => 'post-jira-comment.sh'
       }
 
       result = cli.send(:rewrite_script_references, content, script_mappings)
@@ -131,7 +131,7 @@ RSpec.describe Ruly::CLI do
     end
 
     it 'returns content unchanged when no mappings match' do
-      content = "Some content without script references"
+      content = 'Some content without script references'
       script_mappings = {}
 
       result = cli.send(:rewrite_script_references, content, script_mappings)
@@ -161,13 +161,13 @@ RSpec.describe Ruly::CLI do
       result = cli.send(:build_script_mappings, script_files)
 
       expect(result).to eq({
-        '/Users/patrick/Projects/ruly/rules/bin/post-jira-comment.sh' => 'post-jira-comment.sh',
-        '/Users/patrick/Projects/ruly/rules/bin/markdown-to-adf.mjs' => 'markdown-to-adf.mjs'
+        '/Users/patrick/Projects/ruly/rules/bin/markdown-to-adf.mjs' => 'markdown-to-adf.mjs',
+        '/Users/patrick/Projects/ruly/rules/bin/post-jira-comment.sh' => 'post-jira-comment.sh'
       })
     end
 
     it 'handles empty script files' do
-      script_files = { local: [], remote: [] }
+      script_files = {local: [], remote: []}
 
       result = cli.send(:build_script_mappings, script_files)
 
@@ -250,8 +250,8 @@ RSpec.describe Ruly::CLI do
 
       script_files = {
         local: [
-          { from_rule: 'rules/test.md', relative_path: 'test-script.sh', source_path: script_path },
-          { from_rule: 'rules/test.md', relative_path: 'other-script.mjs', source_path: script2_path }
+          {from_rule: 'rules/test.md', relative_path: 'test-script.sh', source_path: script_path},
+          {from_rule: 'rules/test.md', relative_path: 'other-script.mjs', source_path: script2_path}
         ],
         remote: []
       }

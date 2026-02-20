@@ -199,7 +199,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       it 'raises an error for files not in a /skills/ directory' do
         expect { cli.invoke(:squash, ['test_bad_path']) }.to raise_error(
-          Ruly::Error, /must be in a \/skills\/ directory/i
+          Ruly::Error, %r{must be in a /skills/ directory}i
         )
       end
     end
@@ -295,16 +295,16 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when subagent rule files have skills: frontmatter' do
       before do
         recipes_content = {
+          'grabber-recipe' => {
+            'description' => 'Orchestrates context fetching',
+            'files' => ['rules/agent/fetcher.md', 'rules/agent/basics.md']
+          },
           'parent_recipe' => {
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              { 'name' => 'context_grabber', 'recipe' => 'grabber-recipe' }
+              {'name' => 'context_grabber', 'recipe' => 'grabber-recipe'}
             ]
-          },
-          'grabber-recipe' => {
-            'description' => 'Orchestrates context fetching',
-            'files' => ['rules/agent/fetcher.md', 'rules/agent/basics.md']
           }
         }
 
@@ -358,7 +358,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              { 'name' => 'plain_worker', 'recipe' => 'plain-recipe' }
+              {'name' => 'plain_worker', 'recipe' => 'plain-recipe'}
             ]
           },
           'plain-recipe' => {
@@ -405,25 +405,23 @@ RSpec.describe Ruly::CLI, type: :cli do
         FileUtils.mkdir_p(mcp_config_dir)
         @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
         @mcp_config_backup = nil
-        if File.exist?(@mcp_config_file)
-          @mcp_config_backup = File.read(@mcp_config_file)
-        end
+        @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
 
         File.write(@mcp_config_file, JSON.generate({
-          'teams' => {'type' => 'stdio', 'command' => 'teams-mcp'}
+          'teams' => {'command' => 'teams-mcp', 'type' => 'stdio'}
         }))
 
         recipes_content = {
+          'full-recipe' => {
+            'description' => 'Full recipe with skills and MCP',
+            'files' => ['rules/agent/full.md']
+          },
           'parent_recipe' => {
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              { 'name' => 'full_agent', 'recipe' => 'full-recipe' }
+              {'name' => 'full_agent', 'recipe' => 'full-recipe'}
             ]
-          },
-          'full-recipe' => {
-            'description' => 'Full recipe with skills and MCP',
-            'files' => ['rules/agent/full.md']
           }
         }
 
@@ -433,9 +431,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       after do
-        if @mcp_config_backup
-          File.write(@mcp_config_file, @mcp_config_backup)
-        end
+        File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
       end
 
       it 'includes both skills: and mcpServers: in agent frontmatter' do

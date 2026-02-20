@@ -67,15 +67,13 @@ RSpec.describe Ruly::CLI, type: :cli do
       FileUtils.mkdir_p(mcp_config_dir)
       @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
       @mcp_config_backup = nil
-      if File.exist?(@mcp_config_file)
-        @mcp_config_backup = File.read(@mcp_config_file)
-      end
+      @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
 
       File.write(@mcp_config_file, JSON.generate({
-        'playwright' => {'type' => 'stdio', 'command' => 'playwright-mcp'},
-        'teams' => {'type' => 'stdio', 'command' => 'teams-mcp'},
+        'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'},
         'atlassian' => {'type' => 'sse', 'url' => 'https://mcp.atlassian.com/v1/sse'},
-        'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'}
+        'playwright' => {'command' => 'playwright-mcp', 'type' => 'stdio'},
+        'teams' => {'command' => 'teams-mcp', 'type' => 'stdio'}
       }))
 
       allow(cli).to receive_messages(gem_root: test_dir,
@@ -85,9 +83,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     after do
       # Restore MCP config
-      if @mcp_config_backup
-        File.write(@mcp_config_file, @mcp_config_backup)
-      end
+      File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
     end
 
     context 'when squashing a recipe with rule-file mcp_servers' do
@@ -239,15 +235,13 @@ RSpec.describe Ruly::CLI, type: :cli do
       FileUtils.mkdir_p(mcp_config_dir)
       @mcp_config_file = File.join(mcp_config_dir, 'mcp.json')
       @mcp_config_backup = nil
-      if File.exist?(@mcp_config_file)
-        @mcp_config_backup = File.read(@mcp_config_file)
-      end
+      @mcp_config_backup = File.read(@mcp_config_file) if File.exist?(@mcp_config_file)
 
       File.write(@mcp_config_file, JSON.generate({
-        'playwright' => {'type' => 'stdio', 'command' => 'playwright-mcp'},
-        'teams' => {'type' => 'stdio', 'command' => 'teams-mcp'},
+        'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'},
         'atlassian' => {'type' => 'sse', 'url' => 'https://mcp.atlassian.com/v1/sse'},
-        'Ref' => {'type' => 'http', 'url' => 'https://api.ref.tools/mcp'}
+        'playwright' => {'command' => 'playwright-mcp', 'type' => 'stdio'},
+        'teams' => {'command' => 'teams-mcp', 'type' => 'stdio'}
       }))
 
       allow(cli).to receive_messages(gem_root: test_dir,
@@ -257,9 +251,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     after do
       # Restore MCP config
-      if @mcp_config_backup
-        File.write(@mcp_config_file, @mcp_config_backup)
-      end
+      File.write(@mcp_config_file, @mcp_config_backup) if @mcp_config_backup
     end
 
     context 'when subagent recipe has mcp_servers and rule files also have mcp_servers' do
@@ -269,7 +261,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              { 'name' => 'worker', 'recipe' => 'worker-recipe' }
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
           'worker-recipe' => {
@@ -315,7 +307,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              { 'name' => 'worker', 'recipe' => 'worker-recipe' }
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
           'worker-recipe' => {
@@ -348,7 +340,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              { 'name' => 'worker', 'recipe' => 'worker-recipe' }
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
           'worker-recipe' => {
@@ -391,7 +383,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              { 'name' => 'worker', 'recipe' => 'worker-recipe' }
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
           'worker-recipe' => {

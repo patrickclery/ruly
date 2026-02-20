@@ -208,19 +208,19 @@ RSpec.describe Ruly::CLI do
 
       cli = described_class.new
       cli.options = {
-        output_file: File.join(test_dir, 'output.md'),
         agent: 'claude',
         cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
-        git_ignore: false,
-        git_exclude: false,
-        toc: false,
         essential: false,
-        taskmaster_config: false,
+        front_matter: false,
+        git_exclude: false,
+        git_ignore: false,
         keep_taskmaster: false,
-        front_matter: false
+        output_file: File.join(test_dir, 'output.md'),
+        taskmaster_config: false,
+        toc: false
       }
 
       # Stub collect_local_sources to only return our test file
@@ -250,19 +250,19 @@ RSpec.describe Ruly::CLI do
 
       cli = described_class.new
       cli.options = {
-        output_file: File.join(test_dir, 'output.md'),
         agent: 'claude',
         cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
-        git_ignore: false,
-        git_exclude: false,
-        toc: false,
         essential: false,
-        taskmaster_config: false,
+        front_matter: true,
+        git_exclude: false,
+        git_ignore: false,
         keep_taskmaster: false,
-        front_matter: true
+        output_file: File.join(test_dir, 'output.md'),
+        taskmaster_config: false,
+        toc: false
       }
 
       # Stub collect_local_sources to only return our test file
@@ -293,19 +293,19 @@ RSpec.describe Ruly::CLI do
 
       cli = described_class.new
       cli.options = {
-        output_file: File.join(test_dir, 'output.md'),
         agent: 'claude',
         cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
-        git_ignore: false,
-        git_exclude: false,
-        toc: false,
         essential: false,
-        taskmaster_config: false,
+        front_matter: true,
+        git_exclude: false,
+        git_ignore: false,
         keep_taskmaster: false,
-        front_matter: true
+        output_file: File.join(test_dir, 'output.md'),
+        taskmaster_config: false,
+        toc: false
       }
 
       # Stub collect_local_sources to only return our test file
