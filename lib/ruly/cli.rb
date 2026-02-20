@@ -1837,49 +1837,34 @@ module Ruly
       print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..." if verbose?
       file_path = find_rule_file(source[:path])
 
-      if file_path
-        # Check if it's a bin/*.sh file
-        is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
-
-        if is_bin
-          # For bin files, we'll copy them directly
-          puts ' ✅ (bin)' if verbose?
-          {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
-        else
-          content = File.read(file_path, encoding: 'UTF-8')
-          # Store original content (with requires) for dependency resolution
-          original_content = content
-          # Strip metadata fields from YAML frontmatter for output
-          content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
-          is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
-          is_skill = agent == 'claude' && source[:path].include?('/skills/')
-
-          # Count tokens for the content
-          tokens = count_tokens(content)
-          formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-          if verbose?
-            if is_skill
-              puts " ✅ (skill, #{formatted_tokens} tokens)"
-            elsif is_command
-              puts " ✅ (command, #{formatted_tokens} tokens)"
-            elsif source[:from_requires]
-              puts " ✅ (from requires, #{formatted_tokens} tokens)"
-            else
-              puts " ✅ (#{formatted_tokens} tokens)"
-            end
-          end
-          {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
-        end
-      else
-        # Errors always visible
-        if verbose?
-          puts ' ❌ not found'
-        else
-          warn "  ⚠️  File not found: #{source[:path]}"
-        end
-        nil
+      unless file_path
+        verbose? ? puts(' ❌ not found') : warn("  ⚠️  File not found: #{source[:path]}")
+        return nil
       end
+
+      # Check if it's a bin/*.sh file
+      is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
+
+      if is_bin
+        # For bin files, we'll copy them directly
+        puts ' ✅ (bin)' if verbose?
+        return {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
+      end
+
+      content = File.read(file_path, encoding: 'UTF-8')
+      # Store original content (with requires) for dependency resolution
+      original_content = content
+      # Strip metadata fields from YAML frontmatter for output
+      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
+      is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
+      is_skill = agent == 'claude' && source[:path].include?('/skills/')
+
+      # Count tokens for the content
+      tokens = count_tokens(content)
+      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+
+      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
+      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
     end
 
     def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
@@ -1953,6 +1938,17 @@ module Ruly
       encoder.encode(utf8_text).length
     end
 
+    def print_file_progress_result(formatted_tokens, from_requires:, is_command:, is_skill:)
+      return unless verbose?
+
+      label = if is_skill then 'skill'
+              elsif is_command then 'command'
+              elsif from_requires then 'from requires'
+              end
+      suffix = label ? "(#{label}, #{formatted_tokens} tokens)" : "(#{formatted_tokens} tokens)"
+      puts " ✅ #{suffix}"
+    end
+
     def display_prefetched_remote(source, index, total, agent, content, keep_frontmatter: false)
       # Extract domain and full path for display
       if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
@@ -1981,75 +1977,50 @@ module Ruly
       # Check if remote file is a command file or skill file
       is_command = agent == 'claude' && source[:path].include?('/commands/')
       is_skill = agent == 'claude' && source[:path].include?('/skills/')
-      if verbose?
-        if is_skill
-          puts " ✅ (skill, #{formatted_tokens} tokens)"
-        elsif is_command
-          puts " ✅ (command, #{formatted_tokens} tokens)"
-        elsif source[:from_requires]
-          puts " ✅ (from requires, #{formatted_tokens} tokens)"
-        else
-          puts " ✅ (#{formatted_tokens} tokens)"
-        end
-      end
+      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
 
       {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
     end
 
-    def process_remote_file_with_progress(source, index, total, agent, keep_frontmatter: false) # rubocop:disable Metrics/MethodLength
-      # Extract domain and full path for display
-      if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
-        owner = Regexp.last_match(1)
-        repo = Regexp.last_match(2)
-        file_path = Regexp.last_match(3)
-        display_name = "#{owner}/#{repo}/#{file_path}"
-        icon = source[:from_requires] ? '📚' : '🐙'
-      elsif source[:path] =~ %r{https?://([^/]+)/(.+)}
-        domain = Regexp.last_match(1)
-        path = Regexp.last_match(2)
-        display_name = "#{domain}/#{path}"
-        icon = source[:from_requires] ? '📚' : '🌐'
-      else
-        display_name = source[:path]
-        icon = source[:from_requires] ? '📚' : '🌐'
-      end
+    def process_remote_file_with_progress(source, index, total, agent, keep_frontmatter: false)
+      display_info = parse_remote_display_info(source[:path], from_requires: source[:from_requires])
       prefix = source[:from_requires] ? 'Required' : 'Fetching'
-      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..." if verbose?
+      print "  [#{index + 1}/#{total}] #{display_info[:icon]} #{prefix}: #{display_info[:display_name]}..." if verbose?
       content = fetch_remote_content(source[:path])
-      if content
-        # Store original content for requires resolution
-        original_content = content
-        # Strip metadata fields from YAML frontmatter
-        content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
 
-        # Count tokens in the content
-        tokens = count_tokens(content)
-        formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-        # Check if remote file is a command file or skill file
-        is_command = agent == 'claude' && source[:path].include?('/commands/')
-        is_skill = agent == 'claude' && source[:path].include?('/skills/')
-        if verbose?
-          if is_skill
-            puts " ✅ (skill, #{formatted_tokens} tokens)"
-          elsif is_command
-            puts " ✅ (command, #{formatted_tokens} tokens)"
-          elsif source[:from_requires]
-            puts " ✅ (from requires, #{formatted_tokens} tokens)"
-          else
-            puts " ✅ (#{formatted_tokens} tokens)"
-          end
-        end
-        {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
-      else
-        # Errors always visible
-        if verbose?
-          puts ' ❌ failed'
-        else
-          warn "  ⚠️  Failed to fetch: #{source[:path]}"
-        end
-        nil
+      unless content
+        verbose? ? puts(' ❌ failed') : warn("  ⚠️  Failed to fetch: #{source[:path]}")
+        return nil
       end
+
+      # Store original content for requires resolution
+      original_content = content
+      # Strip metadata fields from YAML frontmatter
+      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
+
+      # Count tokens in the content
+      tokens = count_tokens(content)
+      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+
+      # Check if remote file is a command file or skill file
+      is_command = agent == 'claude' && source[:path].include?('/commands/')
+      is_skill = agent == 'claude' && source[:path].include?('/skills/')
+      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
+      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
+    end
+
+    def parse_remote_display_info(path, from_requires: false)
+      if path =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
+        display_name = "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}/#{Regexp.last_match(3)}"
+        icon = from_requires ? '📚' : '🐙'
+      elsif path =~ %r{https?://([^/]+)/(.+)}
+        display_name = "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}"
+        icon = from_requires ? '📚' : '🌐'
+      else
+        display_name = path
+        icon = from_requires ? '📚' : '🌐'
+      end
+      {display_name:, icon:}
     end
 
     def fetch_remote_content(url)
@@ -2289,7 +2260,8 @@ module Ruly
         resolved_full_path = find_rule_file(resolved_source[:path])
         unless resolved_full_path&.include?('/skills/')
           raise Ruly::Error,
-                "Skill reference '#{skill_path}' must be in a /skills/ directory (resolved to '#{resolved_source[:path]}')"
+                "Skill reference '#{skill_path}' must be in a /skills/ directory " \
+                "(resolved to '#{resolved_source[:path]}')"
         end
 
         # Check if already processed (deduplication)
@@ -2823,48 +2795,10 @@ module Ruly
       puts "\n🤖 Processing subagents..." if top_level
 
       # Ensure .claude/agents directory exists
-      agents_dir = '.claude/agents'
-      FileUtils.mkdir_p(agents_dir)
-
-      generated_count = 0
+      FileUtils.mkdir_p('.claude/agents')
 
       recipe_config['subagents'].each do |subagent|
-        agent_name = subagent['name']
-        recipe_name = subagent['recipe']
-
-        next unless agent_name && recipe_name
-        next if visited.include?(recipe_name)
-
-        visited.add(recipe_name)
-
-        if verbose?
-          puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
-        else
-          puts "  → #{agent_name}"
-        end
-
-        # Load the referenced recipe
-        recipes = load_all_recipes
-        subagent_recipe = recipes[recipe_name]
-
-        unless subagent_recipe
-          puts "    ⚠️  Warning: Recipe '#{recipe_name}' not found, skipping"
-          next
-        end
-
-        # Reject subagent recipes that have their own subagents (nested subagents)
-        if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents'].is_a?(Array) && subagent_recipe['subagents'].any?
-          nested_names = subagent_recipe['subagents'].filter_map { |s| s['name'] }.join(', ')
-          raise Ruly::Error,
-                "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
-                'Claude Code subagents cannot spawn other subagents. ' \
-                "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
-        end
-
-        # Generate the agent file
-        generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
-                            parent_recipe_config: recipe_config, subagent_config: subagent)
-        generated_count += 1
+        process_single_subagent(subagent, parent_recipe_name, recipe_config, visited)
       end
 
       puts "✅ Generated #{visited.size} subagent(s)" if top_level
@@ -2872,6 +2806,49 @@ module Ruly
       raise # Re-raise validation errors (e.g., nested subagents)
     rescue StandardError => e
       puts "⚠️  Warning: Could not process subagents: #{e.message}"
+    end
+
+    def process_single_subagent(subagent, parent_recipe_name, recipe_config, visited)
+      agent_name = subagent['name']
+      recipe_name = subagent['recipe']
+
+      return unless agent_name && recipe_name
+      return if visited.include?(recipe_name)
+
+      visited.add(recipe_name)
+
+      if verbose?
+        puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
+      else
+        puts "  → #{agent_name}"
+      end
+
+      # Load the referenced recipe
+      subagent_recipe = load_all_recipes[recipe_name]
+
+      unless subagent_recipe
+        puts "    ⚠️  Warning: Recipe '#{recipe_name}' not found, skipping"
+        return
+      end
+
+      # Reject subagent recipes that have their own subagents (nested subagents)
+      validate_no_nested_subagents!(subagent_recipe, agent_name, recipe_name)
+
+      # Generate the agent file
+      generate_agent_file(agent_name, recipe_name, subagent_recipe, parent_recipe_name,
+                          parent_recipe_config: recipe_config, subagent_config: subagent)
+    end
+
+    def validate_no_nested_subagents!(subagent_recipe, agent_name, recipe_name)
+      return unless subagent_recipe.is_a?(Hash) &&
+                    subagent_recipe['subagents'].is_a?(Array) &&
+                    subagent_recipe['subagents'].any?
+
+      nested_names = subagent_recipe['subagents'].filter_map { |s| s['name'] }.join(', ')
+      raise Ruly::Error,
+            "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
+            'Claude Code subagents cannot spawn other subagents. ' \
+            "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
     end
 
     def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name, parent_recipe_config: {},
