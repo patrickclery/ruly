@@ -8,6 +8,7 @@ require_relative 'services/recipe_loader'
 require_relative 'services/script_manager'
 require_relative 'services/source_processor'
 require_relative 'services/subagent_processor'
+require_relative 'services/toc_generator'
 
 module Ruly
   # Extracted service modules from the main CLI class

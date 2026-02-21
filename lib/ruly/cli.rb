@@ -1215,168 +1215,43 @@ module Ruly
     end
 
     def generate_toc_content(local_sources, command_files, agent)
-      toc_lines = ['## Table of Contents', '']
-
-      # Generate TOC for source files
-      local_sources.each do |source|
-        toc_lines << generate_toc_for_source(source)
-      end
-
-      # Generate slash commands section
-      toc_lines.concat(generate_toc_slash_commands(command_files)) if agent == 'claude' && !command_files.empty?
-
-      toc_lines.join("\n")
+      Services::TOCGenerator.generate_toc_content(local_sources, command_files, agent)
     end
 
     def generate_toc_for_source(source)
-      toc_section = []
-      headers = extract_headers_from_content(source[:content], source[:path])
-
-      if headers.any?
-        headers.each do |header|
-          indent = '  ' * (header[:level] - 1) if header[:level] > 1
-          toc_section << "#{indent}- [#{header[:text]}](##{header[:anchor]})"
-        end
-      end
-
-      toc_section.join("\n")
+      Services::TOCGenerator.generate_toc_for_source(source)
     end
 
     def extract_headers_from_content(content, source_path = nil)
-      headers = []
-      content = content.force_encoding('UTF-8')
-
-      # Generate file prefix from source path
-      file_prefix = (generate_file_prefix(source_path) if source_path)
-
-      content.each_line.with_index do |line, index|
-        if line =~ /^(#+)\s+(.+)$/
-          level = Regexp.last_match(1).length
-          text = Regexp.last_match(2).strip
-          anchor = generate_anchor(text, file_prefix)
-          headers << {anchor:, level:, line: index + 1, text:}
-        end
-      end
-      headers
+      Services::TOCGenerator.extract_headers_from_content(content, source_path)
     end
 
     def generate_file_prefix(source_path)
-      # Convert file path to a URL-safe prefix
-      # Examples:
-      #   "ruby/common.md" -> "ruby-common-md"
-      #   "https://github.com/user/repo/blob/main/rules/test.md" -> "rules-test-md"
-
-      # Extract just the path portion if it's a URL
-      path = if source_path.start_with?('http')
-               # Extract path after blob/branch/ or tree/branch/ for GitHub URLs
-               if source_path =~ %r{/(?:blob|tree)/[^/]+/(.+)$}
-                 Regexp.last_match(1)
-               else
-                 # Fallback: use last part of URL
-                 source_path.split('/').last
-               end
-             else
-               source_path
-             end
-
-      # Sanitize the path to create a valid anchor prefix
-      path.downcase
-          .gsub(/\.md$/, '') # Remove .md extension
-          .gsub(%r{[^\w/-]}, '') # Keep only word chars, slashes, and hyphens
-          .gsub(%r{/+}, '-') # Replace slashes with hyphens
-          .gsub(/^-|-$/, '') # Remove leading/trailing hyphens
+      Services::TOCGenerator.generate_file_prefix(source_path)
     end
 
     def generate_anchor(text, prefix = nil)
-      anchor = text.downcase
-                   .gsub(/[^\w\s-]/, '')
-                   .gsub(/\s+/, '-').squeeze('-')
-                   .gsub(/^-|-$/, '')
-
-      prefix ? "#{prefix}-#{anchor}" : anchor
+      Services::TOCGenerator.generate_anchor(text, prefix)
     end
 
     def generate_toc_slash_commands(command_files)
-      ['### Available Slash Commands', ''] +
-        command_files.map do |file|
-          cmd_name = extract_command_name(file[:path])
-          description = extract_command_description(file[:content])
-          "- `/#{cmd_name}` - #{description}"
-        end + ['']
+      Services::TOCGenerator.generate_toc_slash_commands(command_files)
     end
 
     def extract_command_name(file_path)
-      File.basename(file_path, '.md').gsub(/[_-]/, ':')
+      Services::TOCGenerator.extract_command_name(file_path)
     end
 
     def extract_command_description(content)
-      content = content.force_encoding('UTF-8')
-
-      # Look for description in YAML frontmatter
-      if content.start_with?('---')
-        yaml_match = content.match(/^---\n(.+?)\n---/m)
-        if yaml_match
-          begin
-            yaml_data = YAML.safe_load(yaml_match[1])
-            return yaml_data['description'] if yaml_data&.key?('description')
-          rescue StandardError
-            # Continue to fallback methods
-          end
-        end
-      end
-
-      # Look for first paragraph after heading
-      lines = content.split("\n")
-      lines.each_with_index do |line, _index|
-        next if line.strip.empty? || line.start_with?('#') || line.start_with?('---')
-
-        if line.strip.length > 10
-          return line.strip.gsub(/[*_`]/, '')[0..80] + (line.length > 80 ? '...' : '')
-        end
-      end
-
-      'Command description not available'
+      Services::TOCGenerator.extract_command_description(content)
     end
 
-    # Rewrite absolute script paths to relative .claude/scripts/ paths
-    # @param content [String] The content to rewrite
-    # @param script_mappings [Hash] Map of absolute path => relative filename
-    # @return [String] Content with rewritten paths
     def rewrite_script_references(content, script_mappings)
-      result = content.dup
-
-      script_mappings.each do |abs_path, relative_path|
-        # Replace absolute path with .claude/scripts/filename
-        result.gsub!(abs_path, ".claude/scripts/#{relative_path}")
-      end
-
-      result
+      Services::TOCGenerator.rewrite_script_references(content, script_mappings)
     end
 
     def add_anchor_ids_to_content(content, source_path)
-      # Add HTML anchor tags before headers to make them linkable
-      # This ensures the TOC links work correctly
-
-      file_prefix = generate_file_prefix(source_path)
-      modified_content = []
-
-      content.force_encoding('UTF-8').each_line do |line|
-        if line =~ /^(#+)\s+(.+)$/
-          level = Regexp.last_match(1)
-          text = Regexp.last_match(2).strip
-          anchor = generate_anchor(text, file_prefix)
-
-          # Add the header with an anchor that matches what's in the TOC
-          # Using HTML comment style anchor that works in markdown
-          modified_content << "<a id=\"#{anchor}\"></a>"
-          modified_content << ''
-          modified_content << "#{level} #{text}"
-        else
-          modified_content << line.chomp
-        end
-      end
-
-      modified_content.join("\n")
+      Services::TOCGenerator.add_anchor_ids_to_content(content, source_path)
     end
 
     def generate_ignore_patterns(output_file, agent, command_files)
@@ -1536,46 +1411,11 @@ module Ruly
     end
 
     def print_summary(mode, output_file, file_count)
-      puts "\n✅ Successfully generated #{output_file} using #{mode}"
-      puts "📊 Combined #{file_count} files"
-      puts "📏 Output size: #{File.size(output_file)} bytes"
-
-      # Add token counting
-      agent = options[:agent] || 'claude'
-      display_token_info(output_file, agent)
+      Services::TOCGenerator.print_summary(mode, output_file, file_count, agent: options[:agent] || 'claude')
     end
 
     def display_token_info(output_file, agent)
-      content = File.read(output_file, encoding: 'UTF-8')
-      token_count = count_tokens(content)
-
-      # Get the context limit for the agent
-      limit = agent_context_limits[agent.downcase] || 100_000
-      percentage = ((token_count.to_f / limit) * 100).round(1)
-
-      # Format numbers with commas
-      formatted_tokens = token_count.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-      formatted_limit = limit.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      # Color code based on percentage
-      status = if percentage < 50
-                 '🟢'
-               elsif percentage < 80
-                 '🟡'
-               elsif percentage < 95
-                 '🟠'
-               else
-                 '🔴'
-               end
-
-      puts "🧮 Token count: #{formatted_tokens} / #{formatted_limit} (#{percentage}%) #{status}"
-
-      if percentage > 80
-        puts "⚠️  Warning: Approaching context limit for #{agent}!" if percentage < 95
-        puts "❌ Error: Exceeds context limit for #{agent}!" if percentage >= 100
-      end
-    rescue StandardError => e
-      puts "⚠️  Could not count tokens: #{e.message}"
+      Services::TOCGenerator.display_token_info(output_file, agent)
     end
 
     def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
@@ -1643,17 +1483,7 @@ module Ruly
     end
 
     def agent_context_limits
-      {
-        'aider' => 128_000,       # Aider (uses GPT-4)
-        'claude' => 200_000,      # Claude 3 Opus/Sonnet/Haiku
-        'codeium' => 32_000,      # Codeium
-        'continue' => 32_000,     # Continue.dev
-        'copilot' => 32_000,      # GitHub Copilot
-        'cursor' => 32_000,       # Cursor IDE (based on GPT-4)
-        'gpt3' => 16_000,         # GPT-3.5 Turbo
-        'gpt4' => 128_000,        # GPT-4 Turbo
-        'windsurf' => 32_000      # Windsurf
-      }
+      Services::TOCGenerator::AGENT_CONTEXT_LIMITS
     end
 
     def user_recipes_file
