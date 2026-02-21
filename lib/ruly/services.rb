@@ -5,6 +5,7 @@ require_relative 'services/frontmatter_parser'
 require_relative 'services/github_client'
 require_relative 'services/mcp_manager'
 require_relative 'services/script_manager'
+require_relative 'services/subagent_processor'
 
 module Ruly
   # Extracted service modules from the main CLI class
