@@ -6,6 +6,7 @@ require_relative 'services/github_client'
 require_relative 'services/mcp_manager'
 require_relative 'services/recipe_loader'
 require_relative 'services/script_manager'
+require_relative 'services/source_processor'
 require_relative 'services/subagent_processor'
 
 module Ruly

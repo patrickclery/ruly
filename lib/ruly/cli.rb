@@ -886,18 +886,6 @@ module Ruly
       Services::RecipeLoader.validate_recipe!(recipe_name, recipes)
     end
 
-    def find_rule_file(file)
-      Services::RecipeLoader.find_rule_file(file, gem_root:)
-    end
-
-    def find_markdown_files_recursively(directory)
-      Services::RecipeLoader.find_markdown_files_recursively(directory)
-    end
-
-    def fetch_github_directory_files(url)
-      Services::GitHubClient.fetch_github_directory_files(url)
-    end
-
     def scan_files_for_recipe_tags(recipe_name)
       sources = []
       return sources unless File.directory?(rules_dir)
@@ -973,18 +961,6 @@ module Ruly
       Services::ScriptManager.build_script_mappings(script_files)
     end
 
-    def extract_scripts_from_frontmatter(content, source_path)
-      Services::ScriptManager.extract_scripts_from_frontmatter(content, source_path)
-    end
-
-    def fetch_remote_scripts(remote_scripts)
-      Services::ScriptManager.fetch_remote_scripts(remote_scripts)
-    end
-
-    def normalize_github_url(url)
-      Services::GitHubClient.normalize_github_url(url)
-    end
-
     # Collect all require_shell_commands from sources
     # @param sources [Array<Hash>] Array of source hashes
     # @return [Array<String>] Unique list of required commands
@@ -1004,6 +980,30 @@ module Ruly
       end
 
       commands.to_a
+    end
+
+    def find_rule_file(file)
+      Services::RecipeLoader.find_rule_file(file, gem_root:)
+    end
+
+    def find_markdown_files_recursively(directory)
+      Services::RecipeLoader.find_markdown_files_recursively(directory)
+    end
+
+    def fetch_github_directory_files(url)
+      Services::GitHubClient.fetch_github_directory_files(url)
+    end
+
+    def extract_scripts_from_frontmatter(content, source_path)
+      Services::ScriptManager.extract_scripts_from_frontmatter(content, source_path)
+    end
+
+    def fetch_remote_scripts(remote_scripts)
+      Services::ScriptManager.fetch_remote_scripts(remote_scripts)
+    end
+
+    def normalize_github_url(url)
+      Services::GitHubClient.normalize_github_url(url)
     end
 
     # Extract require_shell_commands from frontmatter
@@ -1096,307 +1096,15 @@ module Ruly
       essential_sources
     end
 
-    def process_sources_for_squash(sources, agent, _recipe_config, _options) # rubocop:disable Metrics/MethodLength
-      local_sources = []
-      command_files = []
-      bin_files = []
-      skill_files = []
-      processed_files = Set.new
-      sources_to_process = sources.dup
-
-      # Show total count
-      puts "\n📚 Processing #{sources.length} sources..." if verbose?
-
-      # Prefetch remote files using GraphQL
-      prefetched_content = prefetch_remote_files(sources)
-
-      # Process all sources including requires
-      index = 0
-      until sources_to_process.empty?
-        source = sources_to_process.shift
-
-        # Check if already processed (deduplication)
-        source_key = get_source_key(source)
-        next if processed_files.include?(source_key)
-
-        # Process the source
-        context = {
-          agent: agent, # rubocop:disable Style/HashSyntax
-          keep_frontmatter: options[:front_matter],
-          prefetched_content: prefetched_content, # rubocop:disable Style/HashSyntax
-          processed_files: processed_files, # rubocop:disable Style/HashSyntax
-          sources_to_process: sources_to_process # rubocop:disable Style/HashSyntax
-        }
-        result = process_single_source_with_requires(source, index, sources.length + index, context)
-
-        if result
-          processed_files.add(source_key)
-
-          if result[:is_bin]
-            bin_files << result[:data]
-          elsif result[:is_skill]
-            skill_files << result[:data]
-          elsif result[:is_command]
-            command_files << result[:data]
-          else
-            local_sources << result[:data]
-          end
-        end
-
-        index += 1
-      end
-
-      # Copy bin files to .ruly/bin if any exist
-      copy_bin_files(bin_files) unless bin_files.empty? || options[:dry_run]
-
-      puts if verbose?
-
-      [local_sources, command_files, bin_files, skill_files]
+    def process_sources_for_squash(sources, agent, _recipe_config, _options)
+      Services::SourceProcessor.process_for_squash(
+        sources, agent,
+        dry_run: options[:dry_run], find_rule_file: method(:find_rule_file), gem_root:, keep_frontmatter: options[:front_matter], verbose: verbose?
+      )
     end
 
     def verbose?
       options[:verbose] || ENV.fetch('DEBUG', nil)
-    end
-
-    def prefetch_remote_files(sources)
-      Services::GitHubClient.prefetch_remote_files(sources, verbose: verbose?)
-    end
-
-    def get_source_key(source)
-      # Create a unique key for deduplication
-      # For local files, use the absolute canonical path
-      # For remote files, use the full URL
-      if source[:type] == 'local'
-        # Try to find the full path
-        full_path = find_rule_file(source[:path])
-
-        # If found, use the real absolute path for deduplication
-        # This ensures that "rules/commands.md", "../commands.md", "../../commands.md"
-        # all resolve to the same key when they point to the same file
-        if full_path
-          File.realpath(full_path)
-        else
-          # If file not found, use the original path as-is
-          source[:path]
-        end
-      else
-        source[:path]
-      end
-    end
-
-    def process_single_source_with_requires(source, index, total, context)
-      # Extract context
-      agent = context[:agent]
-      prefetched_content = context[:prefetched_content]
-      processed_files = context[:processed_files]
-      sources_to_process = context[:sources_to_process]
-      keep_frontmatter = context[:keep_frontmatter]
-
-      # First process the source normally
-      result = process_single_source(source, index, total, agent, prefetched_content, keep_frontmatter:)
-
-      return nil unless result
-
-      # If it's a regular markdown file (not bin), check for requires
-      if !result[:is_bin] && result[:data] && result[:data][:content]
-        # Use original content (with requires intact) for dependency resolution
-        content_for_requires = result[:data][:original_content] || result[:data][:content]
-
-        # For skill files, skip adding requires to the main queue — they'll be
-        # compiled into the skill output by save_skill_files instead
-        unless result[:is_skill]
-          # Resolve requires for this source
-          required_sources = resolve_requires_for_source(source, content_for_requires, processed_files,
-                                                         sources_to_process)
-
-          # Add required sources to the front of the queue (depth-first processing)
-          unless required_sources.empty?
-            puts "    → Found #{required_sources.length} requires, adding to queue..." if verbose?
-            # Mark these sources as being from requires
-            required_sources.each { |rs| rs[:from_requires] = true }
-            sources_to_process.unshift(*required_sources)
-          end
-        end
-
-        # Resolve skills: frontmatter references (with validation)
-        skill_sources = resolve_skills_for_source(source, content_for_requires, processed_files)
-
-        # Add skill sources to the queue — they'll be categorized as skill_files
-        # because their paths contain /skills/
-        unless skill_sources.empty?
-          puts "    → Found #{skill_sources.length} skills, adding to queue..." if verbose?
-          sources_to_process.unshift(*skill_sources)
-        end
-      end
-
-      result
-    end
-
-    def process_single_source(source, index, total, agent, prefetched_content, keep_frontmatter: false)
-      if source[:type] == 'local'
-        process_local_file_with_progress(source, index, total, agent, keep_frontmatter:)
-      elsif prefetched_content[source[:path]]
-        # Use prefetched content from GraphQL
-        display_prefetched_remote(source, index, total, agent, prefetched_content[source[:path]], keep_frontmatter:)
-      else
-        # Fallback to individual fetch
-        process_remote_file_with_progress(source, index, total, agent, keep_frontmatter:)
-      end
-    end
-
-    def process_local_file_with_progress(source, index, total, agent, keep_frontmatter: false)
-      # Check if this is from requires and adjust the message
-      prefix = source[:from_requires] ? '📚 Required' : '📁 Local'
-      print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..." if verbose?
-      file_path = find_rule_file(source[:path])
-
-      unless file_path
-        verbose? ? puts(' ❌ not found') : warn("  ⚠️  File not found: #{source[:path]}")
-        return nil
-      end
-
-      # Check if it's a bin/*.sh file
-      is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
-
-      if is_bin
-        # For bin files, we'll copy them directly
-        puts ' ✅ (bin)' if verbose?
-        return {data: {relative_path: source[:path], source_path: file_path}, is_bin: true}
-      end
-
-      content = File.read(file_path, encoding: 'UTF-8')
-      # Store original content (with requires) for dependency resolution
-      original_content = content
-      # Strip metadata fields from YAML frontmatter for output
-      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
-      is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
-      is_skill = agent == 'claude' && source[:path].include?('/skills/')
-
-      # Count tokens for the content
-      tokens = count_tokens(content)
-      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
-      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
-    end
-
-    def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
-      Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
-    end
-
-    def count_tokens(text)
-      # Use cl100k_base encoding (used by GPT-4, Claude, etc.)
-      encoder = Tiktoken.get_encoding('cl100k_base')
-      # Ensure text is UTF-8 encoded to avoid encoding errors
-      utf8_text = text.encode('UTF-8', invalid: :replace, replace: '?', undef: :replace)
-      encoder.encode(utf8_text).length
-    end
-
-    def print_file_progress_result(formatted_tokens, from_requires:, is_command:, is_skill:)
-      return unless verbose?
-
-      label = if is_skill then 'skill'
-              elsif is_command then 'command'
-              elsif from_requires then 'from requires'
-              end
-      suffix = label ? "(#{label}, #{formatted_tokens} tokens)" : "(#{formatted_tokens} tokens)"
-      puts " ✅ #{suffix}"
-    end
-
-    def display_prefetched_remote(source, index, total, agent, content, keep_frontmatter: false)
-      # Extract domain and full path for display
-      if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
-        owner = Regexp.last_match(1)
-        repo = Regexp.last_match(2)
-        file_path = Regexp.last_match(3)
-        display_name = "#{owner}/#{repo}/#{file_path}"
-        icon = source[:from_requires] ? '📚' : '🐙'
-      else
-        display_name = source[:path]
-        icon = source[:from_requires] ? '📚' : '📦'
-      end
-
-      prefix = source[:from_requires] ? 'Required' : 'Processing'
-      print "  [#{index + 1}/#{total}] #{icon} #{prefix}: #{display_name}..." if verbose?
-
-      # Store original content for requires resolution
-      original_content = content
-      # Strip metadata fields from YAML frontmatter
-      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
-
-      # Count tokens in the content
-      tokens = count_tokens(content)
-      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      # Check if remote file is a command file or skill file
-      is_command = agent == 'claude' && source[:path].include?('/commands/')
-      is_skill = agent == 'claude' && source[:path].include?('/skills/')
-      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
-
-      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
-    end
-
-    def process_remote_file_with_progress(source, index, total, agent, keep_frontmatter: false)
-      display_info = parse_remote_display_info(source[:path], from_requires: source[:from_requires])
-      prefix = source[:from_requires] ? 'Required' : 'Fetching'
-      print "  [#{index + 1}/#{total}] #{display_info[:icon]} #{prefix}: #{display_info[:display_name]}..." if verbose?
-      content = fetch_remote_content(source[:path])
-
-      unless content
-        verbose? ? puts(' ❌ failed') : warn("  ⚠️  Failed to fetch: #{source[:path]}")
-        return nil
-      end
-
-      # Store original content for requires resolution
-      original_content = content
-      # Strip metadata fields from YAML frontmatter
-      content = strip_metadata_from_frontmatter(content, keep_frontmatter:)
-
-      # Count tokens in the content
-      tokens = count_tokens(content)
-      formatted_tokens = tokens.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      # Check if remote file is a command file or skill file
-      is_command = agent == 'claude' && source[:path].include?('/commands/')
-      is_skill = agent == 'claude' && source[:path].include?('/skills/')
-      print_file_progress_result(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:)
-      {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}
-    end
-
-    def parse_remote_display_info(path, from_requires: false)
-      if path =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
-        display_name = "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}/#{Regexp.last_match(3)}"
-        icon = from_requires ? '📚' : '🐙'
-      elsif path =~ %r{https?://([^/]+)/(.+)}
-        display_name = "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}"
-        icon = from_requires ? '📚' : '🌐'
-      else
-        display_name = path
-        icon = from_requires ? '📚' : '🌐'
-      end
-      {display_name:, icon:}
-    end
-
-    def fetch_remote_content(url)
-      Services::GitHubClient.fetch_remote_content(url)
-    end
-
-    def resolve_requires_for_source(source, content, processed_files, all_sources)
-      Services::DependencyResolver.resolve_requires_for_source(
-        source, content, processed_files, all_sources,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_skills_for_source(source, content, processed_files)
-      Services::DependencyResolver.resolve_skills_for_source(
-        source, content, processed_files,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def copy_bin_files(bin_files)
-      Services::ScriptManager.copy_bin_files(bin_files)
     end
 
     def collect_dispatches_from_sources(local_sources)
@@ -1442,32 +1150,6 @@ module Ruly
 
     def get_command_relative_path(file_path, omit_prefix = nil)
       Services::ScriptManager.get_command_relative_path(file_path, omit_prefix)
-    end
-
-    def convert_to_raw_url(url)
-      Services::GitHubClient.convert_to_raw_url(url)
-    end
-
-    def resolve_required_path(source, required_path)
-      Services::DependencyResolver.resolve_required_path(
-        source, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_local_require(source_path, required_path)
-      Services::DependencyResolver.resolve_local_require(
-        source_path, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_remote_require(source_url, required_path)
-      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
-    end
-
-    def normalize_path(path)
-      Services::DependencyResolver.normalize_path(path)
     end
 
     def calculate_bin_target(relative_path)
@@ -1818,10 +1500,6 @@ module Ruly
       Services::MCPManager.update_mcp_settings(recipe_config, agent)
     end
 
-    def load_mcp_servers_from_config(server_names)
-      Services::MCPManager.load_mcp_servers_from_config(server_names)
-    end
-
     def process_subagents(recipe_config, parent_recipe_name, top_level: true, visited: Set.new)
       Services::SubagentProcessor.process_subagents(
         recipe_config, parent_recipe_name,
@@ -1898,6 +1576,70 @@ module Ruly
       end
     rescue StandardError => e
       puts "⚠️  Could not count tokens: #{e.message}"
+    end
+
+    def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
+      Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
+    end
+
+    def count_tokens(text)
+      Services::SourceProcessor.count_tokens(text)
+    end
+
+    def get_source_key(source)
+      Services::SourceProcessor.get_source_key(source, find_rule_file: method(:find_rule_file))
+    end
+
+    def fetch_remote_content(url)
+      Services::GitHubClient.fetch_remote_content(url)
+    end
+
+    def resolve_requires_for_source(source, content, processed_files, all_sources)
+      Services::DependencyResolver.resolve_requires_for_source(
+        source, content, processed_files, all_sources,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def resolve_skills_for_source(source, content, processed_files)
+      Services::DependencyResolver.resolve_skills_for_source(
+        source, content, processed_files,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def copy_bin_files(bin_files)
+      Services::ScriptManager.copy_bin_files(bin_files)
+    end
+
+    def convert_to_raw_url(url)
+      Services::GitHubClient.convert_to_raw_url(url)
+    end
+
+    def resolve_required_path(source, required_path)
+      Services::DependencyResolver.resolve_required_path(
+        source, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def resolve_local_require(source_path, required_path)
+      Services::DependencyResolver.resolve_local_require(
+        source_path, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def resolve_remote_require(source_url, required_path)
+      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
+    end
+
+    def normalize_path(path)
+      Services::DependencyResolver.normalize_path(path)
+    end
+
+    def load_mcp_servers_from_config(server_names)
+      Services::MCPManager.load_mcp_servers_from_config(server_names)
     end
 
     def agent_context_limits
