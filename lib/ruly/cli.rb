@@ -693,16 +693,23 @@ module Ruly
     option :plan, aliases: '-p', desc: 'Override pricing plan', type: :string
     option :all, aliases: '-a', default: false, desc: 'Analyze all recipes', type: :boolean
     def analyze(recipe_name = nil)
-      load_contexts
-
-      if options[:all]
-        analyze_all_recipes
-      elsif recipe_name
-        analyze_single_recipe(recipe_name)
-      else
+      if !options[:all] && !recipe_name
         puts '❌ Please specify a recipe or use -a for all recipes'
         raise Thor::Error, 'Recipe required'
       end
+
+      result = Operations::Analyzer.call(
+        analyze_all: options[:all],
+        gem_root:,
+        plan_override: options[:plan],
+        recipe_name:,
+        recipes_file:
+      )
+
+      return if result[:success]
+
+      puts "❌ Error: #{result[:error]}"
+      exit 1
     end
 
     desc 'init', 'Initialize Ruly with a basic configuration'
@@ -825,7 +832,7 @@ module Ruly
         sources: resolved_sources
       )
 
-      display_stats_result(result)
+      Operations::Analyzer.display_stats_result(result)
     end
 
     private
@@ -2057,284 +2064,6 @@ module Ruly
       end
     end
 
-    def load_contexts
-      contexts_file = File.join(gem_root, 'lib', 'ruly', 'contexts.yml')
-      @contexts = YAML.load_file(contexts_file) if File.exist?(contexts_file)
-      @load_contexts ||= {}
-    end
-
-    def analyze_all_recipes
-      recipes = load_all_recipes
-
-      puts '📊 Token Analysis for All Recipes'
-      puts '=' * 60
-
-      recipes.each_key do |name|
-        sources, = load_recipe_sources(name)
-
-        # Calculate content size
-        total_content = ''
-        file_count = 0
-
-        sources.each do |source|
-          if source[:type] == 'local'
-            file_path = find_rule_file(source[:path])
-            if file_path
-              content = File.read(file_path, encoding: 'UTF-8')
-              total_content += content
-              file_count += 1
-            end
-          elsif source[:type] == 'remote'
-            total_content += ' ' * 2000 # Estimate
-            file_count += 1
-          end
-        end
-
-        token_count = count_tokens(total_content)
-        plan = get_plan_for_recipe(name)
-        context_limit = get_context_limit_for_plan(plan)
-
-        display_recipe_analysis(name, file_count, token_count, plan, context_limit, compact: true)
-      rescue StandardError => e
-        puts "  ❌ #{name}: Error - #{e.message}"
-      end
-    end
-
-    def get_plan_for_recipe(recipe_name)
-      # Priority: CLI option > recipe-level > user config > global default
-      return options[:plan] if options[:plan]
-
-      # Load recipe config
-      recipes = load_all_recipes
-      recipe = recipes[recipe_name]
-      return recipe['plan'] if recipe && recipe['plan']
-
-      # Check user config
-      user_config_file = File.expand_path('~/.config/ruly/recipes.yml')
-      if File.exist?(user_config_file)
-        user_config = YAML.safe_load_file(user_config_file, aliases: true) || {}
-        return user_config['plan'] if user_config['plan']
-      end
-
-      # Check global default in recipes.yml
-      recipes_config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-      return recipes_config['plan'] if recipes_config['plan']
-
-      # Default fallback
-      'claude_pro'
-    end
-
-    def get_context_limit_for_plan(plan)
-      # Handle aliases
-      plan = @contexts['aliases'][plan] if @contexts['aliases'] && @contexts['aliases'][plan]
-
-      # Parse nested plan (e.g., "claude.pro")
-      if plan.include?('.')
-        service, tier = plan.split('.', 2)
-        context_info = @contexts.dig(service, tier)
-      else
-        # Search all services for the plan
-        @contexts.each_value do |tiers|
-          next unless tiers.is_a?(Hash)
-
-          tiers.each_value do |info|
-            next unless info.is_a?(Hash)
-            return info['context'] if info['name'] == plan
-          end
-        end
-      end
-
-      context_info ? context_info['context'] : 100_000 # Default fallback
-    end
-
-    def display_recipe_analysis(recipe_name, file_count, token_count, plan, context_limit, compact: false) # rubocop:disable Metrics/MethodLength
-      percentage = ((token_count.to_f / context_limit) * 100).round(1)
-
-      # Format numbers
-      formatted_tokens = token_count.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-      formatted_limit = context_limit.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      # Status indicator
-      status = if percentage < 50
-                 '🟢'
-               elsif percentage < 80
-                 '🟡'
-               elsif percentage < 95
-                 '🟠'
-               else
-                 '🔴'
-               end
-
-      if compact
-        context_label = formatted_limit
-        puts format('  %-20<recipe>s %6<tokens>s tokens / %-7<context>s (%5.1<percent>f%%) %<status>s [%<plan>s]',
-                    context: context_label,
-                    percent: percentage,
-                    plan:,
-                    recipe: recipe_name,
-                    status:,
-                    tokens: formatted_tokens)
-      else
-        puts "\n📦 Recipe: #{recipe_name}"
-        puts "📄 Files: #{file_count}"
-        puts "🎯 Plan: #{plan}"
-        puts "🧮 Tokens: #{formatted_tokens} / #{formatted_limit} (#{percentage}%) #{status}"
-
-        if percentage > 80
-          puts '⚠️  Warning: This recipe is approaching the context limit!' if percentage < 95
-          puts '❌ Error: This recipe exceeds the context limit!' if percentage >= 100
-        else
-          puts "✅ This recipe fits comfortably within your plan's context window"
-        end
-      end
-    end
-
-    def analyze_single_recipe(recipe_name)
-      sources, = load_recipe_sources(recipe_name)
-
-      # Calculate content and tokens for each file
-      file_details = []
-      total_content = ''
-      file_count = 0
-
-      sources.each do |source|
-        total_content, file_count = process_source_for_analysis(source, file_details, total_content, file_count)
-      end
-
-      # Get token count
-      token_count = count_tokens(total_content)
-
-      # Get plan and context limit
-      plan = get_plan_for_recipe(recipe_name)
-      context_limit = get_context_limit_for_plan(plan)
-
-      # Display detailed analysis
-      display_detailed_analysis(recipe_name, file_details, token_count, plan, context_limit)
-    end
-
-    def process_source_for_analysis(source, file_details, total_content, file_count)
-      if source[:type] == 'local'
-        file_path = find_rule_file(source[:path])
-        if file_path
-          content = File.read(file_path, encoding: 'UTF-8')
-          tokens = count_tokens(content)
-          file_details << {
-            path: source[:path],
-            size: content.bytesize,
-            tokens:,
-            type: 'local'
-          }
-          total_content += content
-          file_count += 1
-        end
-      elsif source[:type] == 'remote'
-        # For dry-run, estimate remote file size
-        estimated_content = ' ' * 2000 # Estimate 2KB per remote file
-        tokens = count_tokens(estimated_content)
-        file_details << {
-          path: source[:path],
-          size: 2000,
-          tokens:,
-          type: 'remote'
-        }
-        total_content += estimated_content
-        file_count += 1
-      end
-      [total_content, file_count]
-    end
-
-    def display_detailed_analysis(recipe_name, file_details, token_count, plan, context_limit)
-      percentage = ((token_count.to_f / context_limit) * 100).round(1)
-      formatted_tokens = token_count.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-      formatted_limit = context_limit.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-
-      # Status indicator
-      status = if percentage < 50
-                 '🟢'
-               elsif percentage < 80
-                 '🟡'
-               elsif percentage < 95
-                 '🟠'
-               else
-                 '🔴'
-               end
-
-      puts "\n📦 Recipe: #{recipe_name}"
-      puts "🎯 Plan: #{plan}"
-      puts
-
-      # Build file tree structure
-      tree = build_file_tree(file_details)
-      display_file_tree(tree)
-
-      puts
-      puts '📊 Total Summary:'
-      puts "   Files: #{file_details.size}"
-      puts "   Tokens: #{formatted_tokens} / #{formatted_limit} (#{percentage}%) #{status}"
-
-      if percentage > 80
-        puts '   ⚠️  Warning: This recipe is approaching the context limit!' if percentage < 95
-        puts '   ❌ Error: This recipe exceeds the context limit!' if percentage >= 100
-      else
-        puts "   ✅ This recipe fits comfortably within your plan's context window"
-      end
-    end
-
-    def build_file_tree(file_details)
-      tree = {}
-
-      file_details.each do |file|
-        path_parts = file[:path].split('/')
-        current_level = tree
-
-        path_parts.each_with_index do |part, index|
-          if index == path_parts.length - 1
-            # This is a file
-            current_level[part] = file
-          else
-            # This is a directory
-            current_level[part] ||= {}
-            current_level = current_level[part]
-          end
-        end
-      end
-
-      tree
-    end
-
-    def display_file_tree(tree, is_root: true, prefix: '')
-      items = tree.to_a
-      items.each_with_index do |(key, value), index|
-        is_last_item = index == items.length - 1
-
-        if value.is_a?(Hash) && value[:path]
-          # This is a file
-          tokens = value[:tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-          size_kb = (value[:size] / 1024.0).round(1)
-          type_icon = value[:type] == 'remote' ? '🌐' : '📄'
-
-          if is_root && items.length == 1
-            puts "#{type_icon} #{key} (#{tokens} tokens, #{size_kb} KB)"
-          else
-            connector = is_last_item ? '└── ' : '├── '
-            puts "#{prefix}#{connector}#{type_icon} #{key} (#{tokens} tokens, #{size_kb} KB)"
-          end
-        elsif value.is_a?(Hash)
-          # This is a directory
-          if is_root && items.length == 1
-            puts "📁 #{key}/"
-            display_file_tree(value, is_root: false, prefix: '')
-          else
-            connector = is_last_item ? '└── ' : '├── '
-            puts "#{prefix}#{connector}📁 #{key}/"
-
-            new_prefix = prefix + (is_last_item ? '    ' : '│   ')
-            display_file_tree(value, is_root: false, prefix: new_prefix)
-          end
-        end
-      end
-    end
-
     def load_mcp_server_definitions
       Services::MCPManager.load_mcp_server_definitions
     end
@@ -2352,21 +2081,6 @@ module Ruly
 
     def write_mcp_json(selected_servers)
       Services::MCPManager.write_mcp_json(selected_servers, append: options[:append])
-    end
-
-    def display_stats_result(result)
-      if result[:success]
-        data = result[:data]
-        formatted_tokens = data[:total_tokens].to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-        puts "✅ Generated #{data[:output_file]}"
-        puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
-        if data[:orphaned_count].positive?
-          puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
-        end
-      else
-        puts "❌ Error: #{result[:error]}"
-        exit 1
-      end
     end
 
     # Detect recipe type based on its structure
