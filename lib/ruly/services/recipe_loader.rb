@@ -14,10 +14,12 @@ module Ruly
       # @param gem_root [String] root directory of the gem/project
       # @param scan_files_for_recipe_tags [Proc, nil] optional callback for tag scanning
       # @return [Array<(Array<Hash>, Hash)>]
-      def load_recipe_sources(recipe_name, gem_root:, scan_files_for_recipe_tags: nil)
-        validate_recipes_file!(gem_root:)
-
-        recipes = load_all_recipes(gem_root:)
+      def load_recipe_sources(recipe_name, gem_root:, base_recipes_file: nil,
+                              recipes: nil, scan_files_for_recipe_tags: nil)
+        recipes ||= begin
+          validate_recipes_file!(gem_root:)
+          load_all_recipes(base_recipes_file:, gem_root:)
+        end
         recipe = validate_recipe!(recipe_name, recipes)
 
         sources = []

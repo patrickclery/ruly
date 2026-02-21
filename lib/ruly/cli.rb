@@ -1,28 +1,19 @@
 # frozen_string_literal: true
 
-require 'English'
-require 'thor'
-require 'find'
 require 'fileutils'
-require 'date'
-require 'time'
-require 'yaml'
 require 'json'
-require 'net/http'
-require 'uri'
-require 'digest'
-require 'tiktoken_ruby'
-require 'base64'
-require 'tempfile'
 require 'shellwords'
+require 'thor'
+require 'yaml'
 require_relative 'version'
 require_relative 'operations'
 require_relative 'services'
 
 module Ruly
   # Command Line Interface for Ruly gem
-  # Provides commands for managing and compiling AI assistant rules
   class CLI < Thor
+    MERGE_SKIP_KEYS = %w[files sources].freeze
+
     def self.exit_on_failure?
       true
     end
@@ -33,359 +24,70 @@ module Ruly
     option :cache, default: false, desc: 'Enable caching for this recipe', type: :boolean
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
     option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
-    option :dry_run, aliases: '-d', default: false, desc: 'Show what would be done without actually doing it',
-                     type: :boolean
+    option :dry_run, aliases: '-d', default: false, type: :boolean
     option :git_ignore, aliases: '-i', default: false, desc: 'Add generated files to .gitignore', type: :boolean
-    option :git_exclude, aliases: '-I', default: false, desc: 'Add generated files to .git/info/exclude', type: :boolean
-    option :toc, aliases: '-t', default: false, desc: 'Generate table of contents at the beginning of the file',
-                 type: :boolean
-    option :essential, aliases: '-e', default: false,
-                       desc: 'Only include files marked as essential: true in frontmatter',
-                       type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false,
-                               desc: 'Copy TaskMaster config to .taskmaster/config.json',
-                               type: :boolean
-    option :keep_taskmaster, default: false,
-                             desc: 'When used with --clean or --deepclean, append Task Master import to output file',
-                             type: :boolean
-    option :front_matter, default: false,
-                          desc: 'Preserve non-metadata frontmatter in output',
-                          type: :boolean
-    option :home_override, default: false,
-                           desc: 'Allow running squash in $HOME directory (dangerous)',
-                           type: :boolean
-    option :verbose, aliases: '-v', default: false, desc: 'Show detailed per-file processing output', type: :boolean
-    # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
-    def squash(recipe_name = nil)
-      # Safeguard: prevent running in $HOME to avoid deleting ~/.claude/
-      if Dir.pwd == Dir.home && !options[:home_override]
-        say_error "ERROR: Running 'ruly squash' in $HOME is dangerous and may delete ~/.claude/"
-        say_error 'Use --home-override if you really want to do this.'
-        exit 1
-      end
+    option :git_exclude, aliases: '-I', default: false, type: :boolean
+    option :toc, aliases: '-t', default: false, type: :boolean
+    option :essential, aliases: '-e', default: false, type: :boolean
+    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
+    option :keep_taskmaster, default: false, type: :boolean
+    option :front_matter, default: false, type: :boolean
+    option :home_override, default: false, type: :boolean
+    option :verbose, aliases: '-v', default: false, type: :boolean
+    def squash(recipe_name = nil) # rubocop:disable Metrics/MethodLength
+      guard_home_directory!
+      invoke_clean_if_requested(recipe_name)
+      agent = normalize_agent(options[:agent])
 
-      # Clean first if requested (deepclean takes precedence over clean)
-      if options[:deepclean] && !options[:dry_run]
-        invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
-      elsif options[:clean] && !options[:dry_run]
-        invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
-      end
-
-      agent = options[:agent]
-      # Normalize agent aliases
-      agent = 'shell_gpt' if agent == 'sgpt'
-      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
-      # recipe_name is now a positional parameter
-      dry_run = options[:dry_run]
-      git_ignore = options[:git_ignore]
-      git_exclude = options[:git_exclude]
-
-      # Load recipe early to determine output file path based on recipe type
-      sources, recipe_config = if recipe_name
-                                 load_recipe_sources(recipe_name)
-                               else
-                                 [collect_local_sources, {}]
-                               end
-
-      # Determine output file based on recipe type (Array = agent, Hash = standard)
+      sources, recipe_config = load_sources(recipe_name)
       output_file = if recipe_name
-                      determine_output_file(recipe_name, recipe_config, options)
+                      Services::SquashHelpers.determine_output_file(recipe_name, recipe_config,
+                                                                    options)
                     else
                       options[:output_file]
                     end
+      script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
+                                                                          find_rule_file: method(:find_rule_file))
+      script_mappings = Services::ScriptManager.build_script_mappings(script_files)
+      Services::ShellCommandChecker.check_and_warn(sources, find_rule_file: method(:find_rule_file))
 
-      # Collect scripts from all sources
-      script_files = collect_scripts_from_sources(sources)
-
-      # Build script path mappings for rewriting references
-      script_mappings = build_script_mappings(script_files)
-
-      # Check required shell commands and warn about missing ones
-      required_commands = collect_required_shell_commands(sources)
-      unless required_commands.empty?
-        check_result = check_required_shell_commands(required_commands)
-        check_result[:missing].each do |cmd|
-          puts "⚠️  Warning: Required shell command '#{cmd}' not found in PATH"
-        end
-      end
-
-      # Check for cached version
-      cache_used = false
-      if recipe_name && options[:cache] && !dry_run
-        cached_file = check_cache(recipe_name, agent)
-        if cached_file && should_use_cache?
-          puts "\n💾 Using cached version for recipe '#{recipe_name}'"
-          FileUtils.cp(cached_file, output_file)
-          cache_used = true
-
-          # Still need to handle command files separately
-          if agent == 'claude'
-            command_files = extract_cached_command_files(cached_file, recipe_name, agent)
-            save_command_files(command_files, recipe_config) unless command_files.empty?
-          end
-        elsif options[:cache]
-          puts "\n🔄 No cache found for recipe '#{recipe_name}', fetching fresh..."
-        end
-      end
+      cache_used = recipe_name && options[:cache] && !options[:dry_run] &&
+                   cached?(recipe_name, agent, output_file, recipe_config)
 
       unless cache_used
-        ensure_parent_directory(output_file) unless dry_run
-        FileUtils.rm_f(output_file) unless dry_run
+        prepare_output(output_file) unless options[:dry_run]
+        sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
+        local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
+        validate_squash_dispatches(local_sources, recipe_config, recipe_name)
 
-        # Filter to only essential files if --essential flag is set
-        if options[:essential]
-          sources = filter_essential_sources(sources)
-          puts "📌 Essential mode: filtered to #{sources.length} essential files" unless dry_run
-        end
-
-        # Process sources and separate command files and bin files
-        local_sources, command_files, bin_files, skill_files = process_sources_for_squash(sources, agent,
-                                                                                          recipe_config, options)
-
-        # Validate that any dispatches: in source files match registered subagents
-        if recipe_name && recipe_config.is_a?(Hash)
-          collected_dispatches = collect_dispatches_from_sources(local_sources)
-          validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
-        end
-
-        if dry_run
-          puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
-
-          # Show what would be cleaned first
-          if options[:deepclean]
-            puts 'Would deep clean first:'
-            puts '  → Remove .claude/ directory'
-            puts '  → Remove CLAUDE.local.md'
-            puts '  → Remove CLAUDE.md'
-            puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
-            puts ''
-          elsif options[:clean]
-            puts 'Would clean existing files first'
-            puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
-            puts ''
-          end
-
-          puts "Would create: #{output_file}"
-          puts "  → #{local_sources.size} rule files combined"
-          puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
-
-          if agent == 'claude' && !command_files.empty?
-            puts "\nWould create command files in .claude/commands/:"
-            # rubocop:disable Layout/LineLength, Metrics/BlockNesting
-            omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
-            # rubocop:enable Layout/LineLength, Metrics/BlockNesting
-            command_files.each do |file|
-              # Show subdirectory structure if present
-              relative_path = get_command_relative_path(file[:path], omit_prefix)
-              puts "  → #{relative_path}"
-            end
-          end
-
-          unless bin_files.empty?
-            puts "\nWould copy bin files to .ruly/bin/:"
-            bin_files.each do |file|
-              target = calculate_bin_target(file[:relative_path])
-              puts "  → #{target} (executable)"
-            end
-          end
-
-          if agent == 'claude' && !skill_files.empty?
-            puts "\nWould create skill files in .claude/skills/:"
-            skill_files.each do |file|
-              skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
-              puts "  → .claude/skills/#{skill_name}/SKILL.md"
-            end
-          end
-
-          # Show scripts that would be copied
-          if script_files[:local].any? || script_files[:remote].any?
-            total_scripts = script_files[:local].size + script_files[:remote].size
-            puts "\nWould copy #{total_scripts} scripts to .claude/scripts/:"
-            script_files[:local].each do |script|
-              puts "  → #{script[:relative_path]} (local)"
-            end
-            script_files[:remote].each do |script|
-              puts "  → #{script[:filename]} (remote from GitHub)"
-            end
-          end
-
-          puts "\nWould cache output for recipe '#{recipe_name}'" if recipe_name && should_use_cache?
-
-          if git_ignore
-            puts "\nWould update: .gitignore"
-            puts '  → Add entries for generated files'
-          end
-
-          if git_exclude
-            puts "\nWould update: .git/info/exclude"
-            puts '  → Add entries for generated files'
-          end
-
-          copy_taskmaster_config if options[:taskmaster_config]
-
+        if options[:dry_run]
+          Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
+                                           output_file, agent, recipe_name, recipe_config, options)
           return
         end
 
-        # Write output based on agent type
-        if agent == 'shell_gpt'
-          write_shell_gpt_json(output_file, local_sources)
-        else
-          # Standard markdown output
-          File.open(output_file, 'w') do |output|
-            # Generate TOC if requested
-            if options[:toc]
-              toc_content = generate_toc_content(local_sources, command_files, agent)
-              output.puts toc_content
-              output.puts
-            end
-
-            local_sources.each_with_index do |source, index|
-              # Rewrite script references to local .claude/scripts/ paths
-              content = rewrite_script_references(source[:content], script_mappings)
-
-              # If TOC is enabled, add anchor IDs to headers in content
-              if options[:toc]
-                output.puts add_anchor_ids_to_content(content, source[:path])
-              else
-                output.puts content
-              end
-
-              # Add blank line between sources (but not after the last one)
-              output.puts if index < local_sources.length - 1
-            end
-          end
-
-          # Append Task Master import if requested (when using --clean or --deepclean with --keep-taskmaster)
-          if (options[:clean] || options[:deepclean]) && options[:keep_taskmaster] && agent != 'shell_gpt'
-            File.open(output_file, 'a') do |file|
-              file.puts
-              file.puts '## Task Master AI Instructions'
-              file.puts '**Import Task Master\'s development workflow commands and guidelines, ' \
-                        'treat as if import is in the main CLAUDE.md file.**'
-              file.puts '@./.taskmaster/CLAUDE.md'
-            end
-          end
-        end
-
-        # Update git ignore files if requested
-        if git_ignore || git_exclude
-          ignore_patterns = generate_ignore_patterns(output_file, agent, command_files)
-          update_gitignore(ignore_patterns) if git_ignore
-          update_git_exclude(ignore_patterns) if git_exclude
-        end
-
-        # Cache the output if recipe has caching enabled
-        save_to_cache(output_file, recipe_name, agent) if recipe_name && should_use_cache?
-
-        # Save command files separately if agent is Claude
-        save_command_files(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
-
-        # Save skill files separately if agent is Claude
-        save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
-
-        # Collect MCP servers from rule-file frontmatter and merge with recipe config
-        rule_mcp_servers = collect_mcp_servers_from_sources(local_sources)
-        if rule_mcp_servers.any?
-          recipe_config = {} unless recipe_config.is_a?(Hash)
-          existing = Array(recipe_config['mcp_servers'])
-          new_servers = rule_mcp_servers - existing
-          recipe_config['mcp_servers'] = (existing + rule_mcp_servers).uniq
-          puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
-        end
-
-        # Collect MCP servers from subagent recipes (recursive) and merge with parent
-        if recipe_config.is_a?(Hash) && recipe_config['subagents']
-          original_servers = Array(recipe_config['mcp_servers'])
-          all_mcp_servers = collect_all_mcp_servers(recipe_config)
-          if all_mcp_servers.any?
-            propagated = all_mcp_servers - original_servers
-            recipe_config['mcp_servers'] = all_mcp_servers
-            puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
-          end
-        end
-
-        # Update MCP settings (JSON for Claude, YAML for others)
-        update_mcp_settings(recipe_config, agent)
-
-        # Copy TaskMaster config if requested
-        copy_taskmaster_config if options[:taskmaster_config]
-
-        # Process subagents if defined in recipe
-        process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
-
-        # Copy scripts to Claude Code directory
-        copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
-
-        # Run post-squash validation checks
-        Ruly::Checks.run_all(local_sources, command_files)
+        write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
+        post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
+                    script_files)
       end
 
-      mode_desc = if agent == 'shell_gpt'
-                    'shell_gpt role JSON'
-                  elsif cache_used
-                    "cached squash mode with '#{recipe_name}' recipe"
-                  elsif recipe_name
-                    # Check if this is an agent file (array recipe)
-                    if recipe_config.is_a?(Array)
-                      "agent generation mode with '#{recipe_name}' recipe"
-                    else
-                      "squash mode with '#{recipe_name}' recipe"
-                    end
-                  else
-                    'squash mode (combined content)'
-                  end
-
-      # Count total files from the output
-      total_files = if cache_used
-                      cached_file_count(output_file)
-                    else
-                      local_sources.size + command_files.size + skill_files.size
-                    end
-
-      print_summary(mode_desc, output_file, total_files)
-
-      if agent == 'claude' && !command_files.empty?
-        puts "📁 Saved #{command_files.size} command files to .claude/commands/ (with subdirectories)"
-      end
-
-      return unless agent == 'claude' && !skill_files.empty?
-
-      puts "🎯 Saved #{skill_files.size} skill files to .claude/skills/"
+      Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, cache_used,
+                                       cache_used ? nil : local_sources, cache_used ? nil : command_files,
+                                       cache_used ? nil : skill_files)
     end
-    # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
 
     desc 'import RECIPE', 'Import a recipe and copy its scripts to ~/.claude/scripts/'
-    option :dry_run, aliases: '-d', default: false, desc: 'Show what would be copied without actually copying',
-                     type: :boolean
+    option :dry_run, aliases: '-d', default: false, type: :boolean
     def import(recipe_name)
-      dry_run = options[:dry_run]
-
-      # Load recipe sources
-      sources, _recipe_config = load_recipe_sources(recipe_name)
-
+      sources, = load_sources(recipe_name)
       puts "\n🔄 Processing recipe: #{recipe_name}"
+      script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
+                                                                          find_rule_file: method(:find_rule_file))
 
-      # Collect scripts from all sources
-      script_files = collect_scripts_from_sources(sources)
-
-      if dry_run
-        puts "\n🔍 Dry run mode - no files will be copied\n\n"
-
-        if script_files[:local].any? || script_files[:remote].any?
-          total_scripts = script_files[:local].size + script_files[:remote].size
-          puts "Would copy #{total_scripts} scripts to .claude/scripts/:"
-          script_files[:local].each do |script|
-            puts "  → #{script[:relative_path]} (local)"
-          end
-          script_files[:remote].each do |script|
-            puts "  → #{script[:filename]} (remote from GitHub)"
-          end
-        else
-          puts "No scripts found in recipe '#{recipe_name}'"
-        end
+      if options[:dry_run]
+        Services::Display.import_dry_run(script_files, recipe_name)
       elsif script_files[:local].any? || script_files[:remote].any?
-        # Copy scripts
-        copy_scripts(script_files)
+        Services::ScriptManager.copy_scripts(script_files)
         puts "\n✨ Recipe imported successfully"
       else
         puts "No scripts found in recipe '#{recipe_name}'"
@@ -393,257 +95,84 @@ module Ruly
     end
 
     desc 'clean [RECIPE]', 'Remove generated files (recipe optional, overrides metadata)'
-    option :output_file, aliases: '-o', desc: 'Output file to clean (overrides metadata)', type: :string
-    option :dry_run, aliases: '-d', default: false, desc: 'Show what would be deleted without actually deleting',
-                     type: :boolean
-    option :agent, aliases: '-a', default: 'claude', desc: 'Agent name (claude, cursor, etc.)', type: :string
-    option :deepclean, default: false,
-                       desc: 'Remove all generated artifacts (.claude/, CLAUDE files, MCP settings)',
-                       type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false, desc: 'Also remove .taskmaster/ directory',
-                               type: :boolean
-    # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
+    option :output_file, aliases: '-o', type: :string
+    option :dry_run, aliases: '-d', default: false, type: :boolean
+    option :agent, aliases: '-a', default: 'claude', type: :string
+    option :deepclean, default: false, type: :boolean
+    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
     def clean(_recipe_name = nil)
-      dry_run = options[:dry_run]
-      files_to_remove = []
-      agent = options[:agent] || 'claude'
-      # Normalize agent aliases
-      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
+      agent = normalize_agent(options[:agent] || 'claude')
+      files = collect_files_to_clean(agent)
 
-      # Handle deepclean option - removes all generated artifacts
-      files_to_remove << '.claude/' if Dir.exist?('.claude')
-      if options[:deepclean]
-        # Remove entire .claude directory
-
-        # Remove entire .ruly directory (includes bin/)
-        files_to_remove << '.ruly/' if Dir.exist?('.ruly')
-
-        # Remove all CLAUDE*.md files (including CLAUDE.md)
-        files_to_remove << 'CLAUDE.local.md' if File.exist?('CLAUDE.local.md')
-        files_to_remove << 'CLAUDE.md' if File.exist?('CLAUDE.md')
-
-        # Remove MCP settings files (both JSON and YAML)
-        files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
-        files_to_remove << '.mcp.yml' if File.exist?('.mcp.yml')
+      if files.empty? then puts '✨ Already clean - no files to remove'
+      elsif options[:dry_run]
+        puts "\n🔍 Dry run mode - no files will be deleted\n\nWould remove:"
+        files.each { |f| puts "   - #{f}" }
       else
-        # Normal clean behavior - ALWAYS remove entire .claude directory
-
-        # Clean based on recipe or fall back to defaults
-        output_file = options[:output_file] || "#{agent.upcase}.local.md"
-
-        files_to_remove << output_file if File.exist?(output_file)
-        # Remove MCP settings based on agent
-        if agent == 'claude'
-          files_to_remove << '.mcp.json' if File.exist?('.mcp.json')
-        elsif File.exist?('.mcp.yml')
-          files_to_remove << '.mcp.yml'
-        end
-      end
-
-      # Handle TaskMaster config removal if -T flag is present
-      if options[:taskmaster_config]
-        files_to_remove << '.taskmaster/' if Dir.exist?('.taskmaster')
-      end
-
-      # Remove duplicates while preserving order
-      files_to_remove.uniq!
-
-      if files_to_remove.empty?
-        puts '✨ Already clean - no files to remove'
-      elsif dry_run
-        puts "\n🔍 Dry run mode - no files will be deleted\n\n"
-        puts 'Would remove:'
-        files_to_remove.each { |f| puts "   - #{f}" }
-      else
-        # Actually remove files
-        files_to_remove.each do |file|
-          if file.end_with?('/')
-            FileUtils.rm_rf(file.chomp('/'))
-          else
-            FileUtils.rm_f(file)
-          end
-        end
-
+        files.each { |f| f.end_with?('/') ? FileUtils.rm_rf(f.chomp('/')) : FileUtils.rm_f(f) }
         puts '🧹 Cleaned up files:'
-        files_to_remove.each { |f| puts "   - #{f}" }
+        files.each { |f| puts "   - #{f}" }
       end
     end
-    # rubocop:enable Metrics/MethodLength, Metrics/CyclomaticComplexity
 
     desc 'list-recipes', 'List all available recipes'
-    def list_recipes # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
-      recipes_file = File.join(gem_root, 'recipes.yml')
-      unless File.exist?(recipes_file)
-        puts '❌ recipes.yml not found'
-        exit 1
-      end
-
-      recipes = load_all_recipes
-      puts "\n📚 Available Recipes:\n"
-      puts '=' * 80
-
-      recipes.each do |name, config| # rubocop:disable Metrics/BlockLength
-        puts "\n📦 #{name}"
-        puts "   #{config['description']}" if config['description']
-        puts
-
-        # Collect all files from different sources
-        all_files = []
-        all_files.concat(config['files']) if config['files']
-
-        # Handle new sources format (array of hashes for GitHub sources)
-        config['sources']&.each do |source|
-          if source.is_a?(Hash)
-            if source['github']
-              # GitHub source - add each rule as a remote file
-              source['rules']&.each do |rule|
-                all_files << "https://github.com/#{source['github']}/#{rule}"
-              end
-            elsif source['local']
-              # Local source format
-              all_files.concat(source['local'])
-            end
-          else
-            # Legacy format - simple string
-            all_files << source
-          end
-        end
-
-        all_files.concat(config['remote_sources']) if config['remote_sources']
-
-        if all_files.empty?
-          puts '   (no files configured)'
-        else
-          # Build and display file tree
-          tree = build_recipe_file_tree(all_files)
-          display_recipe_tree(tree, '   ')
-        end
-
-        # Show summary stats
-        file_count = 0
-        remote_count = 0
-        all_files.each do |file|
-          if file.start_with?('http')
-            remote_count += 1
-          else
-            file_count += 1
-          end
-        end
-
-        puts
-        puts "   📊 Summary: #{file_count} local files" if file_count > 0
-        puts "   🌐 Remote: #{remote_count} remote sources" if remote_count > 0
-        puts "   🎯 Plan: #{config['plan'] || 'default'}" if config['plan']
-      end
+    def list_recipes
+      recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+      puts "\n📚 Available Recipes:\n\n#{'=' * 80}"
+      recipes.each { |name, config| Services::Display.recipe_listing(name, config) }
       puts
     end
 
     desc 'introspect RECIPE SOURCE...', 'Scan directories or GitHub repos for markdown files and create/update recipe'
-    option :description, aliases: '-d', desc: 'Description for the recipe', type: :string
-    option :output, aliases: '-o', default: nil, desc: 'Output file path', type: :string
-    option :dry_run, default: false, desc: 'Show what would be done without modifying files', type: :boolean
-    option :relative, default: false, desc: 'Use relative paths instead of absolute for local files', type: :boolean
-    def introspect(recipe_name, *sources) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity
-      if sources.empty?
-        puts '❌ At least one source directory or GitHub URL is required'
-        exit 1
-      end
+    option :description, aliases: '-d', type: :string
+    option :output, aliases: '-o', default: nil, type: :string
+    option :dry_run, default: false, type: :boolean
+    option :relative, default: false, type: :boolean
+    def introspect(recipe_name, *sources)
+      abort('❌ At least one source directory or GitHub URL is required') if sources.empty?
 
-      # Determine output file
-      output_file = options[:output] || user_recipes_file
-
+      output_file = options[:output] || Services::RecipeLoader.user_recipes_file
       puts "\n🔍 Introspecting #{sources.length} source#{'s' if sources.length > 1}..."
 
-      all_local_files = []
-      all_github_sources = []
-
+      all_local_files, all_github_sources = [], []
       sources.each do |source|
         if source.start_with?('http') && source.include?('github.com')
-          # GitHub source
-          introspect_github_source(source, all_github_sources)
+          Services::RecipeIntrospector.introspect_github_source(source, all_github_sources)
         else
-          # Local directory
-          introspect_local_source(source, all_local_files, options[:relative])
+          Services::RecipeIntrospector.introspect_local_source(source, all_local_files, options[:relative])
         end
       end
 
-      # Build recipe structure
-      recipe_data = build_introspected_recipe(
-        all_local_files,
-        all_github_sources,
-        sources,
-        options[:description]
+      introspected = Services::RecipeIntrospector.build_introspected_recipe(
+        all_local_files, all_github_sources, sources, options[:description]
       )
-
-      # Merge with existing recipe to preserve keys (for both dry-run and actual save)
-      if File.exist?(output_file)
-        existing_config = YAML.safe_load_file(output_file, aliases: true) || {}
-        if existing_config['recipes'] && existing_config['recipes'][recipe_name]
-          existing_recipe = existing_config['recipes'][recipe_name]
-
-          # Preserve all existing keys except those that introspect updates
-          introspect_keys = %w[files sources]
-          existing_recipe.each do |key, value|
-            next if introspect_keys.include?(key)
-            next if key == 'description' && recipe_data['description']
-
-            recipe_data[key] = value
-          end
-
-          recipe_data['description'] ||= existing_recipe['description']
-        end
-      end
+      recipe_data = merge_with_existing_recipe(recipe_name, introspected, output_file)
 
       if options[:dry_run]
-        puts "\n🔍 Dry run mode - no files will be modified"
-        puts "\n📝 Would update recipe '#{recipe_name}' in #{output_file}:"
+        puts "\n🔍 Dry run mode - no files will be modified\n\n📝 Would update recipe '#{recipe_name}' in #{output_file}:"
         puts recipe_data.to_yaml
       else
-        # Save or update recipe
-        save_introspected_recipe(recipe_name, recipe_data, output_file)
-
-        total_files = all_local_files.length
-        all_github_sources.each do |github_source|
-          total_files += github_source[:rules].length
-        end
-
-        puts "\n✅ Recipe '#{recipe_name}' updated in #{output_file}"
-        puts "   #{total_files} total files added to recipe:"
-        puts "   - #{all_local_files.length} local files" if all_local_files.any?
-        if all_github_sources.any?
-          github_file_count = all_github_sources.sum { |s| s[:rules].length }
-          puts "   - #{github_file_count} GitHub files"
-        end
+        Services::RecipeIntrospector.save_introspected_recipe(recipe_name, recipe_data, output_file)
+        Services::Display.introspect_summary(recipe_name, output_file, all_local_files, all_github_sources)
       end
     end
 
     no_commands do
-      def build_recipe_file_tree(files)
-        Services::RecipeIntrospector.build_recipe_file_tree(files)
-      end
-
-      def display_recipe_tree(tree, prefix = '')
-        Services::RecipeIntrospector.display_recipe_tree(tree, prefix)
-      end
+      def build_recipe_file_tree(files) = Services::RecipeIntrospector.build_recipe_file_tree(files)
+      def display_recipe_tree(tree, prefix = '') = Services::RecipeIntrospector.display_recipe_tree(tree, prefix)
     end
 
     desc 'analyze [RECIPE]', 'Analyze token usage for a recipe or all recipes'
-    option :plan, aliases: '-p', desc: 'Override pricing plan', type: :string
-    option :all, aliases: '-a', default: false, desc: 'Analyze all recipes', type: :boolean
+    option :plan, aliases: '-p', type: :string
+    option :all, aliases: '-a', default: false, type: :boolean
     def analyze(recipe_name = nil)
-      if !options[:all] && !recipe_name
-        puts '❌ Please specify a recipe or use -a for all recipes'
-        raise Thor::Error, 'Recipe required'
+      if !options[:all] && !recipe_name && puts('❌ Please specify a recipe or use -a for all recipes')
+        raise Thor::Error,
+              'Recipe required'
       end
 
-      result = Operations::Analyzer.call(
-        analyze_all: options[:all],
-        gem_root:,
-        plan_override: options[:plan],
-        recipe_name:,
-        recipes_file:
-      )
-
+      result = Operations::Analyzer.call(analyze_all: options[:all], gem_root:, plan_override: options[:plan],
+                                         recipe_name:, recipes_file:)
       return if result[:success]
 
       puts "❌ Error: #{result[:error]}"
@@ -661,858 +190,334 @@ module Ruly
         return
       end
 
-      # Create directory if it doesn't exist
       FileUtils.mkdir_p(config_dir)
-
-      # Create starter configuration
-      starter_config = <<~YAML
-        # Ruly Configuration
-        # Add your own recipes and rule sources here
-
-        recipes:
-          starter:
-            description: "Basic starter recipe - uncomment and customize the sources below"
-        #{'    '}
-            # Example: Add rules from GitHub repositories
-            # sources:
-            #   - github: patrickclery/rules
-            #     branch: main
-            #     rules:
-            #       - ruby/common.md
-            #       - testing/common.md
-            ##{'   '}
-            #   # Add rules from your own repository:
-            #   - github: yourusername/your-rules
-            #     branch: main
-            #     rules:
-            #       - path/to/your/rules.md
-        #{'    '}
-            # Example: Add local rule files
-            # files:
-            #   - /path/to/local/rules.md
-            #   - ~/my-rules/ruby.md
-      YAML
-
-      File.write(config_file, starter_config)
-
-      puts '🎉 Successfully initialized Ruly!'
-      puts
-      puts "📁 Created configuration at: #{config_file}"
-      puts
-      puts 'Next steps:'
-      puts "  1. Edit #{config_file} to add your rule sources"
-      puts '  2. Uncomment and customize the example configurations'
-      puts "  3. Run 'ruly squash starter' to combine your rules"
-      puts
-      puts 'For more information, see: https://github.com/patrickclery/ruly'
+      File.write(config_file, Services::Display.starter_config_yaml)
+      Services::Display.init_success(config_file)
     end
 
     desc 'version', 'Show version'
-    def version
-      puts "Ruly v#{Ruly::VERSION}"
-    end
+    def version = puts("Ruly v#{Ruly::VERSION}")
 
     desc 'mcp [SERVERS...]', 'Generate .mcp.json with specified MCP servers'
-    option :append, aliases: '-a', default: false, desc: 'Append to existing .mcp.json instead of overwriting',
-                    type: :boolean
-    option :recipe, aliases: '-r', desc: 'Use MCP servers from specified recipe', type: :string
+    option :append, aliases: '-a', default: false, type: :boolean
+    option :recipe, aliases: '-r', type: :string
     def mcp(*servers)
-      all_servers = load_mcp_server_definitions
+      all_servers = Services::MCPManager.load_mcp_server_definitions
       return unless all_servers
 
-      recipe_servers = collect_recipe_mcp_servers
+      load_recipes = -> { Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:) }
+      recipe_servers = Services::MCPManager.collect_recipe_mcp_servers(
+        options[:recipe], load_all_recipes: load_recipes
+      )
       return if recipe_servers.nil?
 
       all_requested = (servers + recipe_servers).uniq
       if all_requested.empty?
         puts '❌ Error: No servers specified'
-        puts '   Usage: ruly mcp server1 server2 ...'
-        puts '   Or:    ruly mcp -r <recipe>'
-        return
+        return puts('   Usage: ruly mcp server1 server2 ...  Or: ruly mcp -r <recipe>')
       end
 
-      selected_servers = build_selected_servers(all_servers, all_requested)
-      write_mcp_json(selected_servers)
+      Services::MCPManager.write_mcp_json(Services::MCPManager.build_selected_servers(all_servers, all_requested),
+                                          append: options[:append])
     rescue JSON::ParserError => e
       puts "❌ Error parsing JSON: #{e.message}"
     end
 
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
-    option :output, aliases: '-o', default: 'stats.md', desc: 'Output file path (default: rules/stats.md)',
-                    type: :string
+    option :output, aliases: '-o', default: 'stats.md', type: :string
     def stats(recipe_name = nil)
-      # Collect sources and resolve paths
-      sources = if recipe_name
-                  sources_list, = load_recipe_sources(recipe_name)
-                  sources_list
-                else
-                  collect_local_sources
-                end
-
-      # Resolve file paths for the operation
-      resolved_sources = sources.filter_map do |source|
-        next source unless source[:type] == 'local'
-
-        resolved_path = find_rule_file(source[:path])
-        source.merge(path: resolved_path) if resolved_path
-      end
-
-      puts "📊 Analyzing #{resolved_sources.size} files..."
-
-      # Default output to rules/ directory if not explicitly specified
-      output_file = options[:output]
-      output_file = File.join(rules_dir, output_file) if output_file == 'stats.md'
-
-      result = Operations::Stats.call(
-        output_file:,
-        recipes_file:,
-        rules_dir:,
-        sources: resolved_sources
-      )
-
-      Operations::Analyzer.display_stats_result(result)
+      sources = recipe_name ? load_sources(recipe_name).first : Services::SquashHelpers.collect_local_sources(rules_dir)
+      resolved = sources.filter_map { |s| s[:type] == 'local' ? (p = find_rule_file(s[:path])) && s.merge(path: p) : s }
+      puts "📊 Analyzing #{resolved.size} files..."
+      out = options[:output]
+      out = File.join(rules_dir, out) if out == 'stats.md'
+      Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes_file:, rules_dir:,
+                                                                       sources: resolved))
     end
 
     private
 
-    def load_recipe_sources(recipe_name)
-      validate_recipes_file!
+    # --- Squash pipeline ---
 
-      recipes = load_all_recipes
-      recipe = validate_recipe!(recipe_name, recipes)
+    def guard_home_directory!
+      return unless Dir.pwd == Dir.home && !options[:home_override]
 
-      sources = []
-
-      Services::RecipeLoader.process_recipe_files(recipe, sources, gem_root:)
-      Services::RecipeLoader.process_recipe_sources(recipe, sources, gem_root:)
-      Services::RecipeLoader.process_legacy_remote_sources(recipe, sources)
-
-      # Scan for files with matching recipe tags in frontmatter
-      tagged_sources = scan_files_for_recipe_tags(recipe_name)
-
-      # Merge tagged sources with recipe sources, deduplicating by path
-      existing_paths = sources.to_set { |s| s[:path] }
-      tagged_sources.each do |tagged_source|
-        sources << tagged_source unless existing_paths.include?(tagged_source[:path])
-      end
-
-      [sources, recipe]
-    end
-
-    def validate_recipes_file!
-      return if File.exist?(recipes_file)
-
-      puts "\u274C recipes.yml not found"
+      say_error "ERROR: Running 'ruly squash' in $HOME is dangerous and may delete ~/.claude/"
+      say_error 'Use --home-override if you really want to do this.'
       exit 1
     end
 
-    def recipes_file
-      @recipes_file ||= Services::RecipeLoader.recipes_file_path(gem_root)
-    end
+    def invoke_clean_if_requested(recipe_name)
+      return if options[:dry_run]
 
-    def gem_root
-      # Use RULY_HOME environment variable if set (standalone mode)
-      # Otherwise fall back to gem installation path
-      @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
-    end
-
-    def load_all_recipes
-      Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
-    end
-
-    def validate_recipe!(recipe_name, recipes)
-      Services::RecipeLoader.validate_recipe!(recipe_name, recipes)
-    end
-
-    def scan_files_for_recipe_tags(recipe_name)
-      sources = []
-      return sources unless File.directory?(rules_dir)
-
-      Find.find(rules_dir) do |path|
-        next unless path.end_with?('.md', '.mdc')
-
-        begin
-          content = File.read(path, encoding: 'UTF-8')
-          frontmatter, = parse_frontmatter(content)
-
-          # Check if this file has a recipes field that includes our recipe
-          if frontmatter['recipes']&.include?(recipe_name)
-            relative_path = path.sub("#{rules_dir}/", 'rules/')
-            sources << {path: relative_path, type: 'local'}
-          end
-        rescue StandardError => e
-          # Skip files that can't be read or parsed
-          warn "Warning: Could not parse #{path}: #{e.message}" if ENV['DEBUG']
-        end
+      if options[:deepclean]
+        invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
+      elsif options[:clean]
+        invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
       end
-
-      sources.sort_by { |s| s[:path] }
     end
 
-    def rules_dir
-      @rules_dir ||= File.join(gem_root, 'rules')
+    def normalize_agent(agent)
+      agent = 'shell_gpt' if agent == 'sgpt'
+      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
+      agent
     end
 
-    def parse_frontmatter(content)
-      Services::FrontmatterParser.parse(content)
-    end
-
-    def collect_local_sources
-      sources = []
-      Find.find(rules_dir) do |path|
-        if path.end_with?('.md', '.mdc')
-          relative_path = path.sub("#{rules_dir}/", 'rules/')
-          sources << {path: relative_path, type: 'local'}
-        end
-      end
-      sources.sort_by { |s| s[:path] }
-    end
-
-    # Determine output file path based on recipe type and options
-    # @param recipe_name [String] Name of the recipe being squashed
-    # @param recipe_value [Hash, Array] The recipe value
-    # @param options [Hash] CLI options including :output_file
-    # @return [String] Path to output file
-    def determine_output_file(recipe_name, recipe_value, options)
-      default_output = 'CLAUDE.local.md'
-
-      # User explicitly specified output file - use it (takes precedence)
-      return options[:output_file] if options[:output_file] && options[:output_file] != default_output
-
-      # Auto-detect based on recipe type
-      if recipe_value.is_a?(Array)
-        # Array recipe = agent file goes to .claude/agents/
-        ".claude/agents/#{recipe_name}.md"
+    def load_sources(recipe_name)
+      if recipe_name
+        Services::RecipeLoader.load_recipe_sources(
+          recipe_name, gem_root:, recipes: load_all_recipes,
+                       scan_files_for_recipe_tags: ->(name) { Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:) }
+        )
       else
-        # Hash recipe = default behavior
-        default_output
+        [collect_local_sources, {}]
       end
     end
 
-    # Collect scripts from all sources
-    # Returns hash with :local and :remote arrays
-    def collect_scripts_from_sources(sources)
-      Services::ScriptManager.collect_scripts_from_sources(sources, find_rule_file: method(:find_rule_file))
-    end
+    # --- Core helpers ---
 
-    def build_script_mappings(script_files)
-      Services::ScriptManager.build_script_mappings(script_files)
-    end
+    def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
+    def load_all_recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
 
-    # Collect all require_shell_commands from sources
-    # @param sources [Array<Hash>] Array of source hashes
-    # @return [Array<String>] Unique list of required commands
-    def collect_required_shell_commands(sources)
-      commands = Set.new
+    def recipes_file = @recipes_file ||= Services::RecipeLoader.recipes_file_path(gem_root)
+    def rules_dir = @rules_dir ||= File.join(gem_root, 'rules')
+    def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
-      sources.each do |source|
-        next unless source[:type] == 'local'
-
-        file_path = source[:path]
-        file_path = find_rule_file(file_path) unless File.exist?(file_path)
-        next unless file_path && File.exist?(file_path)
-
-        content = File.read(file_path, encoding: 'UTF-8')
-        cmds = extract_require_shell_commands_from_frontmatter(content)
-        commands.merge(cmds)
-      end
-
-      commands.to_a
-    end
-
-    def find_rule_file(file)
-      Services::RecipeLoader.find_rule_file(file, gem_root:)
-    end
-
-    def find_markdown_files_recursively(directory)
-      Services::RecipeLoader.find_markdown_files_recursively(directory)
-    end
-
-    def fetch_github_directory_files(url)
-      Services::GitHubClient.fetch_github_directory_files(url)
-    end
-
-    def extract_scripts_from_frontmatter(content, source_path)
-      Services::ScriptManager.extract_scripts_from_frontmatter(content, source_path)
-    end
-
-    def fetch_remote_scripts(remote_scripts)
-      Services::ScriptManager.fetch_remote_scripts(remote_scripts)
-    end
-
-    def normalize_github_url(url)
-      Services::GitHubClient.normalize_github_url(url)
-    end
-
-    # Extract require_shell_commands from frontmatter
-    # @param content [String] The file content with potential frontmatter
-    # @return [Array<String>] List of required shell commands
-    def extract_require_shell_commands_from_frontmatter(content)
-      Services::FrontmatterParser.extract_require_shell_commands(content)
-    end
-
-    # Check which required shell commands are available
-    # @param commands [Array<String>] List of commands to check
-    # @return [Hash] Hash with :available and :missing arrays
-    def check_required_shell_commands(commands)
-      available = []
-      missing = []
-
-      commands.each do |cmd|
-        if check_shell_command_available(cmd)
-          available << cmd
-        else
-          missing << cmd
-        end
-      end
-
-      {available:, missing:}
-    end
-
-    # Check if a shell command is available in PATH and executable
-    # @param command [String] The command name to check
-    # @return [Boolean] true if command is available and executable
-    def check_shell_command_available(command)
-      # Use 'which' to find the command in PATH
-      system("which #{command.shellescape} > /dev/null 2>&1")
-    end
-
-    def check_cache(recipe_name, agent)
+    def cached?(recipe_name, agent, output_file, _recipe_config)
       cache_file = File.join(cache_dir, agent, "#{recipe_name}.md")
-      File.exist?(cache_file) ? cache_file : nil
+      return false unless File.exist?(cache_file) && options[:cache]
+
+      puts "\n💾 Using cached version for recipe '#{recipe_name}'"
+      FileUtils.cp(cache_file, output_file)
+      true
     end
 
-    def cache_dir
-      # Use ~/.cache/ruly for standalone mode, otherwise use gem's cache directory
-      @cache_dir ||= if ENV['RULY_HOME']
-                       File.expand_path('~/.cache/ruly')
-                     else
-                       File.join(gem_root, 'cache')
-                     end
+    def cache_dir = @cache_dir ||= ENV['RULY_HOME'] ? File.expand_path('~/.cache/ruly') : File.join(gem_root, 'cache')
+
+    def prepare_output(output_file)
+      Services::ScriptManager.ensure_parent_directory(output_file)
+      FileUtils.rm_f(output_file)
     end
 
-    def should_use_cache?
-      options[:cache] == true
+    def filter_essential(sources)
+      filtered = Services::SquashHelpers.filter_essential_sources(sources, find_rule_file: method(:find_rule_file))
+      puts "📌 Essential mode: filtered to #{filtered.length} essential files"
+      filtered
     end
 
-    def extract_cached_command_files(_cached_file, _recipe_name, _agent)
-      # Extract command file references from cached content
-      # This is a simplified version - you might need to adjust based on actual cache format
-      []
-    end
-
-    def save_command_files(command_files, recipe_config = nil)
-      Services::ScriptManager.save_command_files(command_files, recipe_config, gem_root:)
-    end
-
-    def ensure_parent_directory(file_path)
-      Services::ScriptManager.ensure_parent_directory(file_path)
-    end
-
-    def filter_essential_sources(sources)
-      # Filter to only include sources marked as essential: true
-      essential_sources = []
-
-      sources.each do |source|
-        next unless source[:type] == 'local'
-
-        begin
-          file_path = find_rule_file(source[:path])
-          next unless file_path
-
-          content = File.read(file_path, encoding: 'UTF-8')
-          frontmatter, = parse_frontmatter(content)
-
-          # Include if marked as essential
-          essential_sources << source if frontmatter['essential'] == true
-        rescue StandardError => e
-          # Skip files that can't be read or parsed
-          warn "Warning: Could not parse #{source[:path]}: #{e.message}" if ENV['DEBUG']
-        end
-      end
-
-      essential_sources
-    end
-
-    def process_sources_for_squash(sources, agent, _recipe_config, _options)
+    def process_squash_sources(sources, agent)
       Services::SourceProcessor.process_for_squash(
-        sources, agent,
-        dry_run: options[:dry_run], find_rule_file: method(:find_rule_file), gem_root:, keep_frontmatter: options[:front_matter], verbose: verbose?
+        sources, agent, dry_run: options[:dry_run], find_rule_file: method(:find_rule_file),
+                        gem_root:, keep_frontmatter: options[:front_matter], verbose: verbose?
       )
     end
 
-    def verbose?
-      options[:verbose] || ENV.fetch('DEBUG', nil)
+    def verbose? = options[:verbose] || ENV.fetch('DEBUG', nil)
+
+    def validate_squash_dispatches(local_sources, recipe_config, recipe_name)
+      return unless recipe_name && recipe_config.is_a?(Hash)
+
+      dispatches = Services::SquashHelpers.collect_dispatches_from_sources(local_sources)
+      Services::SquashHelpers.validate_dispatches_registered!(dispatches, recipe_config, recipe_name)
     end
 
-    def collect_dispatches_from_sources(local_sources)
-      dispatches = {}
-
-      local_sources.each do |source|
-        content = source[:original_content] || source[:content]
-        next unless content
-
-        frontmatter, = parse_frontmatter(content)
-        next unless frontmatter.is_a?(Hash) && frontmatter['dispatches'].is_a?(Array)
-
-        filename = File.basename(source[:path])
-        dispatches[filename] = frontmatter['dispatches']
-      end
-
-      dispatches
-    end
-
-    def validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
-      return if collected_dispatches.empty?
-
-      registered_subagents = if recipe_config['subagents'].is_a?(Array)
-                               recipe_config['subagents'].filter_map { |s| s['name'] }
-                             else
-                               []
-                             end
-
-      collected_dispatches.each_value do |dispatch_names|
-        dispatch_names.each do |dispatch_name|
-          next if registered_subagents.include?(dispatch_name)
-
-          raise Ruly::Error,
-                "Recipe '#{recipe_name}' dispatches: #{dispatch_name}\n       " \
-                "but does not register it as a subagent.\n       " \
-                "Add to recipe:\n         " \
-                "subagents:\n           " \
-                "- name: #{dispatch_name}\n             " \
-                "recipe: #{dispatch_name.tr('_', '-')}"
+    def write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
+      if agent == 'shell_gpt'
+        Services::SquashHelpers.write_shell_gpt_json(output_file, local_sources)
+      else
+        write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
+        if (options[:clean] || options[:deepclean]) && options[:keep_taskmaster] && agent != 'shell_gpt'
+          append_taskmaster_import(output_file)
         end
       end
     end
 
-    def get_command_relative_path(file_path, omit_prefix = nil)
-      Services::ScriptManager.get_command_relative_path(file_path, omit_prefix)
-    end
-
-    def calculate_bin_target(relative_path)
-      if (match = relative_path.match(%r{bin/(.+\.sh)$}))
-        match[1]
-      else
-        File.basename(relative_path)
-      end
-    end
-
-    def copy_taskmaster_config
-      source_config = File.expand_path('~/.config/ruly/taskmaster/config.json')
-      target_dir = '.taskmaster'
-      target_config = File.join(target_dir, 'config.json')
-
-      unless File.exist?(source_config)
-        puts "⚠️  Warning: #{source_config} not found"
-        return
-      end
-
-      if options[:dry_run]
-        puts "\nWould copy TaskMaster config:"
-        puts "  → From: #{source_config}"
-        puts "  → To: #{target_config}"
-        return
-      end
-
-      # Create target directory if it doesn't exist
-      FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-
-      # Copy the config file
-      FileUtils.cp(source_config, target_config)
-      puts "🎯 Copied TaskMaster config to #{target_config}"
-    rescue StandardError => e
-      puts "⚠️  Warning: Could not copy TaskMaster config: #{e.message}"
-    end
-
-    def write_shell_gpt_json(output_file, local_sources)
-      require 'json'
-
-      # Extract role name from filename (remove .json extension)
-      role_name = File.basename(output_file, '.json')
-
-      # Combine all content into description
-      description_parts = local_sources.map do |source|
-        # Duplicate string to avoid frozen string error
-        content = source[:content].dup.force_encoding('UTF-8')
-        # Replace invalid UTF-8 sequences
-        content.scrub('?')
-      end
-
-      # Join all parts into single description string
-      description = description_parts.join("\n\n")
-
-      # Create role JSON structure
-      role_json = {
-        'description' => description,
-        'name' => role_name
-      }
-
-      # Write JSON with proper escaping (JSON.pretty_generate handles all escaping)
-      File.write(output_file, JSON.pretty_generate(role_json))
-    end
-
-    def generate_toc_content(local_sources, command_files, agent)
-      Services::TOCGenerator.generate_toc_content(local_sources, command_files, agent)
-    end
-
-    def generate_toc_for_source(source)
-      Services::TOCGenerator.generate_toc_for_source(source)
-    end
-
-    def extract_headers_from_content(content, source_path = nil)
-      Services::TOCGenerator.extract_headers_from_content(content, source_path)
-    end
-
-    def generate_file_prefix(source_path)
-      Services::TOCGenerator.generate_file_prefix(source_path)
-    end
-
-    def generate_anchor(text, prefix = nil)
-      Services::TOCGenerator.generate_anchor(text, prefix)
-    end
-
-    def generate_toc_slash_commands(command_files)
-      Services::TOCGenerator.generate_toc_slash_commands(command_files)
-    end
-
-    def extract_command_name(file_path)
-      Services::TOCGenerator.extract_command_name(file_path)
-    end
-
-    def extract_command_description(content)
-      Services::TOCGenerator.extract_command_description(content)
-    end
-
-    def rewrite_script_references(content, script_mappings)
-      Services::TOCGenerator.rewrite_script_references(content, script_mappings)
-    end
-
-    def add_anchor_ids_to_content(content, source_path)
-      Services::TOCGenerator.add_anchor_ids_to_content(content, source_path)
-    end
-
-    def generate_ignore_patterns(output_file, agent, command_files)
-      patterns = []
-
-      # Add main output file
-      patterns << output_file
-
-      # Add command files directory for Claude
-      patterns << '.claude/commands/' if agent == 'claude' && !command_files.empty?
-
-      patterns
-    end
-
-    def update_gitignore(patterns)
-      gitignore_file = '.gitignore'
-
-      # Read existing content or start fresh
-      existing_content = File.exist?(gitignore_file) ? File.read(gitignore_file, encoding: 'UTF-8') : ''
-      existing_lines = existing_content.split("\n")
-
-      # Check if we already have a Ruly section
-      ruly_section_start = existing_lines.index('# Ruly generated files')
-
-      if ruly_section_start
-        # Find the end of the Ruly section
-        ruly_section_end = ruly_section_start + 1
-        while ruly_section_end < existing_lines.length &&
-              existing_lines[ruly_section_end] &&
-              !existing_lines[ruly_section_end].match(/^\s*$/) &&
-              !existing_lines[ruly_section_end].start_with?('#')
-          ruly_section_end += 1
+    def write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
+      File.open(output_file, 'w') do |output|
+        if options[:toc]
+          output.puts Services::TOCGenerator.generate_toc_content(local_sources, command_files, agent)
+          output.puts
         end
-
-        # Replace the Ruly section
-        new_section = ['# Ruly generated files'] + patterns
-        existing_lines[ruly_section_start...ruly_section_end] = new_section
-      else
-        # Add new Ruly section at the end
-        existing_lines << '' unless existing_lines.last && existing_lines.last.empty?
-        existing_lines << '# Ruly generated files'
-        existing_lines.concat(patterns)
+        local_sources.each_with_index do |source, i|
+          content = Services::TOCGenerator.rewrite_script_references(source[:content], script_mappings)
+          content = Services::TOCGenerator.add_anchor_ids_to_content(content, source[:path]) if options[:toc]
+          output.puts content
+          output.puts if i < local_sources.length - 1
+        end
       end
-
-      # Write back to file
-      File.write(gitignore_file, "#{existing_lines.join("\n")}\n")
-      puts '📦 Updated .gitignore with generated file patterns'
     end
 
-    def update_git_exclude(patterns)
-      exclude_file = '.git/info/exclude'
-
-      # Ensure .git/info directory exists
-      unless Dir.exist?('.git/info')
-        puts '⚠️  .git/info directory not found. Is this a git repository?'
-        return
+    def append_taskmaster_import(output_file)
+      File.open(output_file, 'a') do |f|
+        f.puts "\n## Task Master AI Instructions"
+        f.puts '**Import Task Master development workflow commands and guidelines, ' \
+               'treat as if import is in the main CLAUDE.md file.**'
+        f.puts '@./.taskmaster/CLAUDE.md'
       end
+    end
 
-      # Read existing content or start fresh
-      existing_content = File.exist?(exclude_file) ? File.read(exclude_file, encoding: 'UTF-8') : ''
-      existing_lines = existing_content.split("\n")
-
-      # Check if we already have a Ruly section
-      ruly_section_start = existing_lines.index('# Ruly generated files')
-
-      if ruly_section_start
-        # Find the end of the Ruly section
-        ruly_section_end = ruly_section_start + 1
-        while ruly_section_end < existing_lines.length &&
-              existing_lines[ruly_section_end] &&
-              !existing_lines[ruly_section_end].match(/^\s*$/) &&
-              !existing_lines[ruly_section_end].start_with?('#')
-          ruly_section_end += 1
-        end
-
-        # Replace the Ruly section
-        new_section = ['# Ruly generated files'] + patterns
-        existing_lines[ruly_section_start...ruly_section_end] = new_section
-      else
-        # Add new Ruly section at the end
-        existing_lines << '' unless existing_lines.last && existing_lines.last.empty?
-        existing_lines << '# Ruly generated files'
-        existing_lines.concat(patterns)
+    def post_squash(output_file, agent, recipe_name, recipe_config, # rubocop:disable Metrics/ParameterLists
+                    local_sources, command_files, skill_files, script_files)
+      update_git_ignores(output_file, agent, command_files)
+      save_to_cache(output_file, recipe_name, agent) if recipe_name && options[:cache]
+      if agent == 'claude' && !command_files.empty?
+        Services::ScriptManager.save_command_files(command_files, recipe_config,
+                                                   gem_root:)
       end
+      save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
+      recipe_config = merge_mcp_servers(recipe_config, local_sources)
+      Services::MCPManager.update_mcp_settings(recipe_config, agent)
+      Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
+      process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
+      Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+      Ruly::Checks.run_all(local_sources, command_files)
+    end
 
-      # Write back to file
-      File.write(exclude_file, "#{existing_lines.join("\n")}\n")
-      puts '📦 Updated .git/info/exclude with generated file patterns'
+    def update_git_ignores(output_file, agent, command_files)
+      return unless options[:git_ignore] || options[:git_exclude]
+
+      patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files)
+      Services::GitIgnoreManager.update_gitignore(patterns) if options[:git_ignore]
+      Services::GitIgnoreManager.update_git_exclude(patterns) if options[:git_exclude]
     end
 
     def save_to_cache(output_file, recipe_name, agent)
-      agent_cache_dir = File.join(cache_dir, agent)
-      FileUtils.mkdir_p(agent_cache_dir)
-
-      cache_file = File.join(agent_cache_dir, "#{recipe_name}.md")
-      FileUtils.cp(output_file, cache_file)
+      dir = File.join(cache_dir, agent)
+      FileUtils.mkdir_p(dir)
+      FileUtils.cp(output_file, File.join(dir, "#{recipe_name}.md"))
     end
 
     def save_skill_files(skill_files)
-      Services::ScriptManager.save_skill_files(
-        skill_files,
-        find_rule_file: method(:find_rule_file),
-        parse_frontmatter: method(:parse_frontmatter),
-        strip_metadata: method(:strip_metadata_from_frontmatter)
-      )
+      Services::ScriptManager.save_skill_files(skill_files, find_rule_file: method(:find_rule_file),
+                                                            parse_frontmatter: Services::FrontmatterParser.method(:parse),
+                                                            strip_metadata: Services::FrontmatterParser.method(:strip_metadata))
     end
 
-    def collect_mcp_servers_from_sources(local_sources)
-      Services::MCPManager.collect_mcp_servers_from_sources(local_sources)
-    end
-
-    def collect_all_mcp_servers(recipe_config, visited = Set.new)
-      Services::MCPManager.collect_all_mcp_servers(
-        recipe_config,
-        load_all_recipes: method(:load_all_recipes),
-        visited:
-      )
-    end
-
-    def update_mcp_settings(recipe_config = nil, agent = 'claude')
-      Services::MCPManager.update_mcp_settings(recipe_config, agent)
-    end
-
-    def process_subagents(recipe_config, parent_recipe_name, top_level: true, visited: Set.new)
-      Services::SubagentProcessor.process_subagents(
-        recipe_config, parent_recipe_name,
-        top_level:, visited:,
-        **subagent_processor_deps
-      )
-    end
-
-    def subagent_processor_deps
-      {
-        find_rule_file: method(:find_rule_file),
-        load_all_recipes: method(:load_all_recipes),
-        load_recipe_sources: method(:load_recipe_sources),
-        parse_frontmatter: method(:parse_frontmatter),
-        process_sources_for_squash: method(:process_sources_for_squash),
-        save_skill_files: method(:save_skill_files),
-        verbose: verbose?
-      }
-    end
-
-    def copy_scripts(script_files, destination_dir = nil)
-      Services::ScriptManager.copy_scripts(script_files, destination_dir)
-    end
-
-    def cached_file_count(output_file)
-      # Count the number of sections in the output file
-      return 0 unless File.exist?(output_file)
-
-      content = File.read(output_file, encoding: 'UTF-8')
-      content.scan(/^## /).size
-    rescue StandardError
-      # If we can't read the file for any reason, return 0
-      0
-    end
-
-    def print_summary(mode, output_file, file_count)
-      Services::TOCGenerator.print_summary(mode, output_file, file_count, agent: options[:agent] || 'claude')
-    end
-
-    def display_token_info(output_file, agent)
-      Services::TOCGenerator.display_token_info(output_file, agent)
-    end
-
-    def strip_metadata_from_frontmatter(content, keep_frontmatter: false)
-      Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
-    end
-
-    def count_tokens(text)
-      Services::SourceProcessor.count_tokens(text)
-    end
-
-    def get_source_key(source)
-      Services::SourceProcessor.get_source_key(source, find_rule_file: method(:find_rule_file))
-    end
-
-    def fetch_remote_content(url)
-      Services::GitHubClient.fetch_remote_content(url)
-    end
-
-    def resolve_requires_for_source(source, content, processed_files, all_sources)
-      Services::DependencyResolver.resolve_requires_for_source(
-        source, content, processed_files, all_sources,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_skills_for_source(source, content, processed_files)
-      Services::DependencyResolver.resolve_skills_for_source(
-        source, content, processed_files,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def copy_bin_files(bin_files)
-      Services::ScriptManager.copy_bin_files(bin_files)
-    end
-
-    def convert_to_raw_url(url)
-      Services::GitHubClient.convert_to_raw_url(url)
-    end
-
-    def resolve_required_path(source, required_path)
-      Services::DependencyResolver.resolve_required_path(
-        source, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_local_require(source_path, required_path)
-      Services::DependencyResolver.resolve_local_require(
-        source_path, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_remote_require(source_url, required_path)
-      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
-    end
-
-    def normalize_path(path)
-      Services::DependencyResolver.normalize_path(path)
-    end
-
-    def load_mcp_servers_from_config(server_names)
-      Services::MCPManager.load_mcp_servers_from_config(server_names)
-    end
-
-    def agent_context_limits
-      Services::TOCGenerator::AGENT_CONTEXT_LIMITS
-    end
-
-    def user_recipes_file
-      Services::RecipeLoader.user_recipes_file
-    end
-
-    def introspect_github_source(url, all_github_sources)
-      Services::RecipeIntrospector.introspect_github_source(url, all_github_sources)
-    end
-
-    def introspect_local_source(path, all_files, use_relative)
-      Services::RecipeIntrospector.introspect_local_source(path, all_files, use_relative)
-    end
-
-    def build_introspected_recipe(local_files, github_sources, original_sources, description)
-      Services::RecipeIntrospector.build_introspected_recipe(local_files, github_sources, original_sources, description)
-    end
-
-    def save_introspected_recipe(recipe_name, recipe_data, output_file)
-      Services::RecipeIntrospector.save_introspected_recipe(recipe_name, recipe_data, output_file)
-    end
-
-    def format_yaml_without_quotes(data)
-      Services::RecipeIntrospector.format_yaml_without_quotes(data)
-    end
-
-    def load_mcp_server_definitions
-      Services::MCPManager.load_mcp_server_definitions
-    end
-
-    def collect_recipe_mcp_servers
-      Services::MCPManager.collect_recipe_mcp_servers(
-        options[:recipe],
-        load_all_recipes: method(:load_all_recipes)
-      )
-    end
-
-    def build_selected_servers(all_servers, requested_names)
-      Services::MCPManager.build_selected_servers(all_servers, requested_names)
-    end
-
-    def write_mcp_json(selected_servers)
-      Services::MCPManager.write_mcp_json(selected_servers, append: options[:append])
-    end
-
-    # Detect recipe type based on its structure
-    # @param recipe_value [Hash, Array, Object] The recipe value from recipes.yml
-    # @return [Symbol] :agent for Array recipes, :standard for Hash recipes, :invalid otherwise
-    def recipe_type(recipe_value)
-      if recipe_value.is_a?(Array)
-        :agent # Array = agent file (subagent format)
-      elsif recipe_value.is_a?(Hash)
-        :standard # Hash = traditional recipe
-      else
-        :invalid
+    def merge_mcp_servers(recipe_config, local_sources)
+      servers = Services::MCPManager.collect_mcp_servers_from_sources(local_sources)
+      if servers.any?
+        recipe_config = {} unless recipe_config.is_a?(Hash)
+        existing = Array(recipe_config['mcp_servers'])
+        new_servers = servers - existing
+        recipe_config['mcp_servers'] = (existing + servers).uniq
+        puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
       end
+      if recipe_config.is_a?(Hash) && recipe_config['subagents']
+        orig = Array(recipe_config['mcp_servers'])
+        all = Services::MCPManager.collect_all_mcp_servers(recipe_config, load_all_recipes: load_recipes_proc)
+        if all.any?
+          propagated = all - orig
+          recipe_config['mcp_servers'] = all
+          puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
+        end
+      end
+      recipe_config
+    end
+
+    def load_recipes_proc = -> { load_all_recipes }
+
+    def process_subagents(recipe_config, recipe_name)
+      Services::SubagentProcessor.process_subagents(
+        recipe_config, recipe_name,
+        find_rule_file: method(:find_rule_file),
+        load_all_recipes: load_recipes_proc,
+        load_recipe_sources: ->(name) { load_sources(name) },
+        parse_frontmatter: Services::FrontmatterParser.method(:parse),
+        process_sources_for_squash: method(:process_sources_for_squash),
+        save_skill_files: method(:save_skill_files), verbose: verbose?
+      )
+    end
+
+    # --- Clean helpers ---
+
+    def collect_files_to_clean(agent)
+      files = []
+      files << '.claude/' if Dir.exist?('.claude')
+      if options[:deepclean]
+        files << '.ruly/' if Dir.exist?('.ruly')
+        %w[CLAUDE.local.md CLAUDE.md .mcp.json .mcp.yml].each { |f| files << f if File.exist?(f) }
+      else
+        out = options[:output_file] || "#{agent.upcase}.local.md"
+        files << out if File.exist?(out)
+        if File.exist?(agent == 'claude' ? '.mcp.json' : '.mcp.yml')
+          files << (agent == 'claude' ? '.mcp.json' : '.mcp.yml')
+        end
+      end
+      files << '.taskmaster/' if options[:taskmaster_config] && Dir.exist?('.taskmaster')
+      files.uniq
+    end
+
+    # --- Introspect helpers ---
+
+    def merge_with_existing_recipe(recipe_name, recipe_data, output_file)
+      return recipe_data unless File.exist?(output_file)
+
+      existing = (YAML.safe_load_file(output_file, aliases: true) || {}).dig('recipes', recipe_name)
+      return recipe_data unless existing
+
+      existing.each do |k, v|
+        recipe_data[k] = v unless MERGE_SKIP_KEYS.include?(k) || (k == 'description' && recipe_data['description'])
+      end
+      recipe_data['description'] ||= existing['description']
+      recipe_data
+    end
+
+    def find_rule_file(file) = Services::RecipeLoader.find_rule_file(file, gem_root:)
+
+    def process_sources_for_squash(sources, agent, _recipe_config, _options)
+      process_squash_sources(sources, agent)
+    end
+
+    # --- Backward-compatible delegators for specs ---
+    # rubocop:disable Layout/LineLength
+    def load_recipe_sources(name) = load_sources(name)
+    def parse_frontmatter(content) = Services::FrontmatterParser.parse(content)
+    def strip_metadata_from_frontmatter(content, keep_frontmatter: false) = Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
+    def convert_to_raw_url(url) = Services::GitHubClient.convert_to_raw_url(url)
+    def fetch_remote_content(url) = Services::GitHubClient.fetch_remote_content(url)
+    def normalize_github_url(url) = Services::GitHubClient.normalize_github_url(url)
+    def normalize_path(path) = Services::DependencyResolver.normalize_path(path)
+    def get_command_relative_path(path, omit_prefix = nil) = Services::ScriptManager.get_command_relative_path(path, omit_prefix)
+    def save_command_files(files, config = nil) = Services::ScriptManager.save_command_files(files, config, gem_root:)
+    def get_source_key(source) = Services::SourceProcessor.get_source_key(source, find_rule_file: method(:find_rule_file))
+    def determine_output_file(name, val, opts) = Services::SquashHelpers.determine_output_file(name, val, opts)
+    def scan_files_for_recipe_tags(name) = Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:)
+    def filter_essential_sources(sources) = Services::SquashHelpers.filter_essential_sources(sources, find_rule_file: method(:find_rule_file))
+    def collect_scripts_from_sources(sources) = Services::ScriptManager.collect_scripts_from_sources(sources, find_rule_file: method(:find_rule_file))
+    def build_script_mappings(files) = Services::ScriptManager.build_script_mappings(files)
+    def extract_scripts_from_frontmatter(content, path) = Services::ScriptManager.extract_scripts_from_frontmatter(content, path)
+    def fetch_remote_scripts(scripts) = Services::ScriptManager.fetch_remote_scripts(scripts)
+    def copy_scripts(files, dest = nil) = Services::ScriptManager.copy_scripts(files, dest)
+    def rewrite_script_references(content, mappings) = Services::TOCGenerator.rewrite_script_references(content, mappings)
+    def write_shell_gpt_json(file, sources) = Services::SquashHelpers.write_shell_gpt_json(file, sources)
+    def collect_required_shell_commands(sources) = Services::ShellCommandChecker.collect_required_commands(sources, find_rule_file: method(:find_rule_file))
+    def check_required_shell_commands(cmds) = Services::ShellCommandChecker.check_commands(cmds)
+    def check_shell_command_available(cmd) = system("which #{cmd.shellescape} > /dev/null 2>&1")
+    def extract_require_shell_commands_from_frontmatter(content) = Services::FrontmatterParser.extract_require_shell_commands(content)
+    def update_mcp_settings(config = nil, agent = 'claude') = Services::MCPManager.update_mcp_settings(config, agent)
+    def collect_all_mcp_servers(config, visited = Set.new) = Services::MCPManager.collect_all_mcp_servers(config, load_all_recipes: load_recipes_proc, visited:)
+    def resolve_requires_for_source(source, content, processed, all) = Services::DependencyResolver.resolve_requires_for_source(source, content, processed, all, find_rule_file: method(:find_rule_file), gem_root:)
+    def resolve_local_require(source_path, required_path) = Services::DependencyResolver.resolve_local_require(source_path, required_path, find_rule_file: method(:find_rule_file), gem_root:)
+    def resolve_remote_require(source_url, required_path) = Services::DependencyResolver.resolve_remote_require(source_url, required_path)
+    def validate_recipe!(name, recipes) = Services::RecipeLoader.validate_recipe!(name, recipes)
+    # rubocop:enable Layout/LineLength
+
+    def recipe_type(val)
+      return :agent if val.is_a?(Array)
+      return :standard if val.is_a?(Hash)
+
+      :invalid
     end
 
     def add_agent_files_to_remove(agent, files_to_remove)
-      agent_lower = agent.downcase
-      agent_upper = agent.upcase
-
-      # Add agent-specific directory (e.g., .claude/)
-      agent_dir = ".#{agent_lower}"
+      agent_dir = ".#{agent.downcase}"
       if Dir.exist?(agent_dir)
-        # Determine file extension based on agent
-        file_pattern = case agent_lower
-                       when 'cursor'
-                         "#{agent_dir}/**/*.mdc"
-                       else
-                         "#{agent_dir}/**/*.md"
-                       end
-
-        # Add all files recursively in the agent directory
-        Dir.glob(file_pattern).each do |file|
-          files_to_remove << file
-        end
-        # Add the directory itself for removal
+        pattern = agent.downcase == 'cursor' ? "#{agent_dir}/**/*.mdc" : "#{agent_dir}/**/*.md"
+        Dir.glob(pattern).each { |f| files_to_remove << f }
         files_to_remove << "#{agent_dir}/"
       end
-
-      # Add agent-specific local file (e.g., CLAUDE.local.md)
-      # Different agents have different naming conventions
-      case agent_lower
-      when 'cursor'
-        # Cursor doesn't use a local file, only .cursor/ directory with .mdc files
-        # No local file to remove
-      else
-        agent_local_file = "#{agent_upper}.local.md"
-        files_to_remove << agent_local_file if File.exist?(agent_local_file)
-      end
+      local_file = "#{agent.upcase}.local.md" unless agent.downcase == 'cursor'
+      files_to_remove << local_file if local_file && File.exist?(local_file)
     end
-  end # rubocop:enable Metrics/ClassLength
+  end
 end
