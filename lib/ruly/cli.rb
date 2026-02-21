@@ -1039,44 +1039,7 @@ module Ruly
     end
 
     def fetch_github_directory_files(url)
-      # Parse GitHub directory URL to extract owner, repo, branch, and path
-      # Format: https://github.com/owner/repo/tree/branch/path
-      return [] unless url =~ %r{github\.com/([^/]+)/([^/]+)/tree/([^/]+)/(.+)}
-
-      owner = Regexp.last_match(1)
-      repo = Regexp.last_match(2)
-      branch = Regexp.last_match(3)
-      path = Regexp.last_match(4)
-
-      # Use gh api to list directory contents
-      result = `gh api repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch} 2>/dev/null`
-
-      if $CHILD_STATUS.success? && !result.empty?
-        begin
-          # Parse JSON response
-          require 'json'
-          items = JSON.parse(result)
-
-          # Filter for .md files and convert to blob URLs
-          md_files = items.select do |item|
-            item['type'] == 'file' && item['name'].end_with?('.md')
-          end
-
-          # Convert to blob URLs for fetching content
-          md_files.map do |file|
-            "https://github.com/#{owner}/#{repo}/blob/#{branch}/#{path}/#{file['name']}"
-          end
-        rescue JSON::ParserError => e
-          puts "⚠️  Error parsing GitHub directory response: #{e.message}"
-          []
-        end
-      else
-        puts "⚠️  Failed to fetch directory contents from: #{url}"
-        []
-      end
-    rescue StandardError => e
-      puts "⚠️  Error fetching GitHub directory: #{e.message}"
-      []
+      Services::GitHubClient.fetch_github_directory_files(url)
     end
 
     def process_local_source(source, sources)
@@ -1284,15 +1247,8 @@ module Ruly
       end
     end
 
-    # Normalize GitHub URLs
-    # Converts shorthand github:org/repo/path to full URL
     def normalize_github_url(url)
-      if url.start_with?('github:')
-        path = url.sub('github:', '')
-        "https://github.com/#{path}"
-      else
-        url
-      end
+      Services::GitHubClient.normalize_github_url(url)
     end
 
     # Build a mapping from absolute script paths to relative filenames
@@ -1612,126 +1568,7 @@ module Ruly
     end
 
     def prefetch_remote_files(sources)
-      # Convert sources to proper format if they're strings
-      normalized_sources = sources.map do |s|
-        if s.is_a?(String)
-          {path: s, type: 'local'}
-        else
-          s
-        end
-      end
-
-      remote_sources = normalized_sources.select { |s| s[:type] == 'remote' }
-      return {} unless remote_sources.any?
-
-      prefetched_content = {}
-      grouped_remotes = group_remote_sources_by_repo(remote_sources)
-
-      # Batch fetch files from each repository using GraphQL
-      grouped_remotes.each do |repo_key, repo_sources|
-        next unless repo_sources.size > 1 # Use GraphQL for multiple files
-
-        puts "  🔄 Batch fetching #{repo_sources.size} files from #{repo_key}..." if verbose?
-        batch_content = fetch_github_files_graphql(repo_key, repo_sources)
-        if batch_content && !batch_content.empty?
-          prefetched_content.merge!(batch_content)
-          puts "    ✅ Successfully fetched #{batch_content.size} files" if verbose?
-        else
-          puts '    ⚠️ Batch fetch failed, will fetch individually'
-        end
-      end
-
-      prefetched_content
-    end
-
-    def group_remote_sources_by_repo(remote_sources)
-      grouped = {}
-      remote_sources.each do |source|
-        next unless source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/}
-
-        repo_key = "#{Regexp.last_match(1)}/#{Regexp.last_match(2)}"
-        grouped[repo_key] ||= []
-        grouped[repo_key] << source
-      end
-      grouped
-    end
-
-    def fetch_github_files_graphql(repo_key, repo_sources)
-      owner, repo = repo_key.split('/')
-
-      # Build GraphQL query for multiple files
-      query = build_graphql_files_query(owner, repo, repo_sources)
-
-      # Execute GraphQL query
-      response = execute_github_graphql(query)
-      unless response
-        puts '    Debug: No response from GraphQL' if ENV['DEBUG']
-        return nil
-      end
-
-      # Parse response and map to source paths
-      result = parse_graphql_files_response(response, repo_sources)
-      puts "    Debug: Parsed #{result.size} files from GraphQL" if ENV['DEBUG']
-      result
-    rescue StandardError => e
-      puts "  ⚠️  GraphQL fetch failed: #{e.message}"
-      nil
-    end
-
-    def build_graphql_files_query(owner, repo, sources)
-      # Extract file paths and branches from sources
-      file_queries = sources.map.with_index do |source, idx|
-        if source[:path] =~ %r{/(?:blob|tree)/([^/]+)/(.+)}
-          branch = Regexp.last_match(1)
-          file_path = Regexp.last_match(2)
-          "file#{idx}: object(expression: \"#{branch}:#{file_path}\") { ... on Blob { text } }"
-        end
-      end.compact
-
-      <<~GRAPHQL
-        query {
-          repository(owner: "#{owner}", name: "#{repo}") {
-            #{file_queries.join("\n    ")}
-          }
-        }
-      GRAPHQL
-    end
-
-    def execute_github_graphql(query)
-      # Try using gh CLI for GraphQL (it handles authentication)
-      # Use heredoc to properly escape the query
-      require 'tempfile'
-      file = Tempfile.new(['graphql', '.txt'])
-      file.write(query)
-      file.close
-
-      result = `gh api graphql -f query="$(cat #{file.path})" 2>&1`
-      file.unlink
-
-      return nil unless $CHILD_STATUS.success?
-
-      # Force UTF-8 encoding
-      result.force_encoding('UTF-8')
-
-      require 'json'
-      JSON.parse(result)
-    rescue StandardError => e
-      puts "    Debug: GraphQL execution error: #{e.message}" if ENV['DEBUG']
-      nil
-    end
-
-    def parse_graphql_files_response(response, sources)
-      return {} unless response['data'] && response['data']['repository']
-
-      results = {}
-      repo_data = response['data']['repository']
-
-      sources.each_with_index do |source, idx|
-        file_data = repo_data["file#{idx}"]
-        results[source[:path]] = file_data['text'] if file_data && file_data['text']
-      end
-
-      results
+      Services::GitHubClient.prefetch_remote_files(sources, verbose: verbose?)
     end
 
     def get_source_key(source)
@@ -1950,88 +1787,11 @@ module Ruly
     end
 
     def fetch_remote_content(url)
-      # Try to use gh CLI for GitHub URLs (handles authentication)
-      if url.include?('github.com')
-        content = fetch_via_gh_cli(url)
-        return content if content
-      end
-
-      # Fallback to direct HTTP for non-GitHub or if gh fails
-      raw_url = convert_to_raw_url(url)
-      uri = URI(raw_url)
-      response = Net::HTTP.get_response(uri)
-      return response.body if response.code == '200'
-
-      # Error message will be shown inline during processing
-      nil
-    rescue StandardError
-      # Error message will be shown inline during processing
-      nil
-    end
-
-    def fetch_via_gh_cli(url)
-      # Parse GitHub URL to extract owner, repo, branch, and path
-      # Format: https://github.com/owner/repo/blob/branch/path
-      return nil unless url =~ %r{github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)}
-
-      owner = Regexp.last_match(1)
-      repo = Regexp.last_match(2)
-      branch = Regexp.last_match(3)
-      path = Regexp.last_match(4)
-
-      # Try API fetch first
-      content = fetch_via_gh_api(owner, repo, branch, path)
-      return content if content
-
-      # Fallback to shallow clone
-      fetch_via_gh_clone(owner, repo, branch, path)
-    rescue StandardError => e
-      puts "⚠️  Error using gh CLI: #{e.message}"
-      nil
-    end
-
-    def fetch_via_gh_api(owner, repo, branch, path)
-      # Use gh api to fetch file content
-      result = `gh api repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch} --jq .content 2>/dev/null`
-
-      return nil unless $CHILD_STATUS.success? && !result.empty?
-
-      # GitHub API returns base64 encoded content
-      require 'base64'
-      Base64.decode64(result)
-    end
-
-    def fetch_via_gh_clone(owner, repo, branch, path)
-      # Get default branch name
-      result = `gh repo view #{owner}/#{repo} --json defaultBranchRef --jq .defaultBranchRef.name 2>/dev/null`
-      return nil unless $CHILD_STATUS.success? && !result.empty?
-
-      default_branch = result.strip
-      branch_to_use = %w[master main].include?(branch) ? default_branch : branch
-
-      # Clone and read file
-      temp_dir = "/tmp/ruly_fetch_#{Process.pid}"
-      clone_cmd = "gh repo clone #{owner}/#{repo} #{temp_dir} -- --depth=1 "
-      clone_cmd += "--branch=#{branch_to_use} --single-branch 2>/dev/null"
-      `#{clone_cmd}`
-
-      return nil unless $CHILD_STATUS.success?
-
-      file_path = File.join(temp_dir, path)
-      content = File.exist?(file_path) ? File.read(file_path, encoding: 'UTF-8') : nil
-      FileUtils.rm_rf(temp_dir)
-      content
+      Services::GitHubClient.fetch_remote_content(url)
     end
 
     def convert_to_raw_url(url)
-      # Convert GitHub blob URLs to raw URLs for direct content access
-      # Example: https://github.com/user/repo/blob/master/file.md
-      # Becomes: https://raw.githubusercontent.com/user/repo/master/file.md
-      if url.include?('github.com') && url.include?('/blob/')
-        url.sub('github.com', 'raw.githubusercontent.com').sub('/blob/', '/')
-      else
-        url
-      end
+      Services::GitHubClient.convert_to_raw_url(url)
     end
 
     def resolve_requires_for_source(source, content, processed_files, _all_sources)
@@ -3244,52 +3004,7 @@ module Ruly
     end
 
     def fetch_github_markdown_files(owner, repo, branch, path)
-      # Use GitHub API to fetch directory contents
-      api_url = "https://api.github.com/repos/#{owner}/#{repo}/contents/#{path}?ref=#{branch}"
-      puts "     DEBUG: Fetching #{api_url}" if ENV['DEBUG']
-
-      begin
-        response = fetch_url(api_url)
-        unless response
-          puts '     DEBUG: No response from API' if ENV['DEBUG']
-          return []
-        end
-
-        files = []
-        items = JSON.parse(response)
-        puts "     DEBUG: Found #{items.length} items" if ENV['DEBUG']
-
-        items.each do |item|
-          if item['type'] == 'file' && item['path'].end_with?('.md', '.mdc')
-            files << item['path']
-          elsif item['type'] == 'dir'
-            # Recursively fetch subdirectory contents
-            subdir_files = fetch_github_markdown_files(owner, repo, branch, item['path'])
-            files.concat(subdir_files)
-          end
-        end
-
-        files
-      rescue StandardError => e
-        puts "     ⚠️ Error fetching GitHub files: #{e.message}" if ENV['DEBUG']
-        []
-      end
-    end
-
-    def fetch_url(url)
-      uri = URI(url)
-      request = Net::HTTP::Get.new(uri)
-      request['Accept'] = 'application/vnd.github.v3+json' if url.include?('api.github.com')
-      request['User-Agent'] = 'Ruly CLI'
-
-      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
-        http.request(request)
-      end
-
-      response.body if response.code == '200'
-    rescue StandardError => e
-      puts "     ⚠️ Error fetching URL: #{e.message}" if ENV['DEBUG']
-      nil
+      Services::GitHubClient.fetch_github_markdown_files(owner, repo, branch, path)
     end
 
     def introspect_local_source(path, all_files, use_relative)
