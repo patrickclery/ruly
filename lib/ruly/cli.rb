@@ -1166,101 +1166,23 @@ module Ruly
     # Collect scripts from all sources
     # Returns hash with :local and :remote arrays
     def collect_scripts_from_sources(sources)
-      script_files = {local: [], remote: []}
-
-      sources.each do |source|
-        next unless source[:type] == 'local'
-
-        file_path = find_rule_file(source[:path])
-        next unless file_path
-
-        content = File.read(file_path, encoding: 'UTF-8')
-        scripts = extract_scripts_from_frontmatter(content, source[:path])
-
-        collect_local_scripts(scripts[:files], source[:path], script_files)
-        collect_remote_scripts(scripts[:remote], source[:path], script_files)
-      end
-
-      script_files
+      Services::ScriptManager.collect_scripts_from_sources(sources, find_rule_file: method(:find_rule_file))
     end
 
-    # Extract scripts declarations from frontmatter
-    # Supports both structured format ({ files: [...], remote: [...] })
-    # and simplified format (array of paths, treated as files)
+    def build_script_mappings(script_files)
+      Services::ScriptManager.build_script_mappings(script_files)
+    end
+
     def extract_scripts_from_frontmatter(content, source_path)
-      return {files: [], remote: []} unless content.start_with?('---')
-
-      parts = content.split(/^---\s*$/, 3)
-      return {files: [], remote: []} if parts.length < 3
-
-      frontmatter = YAML.safe_load(parts[1])
-      scripts = frontmatter['scripts']
-      return {files: [], remote: []} unless scripts
-
-      # Handle both structured and simplified formats
-      if scripts.is_a?(Hash)
-        # Structured format: { files: [...], remote: [...] }
-        {
-          files: scripts['files'] || [],
-          remote: scripts['remote'] || []
-        }
-      elsif scripts.is_a?(Array)
-        # Simplified format: treat as files
-        {
-          files: scripts,
-          remote: []
-        }
-      else
-        warn "Warning: Invalid scripts format in #{source_path}"
-        {files: [], remote: []}
-      end
-    rescue StandardError => e
-      warn "Warning: Failed to parse frontmatter for scripts in #{source_path}: #{e.message}"
-      {files: [], remote: []}
+      Services::ScriptManager.extract_scripts_from_frontmatter(content, source_path)
     end
 
-    # Collect local script files and add to script_files hash
-    def collect_local_scripts(script_paths, source_path, script_files)
-      script_paths.each do |script_path|
-        resolved_path = script_path.start_with?('/') ? script_path : find_rule_file(script_path)
-
-        if resolved_path && File.exist?(resolved_path)
-          script_files[:local] << {
-            from_rule: source_path,
-            relative_path: File.basename(script_path),
-            source_path: resolved_path
-          }
-        else
-          warn "Warning: Script not found: #{script_path} (from #{source_path})"
-        end
-      end
-    end
-
-    # Collect remote script URLs and add to script_files hash
-    def collect_remote_scripts(script_urls, source_path, script_files)
-      script_urls.each do |script_url|
-        script_files[:remote] << {
-          filename: File.basename(script_url),
-          from_rule: source_path,
-          url: normalize_github_url(script_url)
-        }
-      end
+    def fetch_remote_scripts(remote_scripts)
+      Services::ScriptManager.fetch_remote_scripts(remote_scripts)
     end
 
     def normalize_github_url(url)
       Services::GitHubClient.normalize_github_url(url)
-    end
-
-    # Build a mapping from absolute script paths to relative filenames
-    # Used for rewriting references in the squashed output
-    def build_script_mappings(script_files)
-      mappings = {}
-
-      (script_files[:local] || []).each do |script|
-        mappings[script[:source_path]] = script[:relative_path]
-      end
-
-      mappings
     end
 
     # Collect all require_shell_commands from sources
@@ -1341,143 +1263,12 @@ module Ruly
       []
     end
 
-    def save_command_files(command_files, recipe_config = nil) # rubocop:disable Metrics/MethodLength
-      return if command_files.empty?
-
-      commands_dir = '.claude/commands'
-      FileUtils.mkdir_p(commands_dir)
-
-      # Extract the omit_command_prefix from recipe config if present
-      omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
-
-      # Track if we've seen 'debug' directory for warning
-      debug_warning_shown = false
-
-      command_files.each do |file| # rubocop:disable Metrics/BlockLength
-        if file.is_a?(Hash)
-          # From squash mode - has content
-          # Preserve subdirectory structure for commands
-          relative_path = get_command_relative_path(file[:path], omit_prefix)
-
-          # Warn if 'debug' is used in command path (Claude Code reserved word)
-          if !debug_warning_shown && relative_path.split('/').include?('debug')
-            puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
-            puts '   Commands in .claude/commands/debug/ will not be recognized'
-            puts "   Consider renaming to 'bug' or another directory name\n\n"
-            debug_warning_shown = true
-          end
-
-          # Create subdirectories if needed
-          target_file = File.join(commands_dir, relative_path)
-          target_dir = File.dirname(target_file)
-          FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
-
-          File.write(target_file, file[:content])
-        else
-          # From import mode - just path
-          source_path = File.join(gem_root, file)
-          if File.exist?(source_path)
-            # Preserve subdirectory structure
-            relative_path = get_command_relative_path(file, omit_prefix)
-
-            # Warn if 'debug' is used in command path (Claude Code reserved word)
-            if !debug_warning_shown && relative_path.split('/').include?('debug')
-              puts "\n⚠️  WARNING: 'debug' is a reserved directory name in Claude Code"
-              puts '   Commands in .claude/commands/debug/ will not be recognized'
-              puts "   Consider renaming to 'bug' or another directory name\n\n"
-              debug_warning_shown = true
-            end
-
-            target_file = File.join(commands_dir, relative_path)
-            target_dir = File.dirname(target_file)
-            FileUtils.mkdir_p(target_dir) if target_dir != commands_dir
-
-            FileUtils.cp(source_path, target_file)
-          end
-        end
-      end
-    end
-
-    def get_command_relative_path(file_path, omit_prefix = nil)
-      if file_path.include?('/commands/')
-        # Split on /commands/ to get everything before and after
-        parts = file_path.split('/commands/')
-        after_commands = parts.last
-        before_commands = parts.first
-
-        # Get the path between the last "rules" directory (or variant) and /commands/
-        # This handles paths like:
-        # - rules/core/commands/bug/fix.md -> core/bug/fix.md
-        # - rules/commands/fix.md -> fix.md
-        # - my-rules/core/commands/fix.md -> core/fix.md
-
-        # Find the last occurrence of a directory containing "rules"
-        path_components = before_commands.split('/')
-        last_rules_index = path_components.rindex { |dir| dir.downcase.include?('rules') }
-
-        if last_rules_index
-          # Get directories after the last "rules" directory
-          dirs_after_rules = path_components[(last_rules_index + 1)..]
-
-          result_path = if dirs_after_rules.any? && !dirs_after_rules.empty?
-                          # Join the intermediate directories with the command path
-                          File.join(*dirs_after_rules, after_commands)
-                        else
-                          # No directories between rules and commands
-                          after_commands
-                        end
-        else
-          # No "rules" directory found, just use the last directory before commands
-          parent_dir = path_components.last
-          result_path = if parent_dir && !parent_dir.empty?
-                          File.join(parent_dir, after_commands)
-                        else
-                          after_commands
-                        end
-        end
-
-        # Apply omit_command_prefix if specified (string or array)
-        result_path = apply_omit_prefix(result_path, after_commands, omit_prefix) if omit_prefix
-
-        result_path
-      else
-        File.basename(file_path)
-      end
-    end
-
-    def apply_omit_prefix(result_path, after_commands, omit_prefix)
-      prefixes = omit_prefix.is_a?(Array) ? omit_prefix : [omit_prefix]
-
-      best_path = result_path
-      best_stripped = 0
-
-      prefixes.each do |prefix|
-        prefix_parts = prefix.split('/')
-        path_parts = result_path.split('/')
-        stripped = 0
-
-        while prefix_parts.any? && path_parts.any? && prefix_parts.first == path_parts.first
-          prefix_parts.shift
-          path_parts.shift
-          stripped += 1
-        end
-
-        next unless stripped > best_stripped
-
-        best_stripped = stripped
-        best_path = if path_parts.any?
-                      File.join(*path_parts)
-                    else
-                      File.basename(after_commands)
-                    end
-      end
-
-      best_path
+    def save_command_files(command_files, recipe_config = nil)
+      Services::ScriptManager.save_command_files(command_files, recipe_config, gem_root:)
     end
 
     def ensure_parent_directory(file_path)
-      dir = File.dirname(file_path)
-      FileUtils.mkdir_p(dir) unless File.directory?(dir)
+      Services::ScriptManager.ensure_parent_directory(file_path)
     end
 
     def filter_essential_sources(sources)
@@ -1790,10 +1581,6 @@ module Ruly
       Services::GitHubClient.fetch_remote_content(url)
     end
 
-    def convert_to_raw_url(url)
-      Services::GitHubClient.convert_to_raw_url(url)
-    end
-
     def resolve_requires_for_source(source, content, processed_files, all_sources)
       Services::DependencyResolver.resolve_requires_for_source(
         source, content, processed_files, all_sources,
@@ -1808,63 +1595,8 @@ module Ruly
       )
     end
 
-    def resolve_required_path(source, required_path)
-      Services::DependencyResolver.resolve_required_path(
-        source, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_local_require(source_path, required_path)
-      Services::DependencyResolver.resolve_local_require(
-        source_path, required_path,
-        find_rule_file: method(:find_rule_file), gem_root:
-      )
-    end
-
-    def resolve_remote_require(source_url, required_path)
-      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
-    end
-
-    def normalize_path(path)
-      Services::DependencyResolver.normalize_path(path)
-    end
-
     def copy_bin_files(bin_files)
-      return if bin_files.empty?
-
-      ruly_bin_dir = '.ruly/bin'
-      FileUtils.mkdir_p(ruly_bin_dir)
-
-      copied_count = 0
-      bin_files.each do |file|
-        source_path = file[:source_path]
-        relative_path = file[:relative_path]
-
-        # Extract subdirectory structure from bin/ onwards
-        target_relative = if (match = relative_path.match(%r{bin/(.+\.sh)$}))
-                            match[1]
-                          else
-                            # Fallback: just use the filename
-                            File.basename(source_path)
-                          end
-
-        target_path = File.join(ruly_bin_dir, target_relative)
-        target_dir = File.dirname(target_path)
-
-        # Create subdirectories if needed
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-
-        # Copy the file
-        FileUtils.cp(source_path, target_path)
-
-        # Make it executable
-        File.chmod(0o755, target_path)
-
-        copied_count += 1
-      end
-
-      puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
+      Services::ScriptManager.copy_bin_files(bin_files)
     end
 
     def collect_dispatches_from_sources(local_sources)
@@ -1906,6 +1638,36 @@ module Ruly
                 "recipe: #{dispatch_name.tr('_', '-')}"
         end
       end
+    end
+
+    def get_command_relative_path(file_path, omit_prefix = nil)
+      Services::ScriptManager.get_command_relative_path(file_path, omit_prefix)
+    end
+
+    def convert_to_raw_url(url)
+      Services::GitHubClient.convert_to_raw_url(url)
+    end
+
+    def resolve_required_path(source, required_path)
+      Services::DependencyResolver.resolve_required_path(
+        source, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def resolve_local_require(source_path, required_path)
+      Services::DependencyResolver.resolve_local_require(
+        source_path, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
+
+    def resolve_remote_require(source_url, required_path)
+      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
+    end
+
+    def normalize_path(path)
+      Services::DependencyResolver.normalize_path(path)
     end
 
     def calculate_bin_target(relative_path)
@@ -2232,54 +1994,12 @@ module Ruly
     end
 
     def save_skill_files(skill_files)
-      return if skill_files.empty?
-
-      skill_files.each do |file|
-        # Extract skill name from path: /rules/skills/deploy-to-production.md -> deploy-to-production
-        skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
-
-        # Create .claude/skills/{name}/ directory
-        skill_dir = ".claude/skills/#{skill_name}"
-        FileUtils.mkdir_p(skill_dir)
-
-        # Compile requires into the skill content
-        content = compile_skill_with_requires(file)
-
-        # Write content to SKILL.md
-        File.write(File.join(skill_dir, 'SKILL.md'), content)
-      end
-    end
-
-    def compile_skill_with_requires(file)
-      original = file[:original_content] || file[:content]
-      frontmatter, = parse_frontmatter(original)
-      requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
-
-      return file[:content] if requires.empty?
-
-      # Resolve and inline each required file
-      source_full_path = find_rule_file(file[:path])
-      return file[:content] unless source_full_path
-
-      source_dir = File.dirname(source_full_path)
-      compiled_parts = [file[:content]]
-
-      requires.each do |required_path|
-        resolved_path = File.expand_path(required_path, source_dir)
-        next unless File.file?(resolved_path)
-
-        raw_content = File.read(resolved_path, encoding: 'UTF-8')
-        _fm, stripped = strip_requires_and_metadata(raw_content)
-        compiled_parts << stripped
-      end
-
-      compiled_parts.join("\n\n---\n\n")
-    end
-
-    def strip_requires_and_metadata(content)
-      frontmatter, = parse_frontmatter(content)
-      stripped = strip_metadata_from_frontmatter(content)
-      [frontmatter, stripped]
+      Services::ScriptManager.save_skill_files(
+        skill_files,
+        find_rule_file: method(:find_rule_file),
+        parse_frontmatter: method(:parse_frontmatter),
+        strip_metadata: method(:strip_metadata_from_frontmatter)
+      )
     end
 
     def collect_mcp_servers_from_sources(local_sources)
@@ -2666,95 +2386,8 @@ module Ruly
       puts "    ⚠️  Warning: Could not save commands for '#{agent_name}': #{e.message}"
     end
 
-    # Copy scripts to ~/.claude/scripts/ and make them executable
-    # Supports both local and remote scripts
     def copy_scripts(script_files, destination_dir = nil)
-      local_scripts = script_files[:local] || []
-      remote_scripts = script_files[:remote] || []
-
-      return if local_scripts.empty? && remote_scripts.empty?
-
-      # Fetch remote scripts first
-      fetched_remote = fetch_remote_scripts(remote_scripts)
-
-      # Combine local and fetched remote scripts
-      all_scripts = local_scripts + fetched_remote
-      return if all_scripts.empty?
-
-      # Default to local .claude/scripts/ directory (relative to current working directory)
-      scripts_dir = destination_dir || File.join(Dir.pwd, '.claude', 'scripts')
-      FileUtils.mkdir_p(scripts_dir)
-
-      copied_count = 0
-      all_scripts.each do |file|
-        source_path = file[:source_path]
-        relative_path = file[:relative_path]
-
-        # Preserve subdirectory structure from script path
-        target_path = File.join(scripts_dir, relative_path)
-        target_dir = File.dirname(target_path)
-
-        # Create subdirectories if needed
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-
-        # Copy the file
-        FileUtils.cp(source_path, target_path)
-
-        # Make it executable
-        File.chmod(0o755, target_path)
-
-        type_label = file[:remote] ? 'remote' : 'local'
-        puts "  ✓ #{relative_path} (#{type_label})"
-
-        copied_count += 1
-      end
-
-      puts "🔧 Copied #{copied_count} scripts to #{scripts_dir} (made executable)"
-    end
-
-    # Fetch remote scripts from GitHub
-    # Returns array of fetched script metadata with temporary file paths
-    def fetch_remote_scripts(remote_scripts)
-      return [] if remote_scripts.empty?
-
-      puts '🔄 Fetching remote scripts...'
-      fetched_scripts = []
-
-      remote_scripts.each do |script|
-        # Convert blob URL to raw content URL
-        raw_url = script[:url]
-                    .gsub('github.com', 'raw.githubusercontent.com')
-                    .gsub('/blob/', '/')
-
-        # Fetch the script content
-        uri = URI(raw_url)
-        response = Net::HTTP.get_response(uri)
-
-        if response.code == '200'
-          # Save to temp location (keep file open to prevent auto-delete)
-          temp_file = Tempfile.new(['script', File.extname(script[:filename])])
-          temp_file.write(response.body)
-          temp_file.flush
-          temp_file.rewind
-
-          fetched_scripts << {
-            filename: script[:filename],
-            from_rule: script[:from_rule],
-            relative_path: script[:filename],
-            remote: true,
-            source_path: temp_file.path,
-            temp_file: # Keep reference to prevent GC
-          }
-
-          puts "  ✓ #{script[:filename]} (from #{URI(script[:url]).host})"
-        else
-          warn "  ✗ Failed to fetch #{script[:filename]}: HTTP #{response.code}"
-        end
-      rescue StandardError => e
-        warn "  ✗ Error fetching #{script[:filename]}: #{e.message}"
-      end
-
-      fetched_scripts
+      Services::ScriptManager.copy_scripts(script_files, destination_dir)
     end
 
     def cached_file_count(output_file)
