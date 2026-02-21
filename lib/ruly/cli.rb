@@ -1794,172 +1794,40 @@ module Ruly
       Services::GitHubClient.convert_to_raw_url(url)
     end
 
-    def resolve_requires_for_source(source, content, processed_files, _all_sources)
-      frontmatter, = parse_frontmatter(content)
-      requires = frontmatter['requires'] || []
-
-      return [] if requires.empty?
-
-      required_sources = []
-
-      requires.each do |required_path|
-        # Resolve the path based on the source context
-        resolved_source = resolve_required_path(source, required_path)
-
-        next unless resolved_source
-
-        # Check if already processed (deduplication)
-        source_key = get_source_key(resolved_source)
-        next if processed_files.include?(source_key)
-
-        # Add to required sources
-        required_sources << resolved_source
-      end
-
-      required_sources
-    end
-
-    def resolve_required_path(source, required_path)
-      if source[:type] == 'local'
-        resolve_local_require(source[:path], required_path)
-      elsif source[:type] == 'remote'
-        resolve_remote_require(source[:path], required_path)
-      end
-    end
-
-    def resolve_local_require(source_path, required_path)
-      # Get the directory of the source file
-      source_full_path = find_rule_file(source_path)
-      return nil unless source_full_path
-
-      source_dir = File.dirname(source_full_path)
-
-      # Resolve the required path relative to the source directory
-      resolved_full_path = File.expand_path(required_path, source_dir)
-
-      # Add .md extension if not present and file doesn't exist as-is
-      unless File.file?(resolved_full_path)
-        unless resolved_full_path.end_with?('.md')
-          md_path = "#{resolved_full_path}.md"
-          resolved_full_path = md_path if File.file?(md_path)
-        end
-      end
-
-      # Check if file exists and is actually a file (not a directory)
-      return nil unless File.file?(resolved_full_path)
-
-      # Use realpath to get canonical path (resolves symlinks, etc.)
-      canonical_path = File.realpath(resolved_full_path)
-
-      # Try to make it relative to gem_root for consistency
-      root = gem_root
-      root_path = begin
-        File.realpath(root)
-      rescue StandardError
-        root
-      end
-
-      relative_path = if canonical_path.start_with?("#{root_path}/")
-                        canonical_path.sub("#{root_path}/", '')
-                      elsif canonical_path == root_path
-                        '.'
-                      else
-                        # If not under gem_root, return the canonical path
-                        canonical_path
-                      end
-
-      {path: relative_path, type: 'local'}
-    end
-
-    def resolve_remote_require(source_url, required_path)
-      # Handle GitHub URLs
-      if source_url.include?('github.com') && source_url.include?('/blob/')
-        # Extract parts from GitHub URL
-        if source_url =~ %r{https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)}
-          owner = Regexp.last_match(1)
-          repo = Regexp.last_match(2)
-          branch = Regexp.last_match(3)
-          source_file_path = Regexp.last_match(4)
-          source_dir = File.dirname(source_file_path)
-
-          # Resolve the required path relative to the source directory
-          # Handle both relative and absolute (from repo root) paths
-          resolved_path = if required_path.start_with?('/')
-                            # Absolute from repo root
-                            required_path[1..]
-                          else
-                            # Relative to current file's directory
-                            normalize_path(File.join(source_dir, required_path))
-                          end
-
-          # Construct the full GitHub URL for the required file
-          resolved_url = "https://github.com/#{owner}/#{repo}/blob/#{branch}/#{resolved_path}"
-
-          return {path: resolved_url, type: 'remote'}
-        end
-      end
-
-      # For other remote URLs, try to resolve relative to base URL
-      begin
-        base_uri = URI.parse(source_url)
-        base_path = File.dirname(base_uri.path)
-        resolved_path = File.join(base_path, required_path)
-        resolved_uri = base_uri.dup
-        resolved_uri.path = resolved_path
-
-        {path: resolved_uri.to_s, type: 'remote'}
-      rescue StandardError
-        nil
-      end
-    end
-
-    def normalize_path(path)
-      # Normalize the path (remove ./, ../, etc)
-      path.split('/').each_with_object([]) do |part, parts|
-        if part == '..'
-          parts.pop
-        elsif part != '.' && !part.empty?
-          parts << part
-        end
-        parts
-      end.join('/')
+    def resolve_requires_for_source(source, content, processed_files, all_sources)
+      Services::DependencyResolver.resolve_requires_for_source(
+        source, content, processed_files, all_sources,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
     end
 
     def resolve_skills_for_source(source, content, processed_files)
-      frontmatter, = parse_frontmatter(content)
-      skills = frontmatter['skills'] || []
+      Services::DependencyResolver.resolve_skills_for_source(
+        source, content, processed_files,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
 
-      return [] if skills.empty?
+    def resolve_required_path(source, required_path)
+      Services::DependencyResolver.resolve_required_path(
+        source, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
 
-      skill_sources = []
+    def resolve_local_require(source_path, required_path)
+      Services::DependencyResolver.resolve_local_require(
+        source_path, required_path,
+        find_rule_file: method(:find_rule_file), gem_root:
+      )
+    end
 
-      skills.each do |skill_path|
-        # Resolve the path based on the source context
-        resolved_source = resolve_required_path(source, skill_path)
+    def resolve_remote_require(source_url, required_path)
+      Services::DependencyResolver.resolve_remote_require(source_url, required_path)
+    end
 
-        # VALIDATE: skill file must exist (unlike requires which silently skips)
-        unless resolved_source
-          raise Ruly::Error, "Skill file not found: '#{skill_path}' referenced from '#{source[:path]}'"
-        end
-
-        # VALIDATE: resolved file must be in a /skills/ directory
-        resolved_full_path = find_rule_file(resolved_source[:path])
-        unless resolved_full_path&.include?('/skills/')
-          raise Ruly::Error,
-                "Skill reference '#{skill_path}' must be in a /skills/ directory " \
-                "(resolved to '#{resolved_source[:path]}')"
-        end
-
-        # Check if already processed (deduplication)
-        source_key = get_source_key(resolved_source)
-        next if processed_files.include?(source_key)
-
-        # Mark as from skills resolution
-        resolved_source[:from_skills] = true
-        skill_sources << resolved_source
-      end
-
-      skill_sources
+    def normalize_path(path)
+      Services::DependencyResolver.normalize_path(path)
     end
 
     def copy_bin_files(bin_files)
