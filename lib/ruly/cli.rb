@@ -21,7 +21,7 @@ require_relative 'operations'
 module Ruly
   # Command Line Interface for Ruly gem
   # Provides commands for managing and compiling AI assistant rules
-  class CLI < Thor # rubocop:disable Metrics/ClassLength
+  class CLI < Thor
     def self.exit_on_failure?
       true
     end
@@ -2326,6 +2326,47 @@ module Ruly
       puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
     end
 
+    def collect_dispatches_from_sources(local_sources)
+      dispatches = {}
+
+      local_sources.each do |source|
+        content = source[:original_content] || source[:content]
+        next unless content
+
+        frontmatter, = parse_frontmatter(content)
+        next unless frontmatter.is_a?(Hash) && frontmatter['dispatches'].is_a?(Array)
+
+        filename = File.basename(source[:path])
+        dispatches[filename] = frontmatter['dispatches']
+      end
+
+      dispatches
+    end
+
+    def validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
+      return if collected_dispatches.empty?
+
+      registered_subagents = if recipe_config['subagents'].is_a?(Array)
+                               recipe_config['subagents'].filter_map { |s| s['name'] }
+                             else
+                               []
+                             end
+
+      collected_dispatches.each_value do |dispatch_names|
+        dispatch_names.each do |dispatch_name|
+          next if registered_subagents.include?(dispatch_name)
+
+          raise Ruly::Error,
+                "Recipe '#{recipe_name}' dispatches: #{dispatch_name}\n       " \
+                "but does not register it as a subagent.\n       " \
+                "Add to recipe:\n         " \
+                "subagents:\n           " \
+                "- name: #{dispatch_name}\n             " \
+                "recipe: #{dispatch_name.tr('_', '-')}"
+        end
+      end
+    end
+
     def calculate_bin_target(relative_path)
       if (match = relative_path.match(%r{bin/(.+\.sh)$}))
         match[1]
@@ -2649,7 +2690,7 @@ module Ruly
       FileUtils.cp(output_file, cache_file)
     end
 
-    def save_skill_files(skill_files) # rubocop:disable Metrics/MethodLength
+    def save_skill_files(skill_files)
       return if skill_files.empty?
 
       skill_files.each do |file|
@@ -2902,47 +2943,6 @@ module Ruly
             "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
     end
 
-    def collect_dispatches_from_sources(local_sources)
-      dispatches = {}
-
-      local_sources.each do |source|
-        content = source[:original_content] || source[:content]
-        next unless content
-
-        frontmatter, = parse_frontmatter(content)
-        next unless frontmatter.is_a?(Hash) && frontmatter['dispatches'].is_a?(Array)
-
-        filename = File.basename(source[:path])
-        dispatches[filename] = frontmatter['dispatches']
-      end
-
-      dispatches
-    end
-
-    def validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
-      return if collected_dispatches.empty?
-
-      registered_subagents = if recipe_config['subagents'].is_a?(Array)
-                               recipe_config['subagents'].filter_map { |s| s['name'] }
-                             else
-                               []
-                             end
-
-      collected_dispatches.each_value do |dispatch_names|
-        dispatch_names.each do |dispatch_name|
-          next if registered_subagents.include?(dispatch_name)
-
-          raise Ruly::Error,
-                "Recipe '#{recipe_name}' dispatches: #{dispatch_name}\n" \
-                "       but does not register it as a subagent.\n" \
-                "       Add to recipe:\n" \
-                "         subagents:\n" \
-                "           - name: #{dispatch_name}\n" \
-                "             recipe: #{dispatch_name.tr('_', '-')}"
-        end
-      end
-    end
-
     def validate_no_subagent_dispatches!(subagent_recipe, agent_name, recipe_name)
       return unless subagent_recipe.is_a?(Hash)
 
@@ -2962,7 +2962,7 @@ module Ruly
 
         filename = File.basename(source[:path])
         frontmatter['dispatches'].each do |dispatch_name|
-          dispatching_files << { file: filename, dispatch: dispatch_name }
+          dispatching_files << {dispatch: dispatch_name, file: filename}
         end
       end
 
