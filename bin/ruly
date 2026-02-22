@@ -1,8 +1,19 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-ENV['BUNDLE_GEMFILE'] ||= File.expand_path('../Gemfile', __dir__)
-require 'bundler/setup'
+# Try Bundler if available, but fall back to rubygems if the bundle
+# isn't installed for the current Ruby (e.g. when invoked from outside
+# the project directory with a different Ruby version).
+gemfile = File.expand_path('../Gemfile', __dir__)
+if File.exist?(gemfile)
+  ENV['BUNDLE_GEMFILE'] ||= gemfile
+  begin
+    require 'bundler/setup'
+  rescue StandardError, LoadError
+    # Bundle not satisfied for this Ruby — fall back to gem-installed deps
+  end
+end
+
 require_relative '../lib/ruly'
 
 Ruly::CLI.start(ARGV)
