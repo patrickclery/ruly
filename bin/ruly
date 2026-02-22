@@ -4,11 +4,16 @@
 # Try Bundler if available, but fall back to rubygems if the bundle
 # isn't installed for the current Ruby (e.g. when invoked from outside
 # the project directory with a different Ruby version).
+#
+# We call Bundler.setup directly instead of require 'bundler/setup'
+# because the latter catches its own errors and calls exit(), which
+# cannot be rescued with StandardError.
 gemfile = File.expand_path('../Gemfile', __dir__)
 if File.exist?(gemfile)
   ENV['BUNDLE_GEMFILE'] ||= gemfile
   begin
-    require 'bundler/setup'
+    require 'bundler'
+    Bundler.setup
   rescue StandardError, LoadError
     # Bundle not satisfied for this Ruby — fall back to gem-installed deps
   end
