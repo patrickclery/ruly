@@ -36,6 +36,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-diagnose.md
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
     skills:
       # === Git Skills ===
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
