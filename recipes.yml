@@ -30,12 +30,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-dashboard.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-diagnose.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-fix.md
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
@@ -73,8 +71,6 @@ recipes:
         recipe: dashboard
       - name: pr_readiness
         recipe: pr-readiness
-      - name: core_architect
-        recipe: core-architect
       - name: core_reviewer
         recipe: core-reviewer
       - name: pr_review_loop
@@ -83,8 +79,6 @@ recipes:
         recipe: qa
       - name: bug_diagnose
         recipe: bug-diagnose
-      - name: bug_fix
-        recipe: bug-fix
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -215,7 +209,6 @@ recipes:
       # === Compiled Skills (loaded on demand via Skill tool) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/code-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-diagnosis.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-fix.md
       # === Existing skills ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       # === Dispatch rules for agents that remain agents ===
@@ -436,7 +429,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugging.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
       # === Cross-Cutting Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
@@ -463,8 +455,6 @@ recipes:
         recipe: core-engineer
       - name: core_debugging
         recipe: core-debugging
-      - name: core_architect
-        recipe: core-architect
       # === Frontend Subagents ===
       - name: frontend_engineer
         recipe: frontend-engineer
@@ -499,8 +489,6 @@ recipes:
         recipe: qa
       - name: bug_diagnose
         recipe: bug-diagnose
-      - name: bug_fix
-        recipe: bug-fix
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
@@ -736,37 +724,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
 
-  core-architect:
-    description: "Read-only architecture advisor — explores codebase, asks questions, produces design plans"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/architect.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === Essential (patterns the architect needs to know) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      # === Standards (architecture and code conventions) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      # === Reference (service landscape) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      # === Frameworks (language and ORM patterns) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === Framework Standards (coding conventions) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
-      # === Migrations (knows when migrations are needed) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
-
   pr-readiness:
     description: "Verify PR readiness against definition of done (subagent execution)"
     files:
@@ -846,39 +803,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-
-  bug-fix:
-    description: "Bug fix subagent - TDD-driven fix implementation after diagnosis is complete"
-    files:
-      # === Superpowers: TDD & Verification (core tenets) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-      # === WorkAxle Core ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      # === Frameworks (for writing code) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === RSpec (for writing tests) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
-      # === Testing ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      # === Standards (for writing code) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
-      # === Bug Fix Command ===
-      - /Users/patrick/Projects/ruly/rules/bug/commands/fix.md
-      # === Debugging (inlined as skill, not subagent) ===
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
   ruly:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
