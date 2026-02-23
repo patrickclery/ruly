@@ -14,6 +14,19 @@ module Ruly
     module ScriptManager # rubocop:disable Metrics/ModuleLength
       module_function
 
+      # Derive a skill name from a file path.
+      # For paths containing '/skills/', uses the portion after the last '/skills/' segment.
+      # For other paths, uses the basename without extension.
+      # @param path [String] file path
+      # @return [String] skill name
+      def derive_skill_name(path)
+        if path.include?('/skills/')
+          path.split('/skills/').last.sub(/\.md$/, '')
+        else
+          File.basename(path, '.md')
+        end
+      end
+
       # Scan all local sources for scripts declared in frontmatter.
       # @param sources [Array<Hash>] source hashes with :type and :path
       # @param find_rule_file [Proc] callable that resolves a rule path to an absolute file path
@@ -374,7 +387,7 @@ module Ruly
         return if skill_files.empty?
 
         skill_files.each do |file|
-          skill_name = file[:path].split('/skills/').last.sub(/\.md$/, '')
+          skill_name = derive_skill_name(file[:path])
           skill_dir = ".claude/skills/#{skill_name}"
           FileUtils.mkdir_p(skill_dir)
 

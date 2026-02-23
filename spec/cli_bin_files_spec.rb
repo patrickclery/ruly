@@ -8,30 +8,32 @@ require 'fileutils'
 RSpec.describe Ruly::CLI do
   let(:cli) { described_class.new }
   let(:temp_dir) { Dir.mktmpdir }
-  let(:original_dir) { Dir.pwd }
 
-  before do
-    Dir.chdir(temp_dir)
+  around do |example|
+    original_dir = Dir.pwd
+    begin
+      Dir.chdir(temp_dir)
 
-    # Create a test recipe file
-    File.write('recipes.yml', recipe_content)
+      # Create a test recipe file
+      File.write('recipes.yml', recipe_content)
 
-    # Create test markdown files
-    FileUtils.mkdir_p('rules')
-    File.write('rules/test.md', '# Test Rule')
+      # Create test markdown files
+      FileUtils.mkdir_p('rules')
+      File.write('rules/test.md', '# Test Rule')
 
-    # Create test bin files with subdirectories
-    FileUtils.mkdir_p('rules/bin/testing')
-    FileUtils.mkdir_p('rules/bin/common')
+      # Create test bin files with subdirectories
+      FileUtils.mkdir_p('rules/bin/testing')
+      FileUtils.mkdir_p('rules/bin/common')
 
-    File.write('rules/bin/testing/test-script.sh', '#!/bin/bash\necho "test"')
-    File.write('rules/bin/common/helper.sh', '#!/bin/bash\necho "helper"')
-    File.write('rules/bin/standalone.sh', '#!/bin/bash\necho "standalone"')
-  end
+      File.write('rules/bin/testing/test-script.sh', '#!/bin/bash\necho "test"')
+      File.write('rules/bin/common/helper.sh', '#!/bin/bash\necho "helper"')
+      File.write('rules/bin/standalone.sh', '#!/bin/bash\necho "standalone"')
 
-  after do
-    Dir.chdir(original_dir)
-    FileUtils.rm_rf(temp_dir)
+      example.run
+    ensure
+      Dir.chdir(original_dir)
+      FileUtils.rm_rf(temp_dir) if temp_dir && Dir.exist?(temp_dir)
+    end
   end
 
   describe '#squash with bin files' do
@@ -40,9 +42,28 @@ RSpec.describe Ruly::CLI do
         recipes:
           test_with_bin:
             description: "Test recipe with bin files"
-            sources:
-              - local: rules
+            files:
+              - rules/test.md
+            bins:
+              - rules/bin/
       YAML
+    end
+
+    before do
+      allow(cli).to receive_messages(gem_root: temp_dir,
+                                     recipes_file: File.join(temp_dir, 'recipes.yml'))
+
+      recipes_content = {
+        'test_with_bin' => {
+          'bins' => ['rules/bin/'],
+          'description' => 'Test recipe with bin files',
+          'files' => ['rules/test.md']
+        }
+      }
+
+      # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      # rubocop:enable RSpec/AnyInstance
     end
 
     context 'when processing sources with bin files' do
@@ -95,6 +116,16 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#clean with --deepclean' do
+    let(:recipe_content) do
+      <<~YAML
+        recipes:
+          dummy:
+            description: "Dummy recipe for clean tests"
+            files:
+              - rules/test.md
+      YAML
+    end
+
     before do
       # Create .ruly/bin directory with files
       FileUtils.mkdir_p('.ruly/bin/testing')
@@ -134,34 +165,31 @@ RSpec.describe Ruly::CLI do
     it 'handles bin files from GitHub sources' do
       # This would require mocking GitHub API calls
       # Placeholder for GitHub bin file handling tests
-      pending 'GitHub bin file handling tests'
+      skip 'GitHub bin file handling tests'
     end
   end
 
-  describe 'bin file detection' do
-    it 'correctly identifies bin/*.sh files' do
-      sources = []
-      cli.send(:process_local_directory, 'rules', sources)
-
-      bin_sources = sources.select { |s| s[:path].match?(%r{bin/.*\.sh$}) }
-
-      expect(bin_sources.size).to eq(3)
-      expect(bin_sources.map { |s| s[:path] }).to include(
-        'rules/bin/testing/test-script.sh',
-        'rules/bin/common/helper.sh',
-        'rules/bin/standalone.sh'
-      )
+  describe 'bin file detection without bins: key' do
+    let(:recipe_content) do
+      <<~YAML
+        recipes:
+          dummy:
+            description: "Dummy recipe for detection tests"
+            files:
+              - rules/test.md
+      YAML
     end
 
-    it 'separates bin files from markdown files' do
+    it 'does not auto-detect bin files from path' do
       sources = []
-      cli.send(:process_local_directory, 'rules', sources)
+      Ruly::Services::RecipeLoader.process_local_directory('rules', sources, gem_root: temp_dir)
 
-      md_sources = sources.select { |s| s[:path].end_with?('.md') }
+      # bin/*.sh files are still collected by process_local_directory
+      # but they are NOT categorized as bins (no :category marker)
       sh_sources = sources.select { |s| s[:path].end_with?('.sh') }
-
-      expect(md_sources.size).to eq(1)
-      expect(sh_sources.size).to eq(3)
+      sh_sources.each do |source|
+        expect(source[:category]).to be_nil
+      end
     end
   end
 end

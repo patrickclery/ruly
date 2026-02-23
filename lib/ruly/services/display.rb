@@ -55,7 +55,7 @@ module Ruly
       def dry_run_skills(skill_files)
         puts "\nWould create skill files in .claude/skills/:"
         skill_files.each do |file|
-          puts "  → .claude/skills/#{file[:path].split('/skills/').last.sub(/\.md$/, '')}/SKILL.md"
+          puts "  → .claude/skills/#{Services::ScriptManager.derive_skill_name(file[:path])}/SKILL.md"
         end
       end
 
@@ -140,6 +140,9 @@ module Ruly
 
       def collect_recipe_display_files(config)
         all_files = Array(config['files']).dup
+        all_files.concat(Array(config['skills']))
+        all_files.concat(Array(config['commands']))
+        all_files.concat(Array(config['bins']))
         config['sources']&.each do |source|
           if source.is_a?(Hash)
             if source['github']

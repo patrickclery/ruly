@@ -12,7 +12,7 @@ require_relative 'services'
 module Ruly
   # Command Line Interface for Ruly gem
   class CLI < Thor
-    MERGE_SKIP_KEYS = %w[files sources].freeze
+    MERGE_SKIP_KEYS = %w[files sources skills commands bins].freeze
 
     def self.exit_on_failure?
       true

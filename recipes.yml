@@ -34,15 +34,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-diagnose.md
+      # === Context Fetching (orchestrator handles context) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    skills:
+      # === Git Skills ===
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+      # === PR Operations (orchestrator handles PR creation) ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       # === PR Operations (orchestrator handles PR creation) ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      # === Git Skills ===
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching (orchestrator handles context) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
@@ -93,7 +97,10 @@ recipes:
       # === Bug Investigation ===
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+    skills:
+      # === Bug Investigation ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    commands:
       # === Commands ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
 
@@ -114,13 +121,15 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - Ref # For API documentation lookup
@@ -131,6 +140,7 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/github/pr/
+    skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
 
   core-engineer:
@@ -179,6 +189,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+    skills:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
     mcp_servers:
@@ -206,20 +217,23 @@ recipes:
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
       - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === Dispatch rules for agents that remain agents ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    skills:
       # === Compiled Skills (loaded on demand via Skill tool) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/code-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-diagnosis.md
       # === Existing skills ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      # === Dispatch rules for agents that remain agents ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       # === Context ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
@@ -259,12 +273,16 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
       # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    skills:
+      # PR operations
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
+      # Context fetching via subagent (MUST be always loaded)
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
       # PR operations
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     mcp_servers:
       - Ref # For documentation lookup
@@ -293,12 +311,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
 
   full:
@@ -339,13 +359,15 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For UI/integration testing
@@ -354,12 +376,8 @@ recipes:
     description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
     omit_command_prefix: github
     files:
-      # === Reviewing skill ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      # === PR readiness chart ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
       # === Jira statuses (for readiness gates) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
       # === WorkAxle standards (review lens) ===
@@ -384,6 +402,12 @@ recipes:
       # === Superpowers code-reviewer ===
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
+    skills:
+      # === Reviewing skill ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+    commands:
+      # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
 
   jira:
     description: "Jira operations (uses CLI)"
@@ -393,6 +417,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
       - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
@@ -437,15 +462,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
+      # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    skills:
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Git Skills ===
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+    commands:
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      # === Git Skills ===
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       # === Backend Subagents (promoted from core) ===
@@ -500,12 +529,14 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
       - playwright # For E2E testing
@@ -530,11 +561,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-testing.md
       # === Playwright Patterns ===
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
+      # === Jira (for fetching AC from tickets) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/
+    skills:
       # === Skills ===
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
-      # === Jira (for fetching AC from tickets) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
     mcp_servers:
       - playwright # For exploring UI when page objects are missing
 
@@ -549,9 +581,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/comms/
+    skills:
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
@@ -589,13 +623,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multi-service-development.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multiple.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
       # === Shared Communication Files ===
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
       - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
       - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+      # === MS Teams ===
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      # === Mattermost ===
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
+    commands:
+      # === Orchestrator (multi-service patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
       # === Jira Ticket Creation ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/epic.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/story.md
@@ -606,10 +646,8 @@ recipes:
       # === Communication Commands (DMs, commenting) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
       - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
@@ -670,15 +708,17 @@ recipes:
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # PR details and merging
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+    skills:
       - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+    commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-branches.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
 
   comms:
     description: "Communication via Jira, Teams, Mattermost, and GitHub — commenting, DMs, reviews, bug reports"
@@ -696,21 +736,26 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/workflow.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/filters.md
+      # === MS Teams Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      # === Mattermost Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
+      # === GitHub PR Communication ===
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+    commands:
+      # === Jira Communication ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
       # === MS Teams Communication ===
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
       # === Mattermost Communication ===
-      - /Users/patrick/Projects/ruly/rules/comms/mattermost/common.md
       - /Users/patrick/Projects/ruly/rules/comms/mattermost/commands/dm.md
       # === GitHub PR Communication ===
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       # === Context (for review requests that need PR context) ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
@@ -721,42 +766,44 @@ recipes:
     description: "Open PRs dashboard with context fetching via subagent"
     omit_command_prefix: comms
     files:
-      - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+    commands:
+      - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
 
   pr-readiness:
     description: "Verify PR readiness against definition of done (subagent execution)"
     files:
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
 
   pr-review-loop:
     description: "Automated PR review feedback loop - monitors reviews, fixes issues, re-checks"
     omit_command_prefix: github
-    files:
+    skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
 
   context-jira:
     description: "Downloads Jira ticket details"
-    files:
+    skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-jira.md
 
   context-github:
     description: "Downloads GitHub PR details for a ticket"
-    files:
+    skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-github.md
 
   context-teams:
     description: "Searches Teams threads for ticket/PR references"
-    files:
+    skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-teams.md
     mcp_servers:
       - teams
 
   context-summarizer:
     description: "Reads cached .toon files and produces ticket summary"
-    files:
+    skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-summarizer.md
 
   core-debugging:
@@ -764,14 +811,16 @@ recipes:
     files:
       # === Debugging patterns ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/debugging.md
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
-      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
       # === WorkAxle context (minimal for reading code) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    commands:
+      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
 
   bug-diagnose:
     description: "Read-only bug investigation subagent - systematic root cause analysis without fixes"
@@ -793,16 +842,20 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       # === Bug Investigation (diagnostic only) ===
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
-      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
-      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
       # === Architecture (for root cause analysis) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+    skills:
+      # === Bug Investigation (diagnostic only) ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    commands:
+      # === Bug Investigation (diagnostic only) ===
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
 
   ruly:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
@@ -829,6 +882,7 @@ recipes:
       # === Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+    skills:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
@@ -849,15 +903,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+      # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    skills:
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      # === Skills ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
+    commands:
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      # === Skills ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
       # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: frontend_engineer
@@ -913,8 +971,6 @@ recipes:
       # === Superpowers: Code Review ===
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
-      # === Reviewing skill ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
       # === Frontend Standards (review lens) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
@@ -927,7 +983,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
       # === PR common ===
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      # === PR readiness chart ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
       # === Jira statuses (for readiness gates) ===
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    skills:
+      # === Reviewing skill ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+    commands:
+      # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md

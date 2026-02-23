@@ -92,7 +92,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe with registered subagent',
             'files' => ['rules/dispatching.md'],
             'subagents' => [
-              { 'name' => 'context_grabber', 'recipe' => 'context-grabber' }
+              {'name' => 'context_grabber', 'recipe' => 'context-grabber'}
             ]
           }
         }
@@ -141,7 +141,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe',
             'files' => ['rules/parent-rule.md'],
             'subagents' => [
-              { 'name' => 'core_reviewer', 'recipe' => 'core-reviewer' }
+              {'name' => 'core_reviewer', 'recipe' => 'core-reviewer'}
             ]
           }
         }
@@ -184,7 +184,7 @@ RSpec.describe Ruly::CLI, type: :cli do
             'description' => 'Parent recipe',
             'files' => ['rules/parent-rule.md'],
             'subagents' => [
-              { 'name' => 'clean_agent', 'recipe' => 'clean-recipe' }
+              {'name' => 'clean_agent', 'recipe' => 'clean-recipe'}
             ]
           }
         }

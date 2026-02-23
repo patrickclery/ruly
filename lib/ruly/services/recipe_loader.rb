@@ -25,6 +25,9 @@ module Ruly
         sources = []
 
         process_recipe_files(recipe, sources, gem_root:)
+        process_recipe_skills(recipe, sources, gem_root:)
+        process_recipe_commands(recipe, sources, gem_root:)
+        process_recipe_bins(recipe, sources, gem_root:)
         process_recipe_sources(recipe, sources, gem_root:)
         process_legacy_remote_sources(recipe, sources)
 
@@ -139,6 +142,69 @@ module Ruly
             end
           else
             puts "\u26A0\uFE0F  Warning: File not found: #{file}"
+          end
+        end
+      end
+
+      # Processes the 'skills' key from a recipe config.
+      def process_recipe_skills(recipe, sources, gem_root:)
+        process_categorized_key(recipe, sources, category: :skill, gem_root:, key: 'skills')
+      end
+
+      # Processes the 'commands' key from a recipe config.
+      def process_recipe_commands(recipe, sources, gem_root:)
+        process_categorized_key(recipe, sources, category: :command, gem_root:, key: 'commands')
+      end
+
+      # Processes a categorized recipe key (skills or commands) into sources.
+      # Both keys share the same logic: resolve files, expand directories to .md files,
+      # and tag with the appropriate category marker.
+      #
+      # @param recipe [Hash, Array] recipe config
+      # @param sources [Array<Hash>] accumulator for sources
+      # @param key [String] recipe key name ('skills' or 'commands')
+      # @param category [Symbol] category marker (:skill or :command)
+      # @param gem_root [String]
+      def process_categorized_key(recipe, sources, category:, gem_root:, key:)
+        return if recipe.is_a?(Array)
+
+        recipe[key]&.each do |file|
+          full_path = find_rule_file(file, gem_root:)
+          if full_path
+            if File.directory?(full_path)
+              find_markdown_files_recursively(full_path).each do |md_file|
+                sources << {category:, path: md_file, type: 'local'}
+              end
+            else
+              sources << {category:, path: file, type: 'local'}
+            end
+          else
+            puts "\u26A0\uFE0F  Warning: #{key.capitalize.delete_suffix('s')} file not found: #{file}"
+          end
+        end
+      end
+
+      # Processes the 'bins' key from a recipe config.
+      #
+      # @param recipe [Hash, Array] recipe config
+      # @param sources [Array<Hash>] accumulator for sources
+      # @param gem_root [String]
+      def process_recipe_bins(recipe, sources, gem_root:)
+        return if recipe.is_a?(Array)
+
+        recipe['bins']&.each do |file|
+          full_path = find_rule_file(file, gem_root:)
+          if full_path
+            if File.directory?(full_path)
+              Dir.glob(File.join(full_path, '**', '*.sh')).each do |sh_file|
+                relative = sh_file.start_with?(gem_root) ? sh_file.sub("#{gem_root}/", '') : sh_file
+                sources << {category: :bin, path: relative, type: 'local'}
+              end
+            else
+              sources << {category: :bin, path: file, type: 'local'}
+            end
+          else
+            puts "\u26A0\uFE0F  Warning: Bin file not found: #{file}"
           end
         end
       end
@@ -259,24 +325,14 @@ module Ruly
         end
       end
 
-      # Processes a local directory, adding all .md and bin/*.sh files.
+      # Processes a local directory, adding all .md files.
+      # Bin files are no longer auto-included; use the explicit 'bins' recipe key instead.
       #
       # @param directory_path [String]
       # @param sources [Array<Hash>]
       # @param gem_root [String]
       def process_local_directory(directory_path, sources, gem_root:)
-        # Process markdown files
         Dir.glob(File.join(directory_path, '**', '*.md')).each do |file|
-          relative_path = if file.start_with?(gem_root)
-                            file.sub("#{gem_root}/", '')
-                          else
-                            file
-                          end
-          sources << {path: relative_path, type: 'local'}
-        end
-
-        # Also process bin/*.sh files
-        Dir.glob(File.join(directory_path, 'bin', '**', '*.sh')).each do |file|
           relative_path = if file.start_with?(gem_root)
                             file.sub("#{gem_root}/", '')
                           else

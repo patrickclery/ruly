@@ -197,10 +197,13 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'raises an error for files not in a /skills/ directory' do
-        expect { cli.invoke(:squash, ['test_bad_path']) }.to raise_error(
-          Ruly::Error, %r{must be in a /skills/ directory}i
-        )
+      it 'allows skill references to files outside /skills/ directory' do
+        expect { cli.invoke(:squash, ['test_bad_path']) }.not_to raise_error
+      end
+
+      it 'creates SKILL.md for files outside /skills/ directory' do
+        cli.invoke(:squash, ['test_bad_path'])
+        expect(File.exist?('.claude/skills/helpers/SKILL.md')).to be(true)
       end
     end
 

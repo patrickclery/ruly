@@ -152,7 +152,7 @@ module Ruly
           )
 
           # Add skill sources to the queue -- they'll be categorized as skill_files
-          # because their paths contain /skills/
+          # because they have from_skills: true set by resolve_skills_for_source
           unless skill_sources.empty?
             puts "    \u{2192} Found #{skill_sources.length} skills, adding to queue..." if verbose
             sources_to_process.unshift(*skill_sources)
@@ -193,7 +193,7 @@ module Ruly
       # @param keep_frontmatter [Boolean] whether to preserve non-metadata frontmatter
       # @param verbose [Boolean] whether to show detailed output
       # @return [Hash, nil] result hash or nil if file not found
-      def process_local_file(source, index, total, agent,
+      def process_local_file(source, index, total, _agent,
                              find_rule_file:, keep_frontmatter: false, verbose: false)
         prefix = source[:from_requires] ? "\u{1F4DA} Required" : "\u{1F4C1} Local"
         print "  [#{index + 1}/#{total}] #{prefix}: #{source[:path]}..." if verbose
@@ -204,8 +204,8 @@ module Ruly
           return nil
         end
 
-        # Check if it's a bin/*.sh file
-        is_bin = source[:path].match?(%r{bin/.*\.sh$}) || file_path.match?(%r{bin/.*\.sh$})
+        # Use explicit category markers instead of path-based auto-detection
+        is_bin = source[:category] == :bin
 
         if is_bin
           puts " \u{2705} (bin)" if verbose
@@ -215,8 +215,8 @@ module Ruly
         content = File.read(file_path, encoding: 'UTF-8')
         original_content = content
         content = Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
-        is_command = agent == 'claude' && (file_path.include?('/commands/') || source[:path].include?('/commands/'))
-        is_skill = agent == 'claude' && source[:path].include?('/skills/')
+        is_command = source[:category] == :command
+        is_skill = source[:category] == :skill || source[:from_skills]
 
         tokens = count_tokens(content)
         formatted_tokens = format_token_count(tokens)
@@ -235,7 +235,7 @@ module Ruly
       # @param keep_frontmatter [Boolean] whether to preserve non-metadata frontmatter
       # @param verbose [Boolean] whether to show detailed output
       # @return [Hash] result hash
-      def display_prefetched_remote(source, index, total, agent, content,
+      def display_prefetched_remote(source, index, total, _agent, content,
                                     keep_frontmatter: false, verbose: false)
         if source[:path] =~ %r{https?://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/[^/]+/(.+)}
           owner = Regexp.last_match(1)
@@ -257,8 +257,8 @@ module Ruly
         tokens = count_tokens(content)
         formatted_tokens = format_token_count(tokens)
 
-        is_command = agent == 'claude' && source[:path].include?('/commands/')
-        is_skill = agent == 'claude' && source[:path].include?('/skills/')
+        is_command = source[:category] == :command
+        is_skill = source[:category] == :skill || source[:from_skills]
         print_file_progress(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:,
                                               verbose:)
 
@@ -273,7 +273,7 @@ module Ruly
       # @param keep_frontmatter [Boolean] whether to preserve non-metadata frontmatter
       # @param verbose [Boolean] whether to show detailed output
       # @return [Hash, nil] result hash or nil if fetch failed
-      def process_remote_file(source, index, total, agent, keep_frontmatter: false, verbose: false)
+      def process_remote_file(source, index, total, _agent, keep_frontmatter: false, verbose: false)
         display_info = parse_remote_display_info(source[:path], from_requires: source[:from_requires])
         prefix = source[:from_requires] ? 'Required' : 'Fetching'
         print "  [#{index + 1}/#{total}] #{display_info[:icon]} #{prefix}: #{display_info[:display_name]}..." if verbose
@@ -290,8 +290,8 @@ module Ruly
         tokens = count_tokens(content)
         formatted_tokens = format_token_count(tokens)
 
-        is_command = agent == 'claude' && source[:path].include?('/commands/')
-        is_skill = agent == 'claude' && source[:path].include?('/skills/')
+        is_command = source[:category] == :command
+        is_skill = source[:category] == :skill || source[:from_skills]
         print_file_progress(formatted_tokens, from_requires: source[:from_requires], is_command:, is_skill:,
                                               verbose:)
         {data: {content:, original_content:, path: source[:path]}, is_command:, is_skill:}

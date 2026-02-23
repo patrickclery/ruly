@@ -35,7 +35,7 @@ module Ruly
 
         skills.filter_map do |skill_path|
           resolved = resolve_required_path(source, skill_path, find_rule_file:, gem_root:)
-          validate_skill!(skill_path, resolved, source, find_rule_file)
+          validate_skill!(skill_path, resolved, source)
 
           key = get_source_key(resolved, find_rule_file:)
           next if processed_files.include?(key)
@@ -99,15 +99,8 @@ module Ruly
 
       # --- private helpers (still module_function for internal use) ---
 
-      def validate_skill!(skill_path, resolved, source, find_rule_file)
+      def validate_skill!(skill_path, resolved, source)
         raise Ruly::Error, "Skill file not found: '#{skill_path}' referenced from '#{source[:path]}'" unless resolved
-
-        resolved_full_path = find_rule_file.call(resolved[:path])
-        return if resolved_full_path&.include?('/skills/')
-
-        raise Ruly::Error,
-              "Skill reference '#{skill_path}' must be in a /skills/ directory " \
-              "(resolved to '#{resolved[:path]}')"
       end
 
       def expand_local_path(source_full_path, required_path)

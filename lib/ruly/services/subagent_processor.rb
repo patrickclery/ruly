@@ -215,7 +215,7 @@ module Ruly
       # @param skill_files [Array<Hash>] array of skill file hashes with :path
       # @return [Array<String>] skill names
       def extract_skill_names(skill_files)
-        skill_files.map { |file| file[:path].split('/skills/').last.sub(/\.md$/, '') }
+        skill_files.map { |file| Services::ScriptManager.derive_skill_name(file[:path]) }
       end
 
       # Build the context hash used for writing an agent file.
