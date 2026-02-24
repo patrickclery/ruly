@@ -358,26 +358,28 @@ module Ruly
 
     def post_squash(output_file, agent, recipe_name, recipe_config, # rubocop:disable Metrics/ParameterLists
                     local_sources, command_files, skill_files, script_files)
+      profile_paths = build_profile_paths(local_sources)
       update_git_ignores(output_file, agent, command_files)
       save_to_cache(output_file, recipe_name, agent) if recipe_name && options[:cache]
       if agent == 'claude' && !command_files.empty?
         Services::ScriptManager.save_command_files(command_files, recipe_config,
                                                    gem_root:)
       end
-      if agent == 'claude' && !skill_files.empty?
-        profile_paths = build_profile_paths(local_sources)
-        save_skill_files(skill_files, profile_paths:)
-      end
+      save_skill_files(skill_files, profile_paths:) if agent == 'claude' && !skill_files.empty?
       recipe_config = merge_mcp_servers(recipe_config, local_sources)
       Services::MCPManager.update_mcp_settings(recipe_config, agent)
       Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
-      process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
+      all_skill_files = skill_files.dup
+      if recipe_config.is_a?(Hash) && recipe_config['subagents']
+        subagent_skill_files = process_subagents(recipe_config, recipe_name, profile_paths:)
+        all_skill_files.concat(subagent_skill_files) if subagent_skill_files
+      end
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
       Ruly::Checks.run_all(local_sources, command_files,
-                           skill_files:,
+                           skill_files: all_skill_files,
                            find_rule_file: method(:find_rule_file),
                            parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                           profile_paths: build_profile_paths(local_sources))
+                           profile_paths:)
     end
 
     def update_git_ignores(output_file, agent, command_files)
@@ -440,7 +442,7 @@ module Ruly
 
     def load_recipes_proc = -> { load_all_recipes }
 
-    def process_subagents(recipe_config, recipe_name)
+    def process_subagents(recipe_config, recipe_name, profile_paths: Set.new)
       Services::SubagentProcessor.process_subagents(
         recipe_config, recipe_name,
         find_rule_file: method(:find_rule_file),
@@ -448,7 +450,8 @@ module Ruly
         load_recipe_sources: ->(name) { load_sources(name) },
         parse_frontmatter: Services::FrontmatterParser.method(:parse),
         process_sources_for_squash: method(:process_sources_for_squash),
-        save_skill_files: method(:save_skill_files), verbose: verbose?
+        save_skill_files: method(:save_skill_files), verbose: verbose?,
+        profile_paths:
       )
     end
 
