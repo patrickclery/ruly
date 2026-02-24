@@ -63,15 +63,15 @@ module Ruly
 
         def report(warnings)
           puts "\n\u{1F4A1} Skill requires optimization suggestion:"
-          puts '   These files are inlined into multiple skills but not in the profile.'
-          puts "   Adding them to the recipe's files: list would eliminate duplication.\n\n"
+          puts '   These files are required by multiple skills but not in the profile.'
+          puts "   Adding them to the recipe's files: list would make the dependency explicit.\n\n"
 
           warnings.each do |warning|
             puts "   \u{1F4C4} #{warning[:file]}"
-            puts "      \u{2514}\u{2500} inlined into #{warning[:skills].size} skills: #{warning[:skills].join(', ')}"
+            puts "      \u{2514}\u{2500} required by #{warning[:skills].size} skills: #{warning[:skills].join(', ')}"
           end
 
-          puts "\n   Add these files to the recipe's `files:` list to deduplicate."
+          puts "\n   Add these files to the recipe's `files:` list."
           puts ''
         end
       end

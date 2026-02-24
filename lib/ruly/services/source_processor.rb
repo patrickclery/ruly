@@ -128,21 +128,18 @@ module Ruly
           # Use original content (with requires intact) for dependency resolution
           content_for_requires = result[:data][:original_content] || result[:data][:content]
 
-          # For skill files, skip adding requires to the main queue -- they'll be
-          # compiled into the skill output by save_skill_files instead
-          unless result[:is_skill]
-            # Resolve requires for this source
-            required_sources = Services::DependencyResolver.resolve_requires_for_source(
-              source, content_for_requires, processed_files, sources_to_process,
-              find_rule_file:, gem_root:
-            )
+          # Resolve requires for this source (including skills — requires declares
+          # a dependency that must be in the profile, not inlined into the skill)
+          required_sources = Services::DependencyResolver.resolve_requires_for_source(
+            source, content_for_requires, processed_files, sources_to_process,
+            find_rule_file:, gem_root:
+          )
 
-            # Add required sources to the front of the queue (depth-first processing)
-            unless required_sources.empty?
-              puts "    \u{2192} Found #{required_sources.length} requires, adding to queue..." if verbose
-              required_sources.each { |rs| rs[:from_requires] = true }
-              sources_to_process.unshift(*required_sources)
-            end
+          # Add required sources to the front of the queue (depth-first processing)
+          unless required_sources.empty?
+            puts "    \u{2192} Found #{required_sources.length} requires, adding to queue..." if verbose
+            required_sources.each { |rs| rs[:from_requires] = true }
+            sources_to_process.unshift(*required_sources)
           end
 
           # Resolve skills: frontmatter references (with validation)

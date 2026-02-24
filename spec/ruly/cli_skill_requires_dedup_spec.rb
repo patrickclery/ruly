@@ -135,13 +135,18 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'does not inline the required file into the skill (requires is a dependency declaration)' do
+      it 'does not inline into the skill but adds the required file to the profile' do
         cli.invoke(:squash, ['test_recipe'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).not_to include('Alice')
         expect(skill_content).not_to include('| Name | ID |')
         expect(skill_content).to include('Send DM')
+
+        # requires: adds the file to the profile (CLAUDE.local.md)
+        profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+        expect(profile_content).to include('Alice')
+        expect(profile_content).to include('Team Directory')
       end
     end
   end
@@ -222,10 +227,15 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'outputs a warning about duplicate requires' do
+      it 'adds the required file to the profile (no duplication warning needed)' do
         output = capture(:stdout) { cli.invoke(:squash, ['test_recipe']) }
-        expect(output).to include('optimization suggestion')
-        expect(output).to include('accounts.md')
+        # Requires are resolved into the profile, so accounts.md appears once in CLAUDE.local.md
+        # No duplication warning because the file is in the profile
+        expect(output).not_to include('optimization suggestion')
+
+        profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+        expect(profile_content).to include('Alice')
+        expect(profile_content).to include('Team Directory')
       end
     end
   end
