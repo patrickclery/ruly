@@ -9,6 +9,17 @@ RSpec.describe Ruly::CLI, type: :cli do
   let(:cli) { described_class.new }
   let(:test_dir) { Dir.mktmpdir }
 
+  # Helper method to capture stdout
+  def capture(stream)
+    original_stream = stream == :stdout ? $stdout : $stderr
+    stream_io = StringIO.new
+    stream == :stdout ? $stdout = stream_io : $stderr = stream_io
+    yield
+    stream_io.string
+  ensure
+    stream == :stdout ? $stdout = original_stream : $stderr = original_stream
+  end
+
   around do |example|
     original_dir = Dir.pwd
     begin
@@ -130,6 +141,90 @@ RSpec.describe Ruly::CLI, type: :cli do
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).to include('Team Directory')
         expect(skill_content).to include('Alice')
+      end
+    end
+  end
+
+  describe 'duplicate skill requires warning' do
+    before do
+      FileUtils.mkdir_p(File.join(test_dir, 'rules', 'comms', 'skills'))
+      FileUtils.mkdir_p(File.join(test_dir, 'rules', 'shared'))
+
+      File.write(File.join(test_dir, 'rules', 'shared', 'accounts.md'), <<~MD)
+        ---
+        description: Team account IDs
+        ---
+        # Team Directory
+
+        | Name | ID |
+        |------|-----|
+        | Alice | 123 |
+        | Bob | 456 |
+      MD
+
+      # First skill requiring accounts
+      File.write(File.join(test_dir, 'rules', 'comms', 'skills', 'send-dm.md'), <<~MD)
+        ---
+        name: Send DM
+        description: Send a DM
+        requires:
+          - ../../shared/accounts.md
+        ---
+        # Send DM
+
+        Look up recipient in [Team Directory](#team-directory).
+      MD
+
+      # Second skill also requiring accounts
+      File.write(File.join(test_dir, 'rules', 'comms', 'skills', 'post-comment.md'), <<~MD)
+        ---
+        name: Post Comment
+        description: Post a comment
+        requires:
+          - ../../shared/accounts.md
+        ---
+        # Post Comment
+
+        Look up user in [Team Directory](#team-directory).
+      MD
+
+      # Update messaging to reference both skills
+      File.write(File.join(test_dir, 'rules', 'comms', 'messaging.md'), <<~MD)
+        ---
+        description: Messaging commands
+        skills:
+          - ./skills/send-dm.md
+          - ./skills/post-comment.md
+        ---
+        # Messaging
+
+        Use skills to send messages.
+      MD
+
+      allow(cli).to receive_messages(gem_root: test_dir,
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
+                                     rules_dir: File.join(test_dir, 'rules'))
+    end
+
+    context 'when squashing produces duplicate skill requires' do
+      before do
+        # Profile does NOT include accounts.md
+        recipes_content = {
+          'test_recipe' => {
+            'description' => 'Test recipe',
+            'files' => ['rules/comms/messaging.md']
+          }
+        }
+
+        # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        # rubocop:enable RSpec/AnyInstance
+      end
+
+      it 'outputs a warning about duplicate requires' do
+        output = capture(:stdout) { cli.invoke(:squash, ['test_recipe']) }
+        expect(output).to include('optimization suggestion')
+        expect(output).to include('accounts.md')
       end
     end
   end

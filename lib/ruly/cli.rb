@@ -373,7 +373,11 @@ module Ruly
       Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
       process_subagents(recipe_config, recipe_name) if recipe_config.is_a?(Hash) && recipe_config['subagents']
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
-      Ruly::Checks.run_all(local_sources, command_files)
+      Ruly::Checks.run_all(local_sources, command_files,
+                           skill_files:,
+                           find_rule_file: method(:find_rule_file),
+                           parse_frontmatter: Services::FrontmatterParser.method(:parse),
+                           profile_paths: build_profile_paths(local_sources))
     end
 
     def update_git_ignores(output_file, agent, command_files)
