@@ -182,7 +182,10 @@ module Ruly
         mcp_servers = Services::MCPManager.collect_agent_mcp_servers(recipe_config, local_sources)
 
         skill_names = extract_skill_names(skill_files)
-        deps[:save_skill_files].call(skill_files) unless skill_files.empty?
+        unless skill_files.empty?
+          profile_paths = build_subagent_profile_paths(local_sources, deps[:find_rule_file])
+          deps[:save_skill_files].call(skill_files, profile_paths:)
+        end
 
         context = build_agent_context(
           agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
@@ -216,6 +219,26 @@ module Ruly
       # @return [Array<String>] skill names
       def extract_skill_names(skill_files)
         skill_files.map { |file| Services::ScriptManager.derive_skill_name(file[:path]) }
+      end
+
+      # Build canonical paths set from a subagent's local sources.
+      # @param local_sources [Array<Hash>] array of source hashes with :path
+      # @param find_rule_file [Proc] callable to resolve rule paths
+      # @return [Set<String>] canonical file paths
+      def build_subagent_profile_paths(local_sources, find_rule_file)
+        paths = Set.new
+        local_sources.each do |source|
+          full_path = find_rule_file.call(source[:path])
+          next unless full_path
+
+          canonical = begin
+            File.realpath(full_path)
+          rescue StandardError
+            full_path
+          end
+          paths.add(canonical)
+        end
+        paths
       end
 
       # Build the context hash used for writing an agent file.

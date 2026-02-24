@@ -364,7 +364,10 @@ module Ruly
         Services::ScriptManager.save_command_files(command_files, recipe_config,
                                                    gem_root:)
       end
-      save_skill_files(skill_files) if agent == 'claude' && !skill_files.empty?
+      if agent == 'claude' && !skill_files.empty?
+        profile_paths = build_profile_paths(local_sources)
+        save_skill_files(skill_files, profile_paths:)
+      end
       recipe_config = merge_mcp_servers(recipe_config, local_sources)
       Services::MCPManager.update_mcp_settings(recipe_config, agent)
       Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
@@ -387,10 +390,27 @@ module Ruly
       FileUtils.cp(output_file, File.join(dir, "#{recipe_name}.md"))
     end
 
-    def save_skill_files(skill_files)
+    def save_skill_files(skill_files, profile_paths: Set.new)
       Services::ScriptManager.save_skill_files(skill_files, find_rule_file: method(:find_rule_file),
                                                             parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                                                            strip_metadata: Services::FrontmatterParser.method(:strip_metadata))
+                                                            strip_metadata: Services::FrontmatterParser.method(:strip_metadata),
+                                                            profile_paths:)
+    end
+
+    def build_profile_paths(local_sources)
+      paths = Set.new
+      local_sources.each do |source|
+        full_path = find_rule_file(source[:path])
+        next unless full_path
+
+        canonical = begin
+          File.realpath(full_path)
+        rescue StandardError
+          full_path
+        end
+        paths.add(canonical)
+      end
+      paths
     end
 
     def merge_mcp_servers(recipe_config, local_sources)

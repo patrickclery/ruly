@@ -383,7 +383,7 @@ module Ruly
       # @param find_rule_file [Proc] callable to resolve rule paths
       # @param parse_frontmatter [Proc] callable for frontmatter parsing
       # @param strip_metadata [Proc] callable for stripping metadata from frontmatter
-      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:)
+      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, profile_paths: Set.new)
         return if skill_files.empty?
 
         skill_files.each do |file|
@@ -391,7 +391,8 @@ module Ruly
           skill_dir = ".claude/skills/#{skill_name}"
           FileUtils.mkdir_p(skill_dir)
 
-          content = compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:)
+          content = compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
+                                                profile_paths:)
           File.write(File.join(skill_dir, 'SKILL.md'), content)
         end
       end
@@ -402,7 +403,8 @@ module Ruly
       # @param parse_frontmatter [Proc] callable for frontmatter parsing
       # @param strip_metadata [Proc] callable for stripping metadata from frontmatter
       # @return [String] compiled skill content
-      def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:)
+      def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
+                                      profile_paths: Set.new)
         original = file[:original_content] || file[:content]
         frontmatter, = parse_frontmatter.call(original)
         requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
@@ -418,6 +420,14 @@ module Ruly
         requires.each do |required_path|
           resolved_path = File.expand_path(required_path, source_dir)
           next unless File.file?(resolved_path)
+
+          # Skip if this file is already in the profile
+          canonical = begin
+            File.realpath(resolved_path)
+          rescue StandardError
+            resolved_path
+          end
+          next if profile_paths.include?(canonical)
 
           raw_content = File.read(resolved_path, encoding: 'UTF-8')
           stripped = strip_metadata.call(raw_content)
