@@ -334,13 +334,17 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'does not inline accounts into the subagent skill (requires is a dependency declaration)' do
+      it 'adds accounts.md to the profile, not the skill' do
         cli.invoke(:squash, ['parent_recipe'])
 
         skill_content = File.read('.claude/skills/post-comment/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).not_to include('Alice')
         expect(skill_content).not_to include('| Name | ID |')
         expect(skill_content).to include('Post Comment')
+
+        profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+        expect(profile_content).to include('Alice')
+        expect(profile_content).to include('Team Directory')
       end
     end
 
@@ -393,10 +397,15 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'warns about accounts.md being duplicated across subagent skills' do
+      it 'adds accounts.md to the profile once (no duplication warning)' do
         output = capture(:stdout) { cli.invoke(:squash, ['parent_recipe']) }
-        expect(output).to include('optimization suggestion')
-        expect(output).to include('accounts.md')
+        # Both skills require accounts.md — it gets added to the profile once
+        expect(output).not_to include('optimization suggestion')
+
+        profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+        expect(profile_content).to include('Alice')
+        # Only appears once (deduped)
+        expect(profile_content.scan('Team Directory').size).to eq(1)
       end
     end
   end

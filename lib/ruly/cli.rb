@@ -372,7 +372,10 @@ module Ruly
       all_skill_files = skill_files.dup
       if recipe_config.is_a?(Hash) && recipe_config['subagents']
         subagent_skill_files = process_subagents(recipe_config, recipe_name, profile_paths:)
-        all_skill_files.concat(subagent_skill_files) if subagent_skill_files
+        if subagent_skill_files&.any?
+          all_skill_files.concat(subagent_skill_files)
+          append_skill_requires_to_profile(output_file, subagent_skill_files, profile_paths)
+        end
       end
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
       Ruly::Checks.run_all(local_sources, command_files,
@@ -380,6 +383,42 @@ module Ruly
                            find_rule_file: method(:find_rule_file),
                            parse_frontmatter: Services::FrontmatterParser.method(:parse),
                            profile_paths:)
+    end
+
+    # Append skill requires content to the profile (CLAUDE.local.md).
+    # Skills reference required content via section anchors — the content
+    # must be in the profile for those anchors to resolve.
+    def append_skill_requires_to_profile(output_file, skill_files, profile_paths)
+      appended = Set.new
+      skill_files.each do |file|
+        original = file[:original_content] || file[:content]
+        frontmatter, = Services::FrontmatterParser.parse(original)
+        requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
+        next if requires.empty?
+
+        source_full_path = find_rule_file(file[:path])
+        next unless source_full_path
+
+        source_dir = File.dirname(source_full_path)
+        requires.each do |required_path|
+          resolved = File.expand_path(required_path, source_dir)
+          next unless File.file?(resolved)
+
+          canonical = begin
+            File.realpath(resolved)
+          rescue StandardError
+            resolved
+          end
+          next if profile_paths.include?(canonical)
+          next if appended.include?(canonical)
+
+          raw_content = File.read(resolved, encoding: 'UTF-8')
+          stripped = Services::FrontmatterParser.strip_metadata(raw_content)
+          File.open(output_file, 'a') { |f| f.puts("\n#{stripped}") }
+          profile_paths.add(canonical)
+          appended.add(canonical)
+        end
+      end
     end
 
     def update_git_ignores(output_file, agent, command_files)
