@@ -323,13 +323,70 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'does not inline accounts into the subagent skill' do
+      it 'still inlines accounts into the subagent skill (agent file not visible to skills)' do
         cli.invoke(:squash, ['parent_recipe'])
 
         skill_content = File.read('.claude/skills/post-comment/SKILL.md', encoding: 'UTF-8')
-        expect(skill_content).not_to include('Alice')
-        expect(skill_content).not_to include('| Name | ID |')
+        # Subagent agent file is NOT visible to skills, so requires MUST be inlined
+        expect(skill_content).to include('Alice')
+        expect(skill_content).to include('| Name | ID |')
         expect(skill_content).to include('Post Comment')
+      end
+    end
+
+    context 'when subagent skills have duplicate requires not in top-level profile' do
+      before do
+        # Add a second skill requiring accounts in the same subagent
+        File.write(File.join(test_dir, 'rules', 'agent', 'skills', 'send-dm.md'), <<~MD)
+          ---
+          name: Send DM
+          description: Send a DM
+          requires:
+            - ../../shared/accounts.md
+          ---
+          # Send DM
+
+          Look up recipient in [Team Directory](#team-directory).
+        MD
+
+        File.write(File.join(test_dir, 'rules', 'agent', 'comms.md'), <<~MD)
+          ---
+          description: Communication rules
+          skills:
+            - ./skills/post-comment.md
+            - ./skills/send-dm.md
+          ---
+          # Communication
+
+          Handle all comms tasks.
+        MD
+
+        recipes_content = {
+          'comms-recipe' => {
+            'description' => 'Comms recipe',
+            'files' => [
+              'rules/shared/agent-base.md',
+              'rules/agent/comms.md'
+            ]
+          },
+          'parent_recipe' => {
+            'description' => 'Parent',
+            'files' => ['rules/parent/main.md'],
+            'subagents' => [
+              { 'name' => 'comms', 'recipe' => 'comms-recipe' }
+            ]
+          }
+        }
+
+        # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        # rubocop:enable RSpec/AnyInstance
+      end
+
+      it 'warns about accounts.md being duplicated across subagent skills' do
+        output = capture(:stdout) { cli.invoke(:squash, ['parent_recipe']) }
+        expect(output).to include('optimization suggestion')
+        expect(output).to include('accounts.md')
       end
     end
   end

@@ -27,20 +27,22 @@ module Ruly
         recipe_config, parent_recipe_name,
         find_rule_file:, load_all_recipes:, load_recipe_sources:,
         parse_frontmatter:, process_sources_for_squash:, save_skill_files:,
-        top_level: true, verbose: false, visited: Set.new
+        top_level: true, verbose: false, visited: Set.new, profile_paths: Set.new
       )
-        return unless recipe_config['subagents'].is_a?(Array)
+        return [] unless recipe_config['subagents'].is_a?(Array)
 
         puts "\n\u{1F916} Processing subagents..." if top_level
 
         FileUtils.mkdir_p('.claude/agents')
 
         deps = {
+          all_skill_files: [],
           find_rule_file:,
           load_all_recipes:,
           load_recipe_sources:,
           parse_frontmatter:,
           process_sources_for_squash:,
+          profile_paths:,
           save_skill_files:,
           verbose:
         }
@@ -50,10 +52,12 @@ module Ruly
         end
 
         puts "\u{2705} Generated #{visited.size} subagent(s)" if top_level
+        deps[:all_skill_files]
       rescue Ruly::Error
         raise
       rescue StandardError => e
         puts "\u{26A0}\u{FE0F}  Warning: Could not process subagents: #{e.message}"
+        []
       end
 
       # Process a single subagent: load, validate, and generate its agent file.
@@ -183,8 +187,8 @@ module Ruly
 
         skill_names = extract_skill_names(skill_files)
         unless skill_files.empty?
-          profile_paths = build_subagent_profile_paths(local_sources, deps[:find_rule_file])
-          deps[:save_skill_files].call(skill_files, profile_paths:)
+          deps[:save_skill_files].call(skill_files, profile_paths: deps[:profile_paths])
+          deps[:all_skill_files].concat(skill_files)
         end
 
         context = build_agent_context(
@@ -219,26 +223,6 @@ module Ruly
       # @return [Array<String>] skill names
       def extract_skill_names(skill_files)
         skill_files.map { |file| Services::ScriptManager.derive_skill_name(file[:path]) }
-      end
-
-      # Build canonical paths set from a subagent's local sources.
-      # @param local_sources [Array<Hash>] array of source hashes with :path
-      # @param find_rule_file [Proc] callable to resolve rule paths
-      # @return [Set<String>] canonical file paths
-      def build_subagent_profile_paths(local_sources, find_rule_file)
-        paths = Set.new
-        local_sources.each do |source|
-          full_path = find_rule_file.call(source[:path])
-          next unless full_path
-
-          canonical = begin
-            File.realpath(full_path)
-          rescue StandardError
-            full_path
-          end
-          paths.add(canonical)
-        end
-        paths
       end
 
       # Build the context hash used for writing an agent file.
