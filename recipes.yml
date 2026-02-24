@@ -14,11 +14,6 @@ recipes:
       - github
       - comms
     files:
-      # === WorkAxle Core ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === Essential (minimal for routing) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
       # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
@@ -33,22 +28,15 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-diagnose.md
-      # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-creator.md
       # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
     skills:
-      # === Git Skills ===
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
-      # === PR Operations (orchestrator handles PR creation) ===
+      # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
     commands:
-      # === PR Operations (orchestrator handles PR creation) ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       # === Context Fetching (orchestrator handles context) ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
@@ -90,8 +78,8 @@ recipes:
         recipe: pr-review-loop
       - name: qa_tester
         recipe: qa
-      - name: bug_diagnose
-        recipe: bug-diagnose
+      - name: pr_creator
+        recipe: pr-creator
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -818,6 +806,18 @@ recipes:
     omit_command_prefix: github
     skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+
+  pr-creator:
+    description: "PR creation commands - create, create-develop, create-dual, create-branch"
+    omit_command_prefix: github
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+    commands:
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-branch.md
 
   context-jira:
     description: "Downloads Jira ticket details"
