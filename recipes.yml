@@ -89,7 +89,7 @@ recipes:
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
-    omit_command_prefix: workaxle
+    omitCommandPrefix: workaxle
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       # === Essential (no feature-flags, no outbox — bugs don't need these) ===
@@ -560,14 +560,13 @@ recipes:
   qa:
     description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
     files:
-      # === QA Testing Workflow ===
+      # === QA Testing Workflow (repo layout, patterns, env) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-testing.md
-      # === Playwright Patterns ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
-      # === Jira (for fetching AC from tickets) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
+      # === Selector patterns (battle-tested from live testing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/qa/playwright-selector-patterns.md
+      # === Jira (only ticket fetching — for extracting AC) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
     skills:
-      # === Skills ===
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
     mcp_servers:
