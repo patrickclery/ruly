@@ -1,4 +1,4 @@
-# PR Review Loop: Convert from Subagent to Orchestrator Skill
+the # PR Review Loop: Convert from Subagent to Orchestrator Skill
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
