@@ -175,6 +175,31 @@
     - Migration of all rules that reference accounts.md
     - Sync mechanism (chezmoi or similar)
 
+- Rewrite the pr-review-loop so it runs in the parent, and dispatches each fix using a subagent with git worktrees
+
+### Inline Frontmatter Key for Skills
+
+- [ ] Add an `inline:` frontmatter key for skills that explicitly opts in to inlining content
+  - **Context**: `requires:` is a dependency declaration — it declares that the content must be available in the recipe's top-level profile or agent file. Skills reference that content via markdown section anchors (`[Section Name](#section-name)`). Content is never inlined into skills from `requires:`.
+  - **Use Case**: Some skills may genuinely need content inlined (e.g., standalone skills not tied to a recipe, or content that must be self-contained in the SKILL.md)
+  - **Syntax**:
+    ```yaml
+    ---
+    name: My Skill
+    requires:
+      - ../../shared/accounts.md    # Dependency declaration (not inlined)
+    inline:
+      - ../../shared/templates.md   # Explicitly inlined into SKILL.md
+    ---
+    ```
+  - **Behavior**:
+    - `requires:` — never inlines, content assumed available in profile/agent file
+    - `inline:` — always inlines content into SKILL.md (with dedup against profile)
+  - **Components Needed**:
+    - Update `compile_skill_with_requires` (or rename) to handle `inline:` key
+    - Update DuplicateSkillRequires check to also warn about duplicated `inline:` entries
+    - Tests for both `requires:` (no inline) and `inline:` (yes inline) behavior
+
 ## Completed Features
 
 - [x] shell_gpt/sgpt agent support for JSON output

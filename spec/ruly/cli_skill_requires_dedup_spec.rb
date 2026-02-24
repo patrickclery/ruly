@@ -135,12 +135,13 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'still inlines the required file into the skill' do
+      it 'does not inline the required file into the skill (requires is a dependency declaration)' do
         cli.invoke(:squash, ['test_recipe'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
-        expect(skill_content).to include('Team Directory')
-        expect(skill_content).to include('Alice')
+        expect(skill_content).not_to include('Alice')
+        expect(skill_content).not_to include('| Name | ID |')
+        expect(skill_content).to include('Send DM')
       end
     end
   end
@@ -323,13 +324,12 @@ RSpec.describe Ruly::CLI, type: :cli do
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'still inlines accounts into the subagent skill (agent file not visible to skills)' do
+      it 'does not inline accounts into the subagent skill (requires is a dependency declaration)' do
         cli.invoke(:squash, ['parent_recipe'])
 
         skill_content = File.read('.claude/skills/post-comment/SKILL.md', encoding: 'UTF-8')
-        # Subagent agent file is NOT visible to skills, so requires MUST be inlined
-        expect(skill_content).to include('Alice')
-        expect(skill_content).to include('| Name | ID |')
+        expect(skill_content).not_to include('Alice')
+        expect(skill_content).not_to include('| Name | ID |')
         expect(skill_content).to include('Post Comment')
       end
     end

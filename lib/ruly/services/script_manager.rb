@@ -397,44 +397,14 @@ module Ruly
         end
       end
 
-      # Compile a skill file by inlining its required dependencies.
+      # Return skill content as-is. The `requires:` frontmatter is a dependency
+      # declaration — required content is provided by the recipe's top-level
+      # profile or agent file. Skills reference it via section anchors.
       # @param file [Hash] skill file hash with :path, :content, :original_content
-      # @param find_rule_file [Proc] callable to resolve rule paths
-      # @param parse_frontmatter [Proc] callable for frontmatter parsing
-      # @param strip_metadata [Proc] callable for stripping metadata from frontmatter
-      # @return [String] compiled skill content
-      def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
+      # @return [String] skill content (never inlines requires)
+      def compile_skill_with_requires(file, find_rule_file: nil, parse_frontmatter: nil, strip_metadata: nil,
                                       profile_paths: Set.new)
-        original = file[:original_content] || file[:content]
-        frontmatter, = parse_frontmatter.call(original)
-        requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
-
-        return file[:content] if requires.empty?
-
-        source_full_path = find_rule_file.call(file[:path])
-        return file[:content] unless source_full_path
-
-        source_dir = File.dirname(source_full_path)
-        compiled_parts = [file[:content]]
-
-        requires.each do |required_path|
-          resolved_path = File.expand_path(required_path, source_dir)
-          next unless File.file?(resolved_path)
-
-          # Skip if this file is already in the profile
-          canonical = begin
-            File.realpath(resolved_path)
-          rescue StandardError
-            resolved_path
-          end
-          next if profile_paths.include?(canonical)
-
-          raw_content = File.read(resolved_path, encoding: 'UTF-8')
-          stripped = strip_metadata.call(raw_content)
-          compiled_parts << stripped
-        end
-
-        compiled_parts.join("\n\n---\n\n")
+        file[:content]
       end
     end
   end
