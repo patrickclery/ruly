@@ -841,6 +841,40 @@ User profiles:
 - Are stored in your home directory configuration
 - Allow user-specific or team-specific customizations
 
+#### Profile Inheritance (`extends:`)
+
+Profiles can extend other profiles using the `extends:` key. The child profile inherits all keys from the parent, with:
+
+- **Array keys** (`files`, `skills`, `commands`, `scripts`, `sources`, `mcp_servers`, `omit_command_prefix`): Merged via union — parent entries first, then child entries, deduplicated
+- **Scalar keys** (`description`, `model`, `tier`): Child wins — parent value only used if child doesn't define it
+- **Subagents**: Merged by `name` — child entry overrides parent entry with same name
+
+```yaml
+profiles:
+  base:
+    description: "Base development profile"
+    files:
+      - rules/core.md
+      - rules/common.md
+    mcp_servers:
+      - task-master-ai
+
+  extended:
+    extends: base
+    description: "Extended profile with extra tools"
+    files:
+      - rules/extra.md
+    mcp_servers:
+      - playwright
+```
+
+After resolution, `extended` will have:
+- `files`: `[rules/core.md, rules/common.md, rules/extra.md]`
+- `mcp_servers`: `[task-master-ai, playwright]`
+- `description`: `"Extended profile with extra tools"`
+
+Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.
+
 ### Commands
 
 - **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Profile is
