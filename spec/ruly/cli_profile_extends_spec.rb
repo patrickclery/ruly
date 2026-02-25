@@ -232,3 +232,71 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
     end
   end
 end
+
+RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
+  let(:cli) { described_class.new }
+  let(:test_dir) { Dir.mktmpdir }
+
+  around do |example|
+    original_dir = Dir.pwd
+    begin
+      Dir.chdir(test_dir)
+      example.run
+    ensure
+      Dir.chdir(original_dir)
+      FileUtils.rm_rf(test_dir) if test_dir && Dir.exist?(test_dir)
+    end
+  end
+
+  before do
+    FileUtils.mkdir_p(File.join(test_dir, 'rules'))
+    File.write(File.join(test_dir, 'rules', 'base.md'), '# Base Rule')
+    File.write(File.join(test_dir, 'rules', 'child.md'), '# Child Rule')
+
+    profiles_yml = {
+      'profiles' => {
+        'base' => {
+          'description' => 'Base profile',
+          'files' => ['rules/base.md']
+        },
+        'child' => {
+          'extends' => 'base',
+          'description' => 'Child profile',
+          'files' => ['rules/child.md']
+        }
+      }
+    }
+    File.write(File.join(test_dir, 'profiles.yml'), profiles_yml.to_yaml)
+
+    allow(cli).to receive_messages(
+      gem_root: test_dir,
+      profiles_file: File.join(test_dir, 'profiles.yml'),
+      rules_dir: File.join(test_dir, 'rules')
+    )
+
+    # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(
+      Ruly::Services::ProfileLoader.load_all_profiles(
+        gem_root: test_dir,
+        base_profiles_file: File.join(test_dir, 'profiles.yml')
+      )
+    )
+    # rubocop:enable RSpec/AnyInstance
+  end
+
+  it 'squash output includes content from both parent and child files' do
+    cli.invoke(:squash, ['child'])
+
+    content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+    expect(content).to include('Base Rule')
+    expect(content).to include('Child Rule')
+  end
+
+  it 'parent profile squash is unaffected' do
+    cli.invoke(:squash, ['base'])
+
+    content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+    expect(content).to include('Base Rule')
+    expect(content).not_to include('Child Rule')
+  end
+end
