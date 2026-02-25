@@ -96,6 +96,8 @@ module Ruly
           profiles.merge!(user_config['profiles'] || {})
         end
 
+        resolve_extends!(profiles)
+
         profiles
       end
 
@@ -366,6 +368,91 @@ module Ruly
         profile['remote_sources']&.each do |url|
           sources << {path: url, type: 'remote'}
         end
+      end
+
+      # Array keys that get merged via union (concat + uniq).
+      ARRAY_MERGE_KEYS = %w[files skills commands scripts sources remote_sources mcp_servers omit_command_prefix].freeze
+
+      # Resolve all `extends:` declarations in the profiles hash, in-place.
+      #
+      # @param profiles [Hash] all loaded profiles (mutated in place)
+      # @raise [Ruly::Error] on circular extends references or missing parent
+      def resolve_extends!(profiles)
+        resolved = Set.new
+
+        profiles.each_key do |name|
+          resolve_single_extends!(name, profiles, resolved, Set.new)
+        end
+      end
+
+      # Recursively resolve extends for a single profile.
+      #
+      # @param name [String] profile name
+      # @param profiles [Hash] all profiles
+      # @param resolved [Set] already fully-resolved profile names
+      # @param in_progress [Set] currently being resolved (cycle detection)
+      def resolve_single_extends!(name, profiles, resolved, in_progress)
+        return if resolved.include?(name)
+
+        profile = profiles[name]
+        return unless profile.is_a?(Hash) && profile['extends']
+
+        parent_name = profile['extends']
+
+        if in_progress.include?(name)
+          raise Ruly::Error, "Circular extends detected: #{in_progress.to_a.join(' -> ')} -> #{name}"
+        end
+
+        unless profiles.key?(parent_name)
+          raise Ruly::Error,
+                "Profile '#{name}' extends '#{parent_name}', but '#{parent_name}' does not exist"
+        end
+
+        in_progress.add(name)
+
+        # Resolve parent first (handles transitive extends)
+        resolve_single_extends!(parent_name, profiles, resolved, in_progress)
+
+        parent = profiles[parent_name]
+        merge_profile!(profile, parent)
+        profile.delete('extends')
+
+        in_progress.delete(name)
+        resolved.add(name)
+      end
+
+      # Merge parent profile keys into child profile (in-place).
+      #
+      # @param child [Hash] child profile (mutated)
+      # @param parent [Hash] parent profile (read-only)
+      def merge_profile!(child, parent)
+        parent.each do |key, parent_value|
+          next if key == 'extends'
+
+          if key == 'subagents'
+            child[key] = merge_subagents(parent_value, child[key])
+          elsif ARRAY_MERGE_KEYS.include?(key)
+            child_value = child[key] || []
+            child[key] = (Array(parent_value) + Array(child_value)).uniq
+          elsif !child.key?(key)
+            child[key] = parent_value
+          end
+        end
+      end
+
+      # Merge subagent arrays by name, child entries win on conflict.
+      #
+      # @param parent_subagents [Array<Hash>, nil]
+      # @param child_subagents [Array<Hash>, nil]
+      # @return [Array<Hash>]
+      def merge_subagents(parent_subagents, child_subagents)
+        parent_list = Array(parent_subagents)
+        child_list = Array(child_subagents)
+
+        merged = {}
+        parent_list.each { |s| merged[s['name']] = s if s['name'] }
+        child_list.each { |s| merged[s['name']] = s if s['name'] }
+        merged.values
       end
 
       # Searches for a file or directory in multiple locations.
