@@ -6,12 +6,12 @@ The `omit_command_prefix` feature allows you to strip a common prefix from comma
 
 ## Usage
 
-Add the `omit_command_prefix` key to your recipe configuration in `recipes.yml`:
+Add the `omit_command_prefix` key to your profile configuration in `profiles.yml`:
 
 ```yaml
-recipes:
-  my_recipe:
-    description: My recipe with simplified command paths
+profiles:
+  my_profile:
+    description: My profile with simplified command paths
     omit_command_prefix: path/to/strip
     files:
       - rules/path/to/strip/commands/feature.md
@@ -42,9 +42,9 @@ The prefix removal works by matching path components from the beginning, removin
 When commands come from multiple source trees, use an array of prefixes:
 
 ```yaml
-recipes:
-  my_recipe:
-    description: Multi-source recipe
+profiles:
+  my_profile:
+    description: Multi-source profile
     omit_command_prefix:
       - comms/github
       - github
@@ -69,7 +69,7 @@ Each prefix is tried against each command path. The prefix that strips the most 
 
 ## Introspect Support
 
-The `omit_command_prefix` key is preserved when using the `introspect` command to update a recipe. This ensures your path simplification preferences are maintained when adding new files to an existing recipe.
+The `omit_command_prefix` key is preserved when using the `introspect` command to update a profile. This ensures your path simplification preferences are maintained when adding new files to an existing profile.
 
 ## Use Cases
 

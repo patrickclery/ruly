@@ -7,29 +7,29 @@ module Ruly
     # Handles subagent processing: generating agent files, validating
     # subagent configurations, and writing subagent output.
     # All methods are stateless module functions; external dependencies
-    # (load_all_recipes, load_recipe_sources, etc.) are injected via keyword arguments.
+    # (load_all_profiles, load_profile_sources, etc.) are injected via keyword arguments.
     module SubagentProcessor # rubocop:disable Metrics/ModuleLength
       module_function
 
-      # Process all subagents defined in a recipe configuration.
-      # @param recipe_config [Hash] recipe configuration with optional 'subagents' key
-      # @param parent_recipe_name [String] name of the parent recipe
+      # Process all subagents defined in a profile configuration.
+      # @param profile_config [Hash] profile configuration with optional 'subagents' key
+      # @param parent_profile_name [String] name of the parent profile
       # @param top_level [Boolean] whether this is the top-level call (controls output)
-      # @param visited [Set] already-visited recipe names (prevents duplicates)
-      # @param load_all_recipes [Proc] callable returning all recipes hash
-      # @param load_recipe_sources [Proc] callable(recipe_name) returning [sources, ...]
+      # @param visited [Set] already-visited profile names (prevents duplicates)
+      # @param load_all_profiles [Proc] callable returning all profiles hash
+      # @param load_profile_sources [Proc] callable(profile_name) returning [sources, ...]
       # @param process_sources_for_squash [Proc] callable(sources, agent, config, opts)
       # @param find_rule_file [Proc] callable(path) returning absolute file path
       # @param parse_frontmatter [Proc] callable(content) returning [frontmatter, body]
       # @param save_skill_files [Proc] callable(skill_files)
       # @param verbose [Boolean] whether to output verbose messages
       def process_subagents(
-        recipe_config, parent_recipe_name,
-        find_rule_file:, load_all_recipes:, load_recipe_sources:,
+        profile_config, parent_profile_name,
+        find_rule_file:, load_all_profiles:, load_profile_sources:,
         parse_frontmatter:, process_sources_for_squash:, save_skill_files:,
         top_level: true, verbose: false, visited: Set.new, profile_paths: Set.new
       )
-        return [] unless recipe_config['subagents'].is_a?(Array)
+        return [] unless profile_config['subagents'].is_a?(Array)
 
         puts "\n\u{1F916} Processing subagents..." if top_level
 
@@ -38,8 +38,8 @@ module Ruly
         deps = {
           all_skill_files: [],
           find_rule_file:,
-          load_all_recipes:,
-          load_recipe_sources:,
+          load_all_profiles:,
+          load_profile_sources:,
           parse_frontmatter:,
           process_sources_for_squash:,
           profile_paths:,
@@ -47,8 +47,8 @@ module Ruly
           verbose:
         }
 
-        recipe_config['subagents'].each do |subagent|
-          process_single_subagent(subagent, parent_recipe_name, recipe_config, visited, **deps)
+        profile_config['subagents'].each do |subagent|
+          process_single_subagent(subagent, parent_profile_name, profile_config, visited, **deps)
         end
 
         puts "\u{2705} Generated #{visited.size} subagent(s)" if top_level
@@ -61,78 +61,78 @@ module Ruly
       end
 
       # Process a single subagent: load, validate, and generate its agent file.
-      # @param subagent [Hash] subagent config with 'name' and 'recipe' keys
-      # @param parent_recipe_name [String] parent recipe name
-      # @param recipe_config [Hash] parent recipe configuration
-      # @param visited [Set] already-visited recipe names
-      def process_single_subagent(subagent, parent_recipe_name, recipe_config, visited, **deps)
+      # @param subagent [Hash] subagent config with 'name' and 'profile' keys
+      # @param parent_profile_name [String] parent profile name
+      # @param profile_config [Hash] parent profile configuration
+      # @param visited [Set] already-visited profile names
+      def process_single_subagent(subagent, parent_profile_name, profile_config, visited, **deps)
         agent_name = subagent['name']
-        recipe_name = subagent['recipe']
+        profile_name = subagent['profile']
 
-        return unless agent_name && recipe_name
-        return if visited.include?(recipe_name)
+        return unless agent_name && profile_name
+        return if visited.include?(profile_name)
 
-        visited.add(recipe_name)
+        visited.add(profile_name)
 
         if deps[:verbose]
-          puts "  \u{2192} Generating #{agent_name}.md from '#{recipe_name}' recipe"
+          puts "  \u{2192} Generating #{agent_name}.md from '#{profile_name}' profile"
         else
           puts "  \u{2192} #{agent_name}"
         end
 
-        subagent_recipe = deps[:load_all_recipes].call[recipe_name]
+        subagent_profile = deps[:load_all_profiles].call[profile_name]
 
-        unless subagent_recipe
-          puts "    \u{26A0}\u{FE0F}  Warning: Recipe '#{recipe_name}' not found, skipping"
+        unless subagent_profile
+          puts "    \u{26A0}\u{FE0F}  Warning: Profile '#{profile_name}' not found, skipping"
           return
         end
 
-        validate_no_nested_subagents!(subagent_recipe, agent_name, recipe_name)
+        validate_no_nested_subagents!(subagent_profile, agent_name, profile_name)
         validate_no_subagent_dispatches!(
-          subagent_recipe, agent_name, recipe_name,
+          subagent_profile, agent_name, profile_name,
           find_rule_file: deps[:find_rule_file],
-          load_recipe_sources: deps[:load_recipe_sources],
+          load_profile_sources: deps[:load_profile_sources],
           parse_frontmatter: deps[:parse_frontmatter]
         )
 
         generate_agent_file(
-          agent_name, recipe_name, subagent_recipe, parent_recipe_name,
-          parent_recipe_config: recipe_config, subagent_config: subagent, **deps
+          agent_name, profile_name, subagent_profile, parent_profile_name,
+          parent_profile_config: profile_config, subagent_config: subagent, **deps
         )
       end
 
-      # Validate that a subagent recipe does not define its own subagents.
-      # @param subagent_recipe [Hash] the subagent's recipe configuration
+      # Validate that a subagent profile does not define its own subagents.
+      # @param subagent_profile [Hash] the subagent's profile configuration
       # @param agent_name [String] the subagent name
-      # @param recipe_name [String] the subagent's recipe name
+      # @param profile_name [String] the subagent's profile name
       # @raise [Ruly::Error] if nested subagents are found
-      def validate_no_nested_subagents!(subagent_recipe, agent_name, recipe_name)
-        return unless subagent_recipe.is_a?(Hash) &&
-                      subagent_recipe['subagents'].is_a?(Array) &&
-                      subagent_recipe['subagents'].any?
+      def validate_no_nested_subagents!(subagent_profile, agent_name, profile_name)
+        return unless subagent_profile.is_a?(Hash) &&
+                      subagent_profile['subagents'].is_a?(Array) &&
+                      subagent_profile['subagents'].any?
 
-        nested_names = subagent_recipe['subagents'].filter_map { |s| s['name'] }.join(', ')
+        nested_names = subagent_profile['subagents'].filter_map { |s| s['name'] }.join(', ')
         raise Ruly::Error,
-              "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
+              "Profile '#{profile_name}' (subagent '#{agent_name}') has its own subagents (#{nested_names}). " \
               'Claude Code subagents cannot spawn other subagents. ' \
               "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
       end
 
-      # Validate that a subagent recipe's files do not contain dispatch frontmatter.
-      # @param subagent_recipe [Hash] the subagent's recipe configuration
+      # Validate that a subagent profile's files do not contain dispatch frontmatter.
+      # @param subagent_profile [Hash] the subagent's profile configuration
       # @param agent_name [String] the subagent name
-      # @param recipe_name [String] the subagent's recipe name
-      # @param load_recipe_sources [Proc] callable(recipe_name) returning [sources, ...]
+      # @param profile_name [String] the subagent's profile name
+      # @param load_profile_sources [Proc] callable(profile_name) returning [sources, ...]
       # @param find_rule_file [Proc] callable(path) returning absolute file path
       # @param parse_frontmatter [Proc] callable(content) returning [frontmatter, body]
       # @raise [Ruly::Error] if dispatching files are found
       def validate_no_subagent_dispatches!(
-        subagent_recipe, agent_name, recipe_name,
-        find_rule_file:, load_recipe_sources:, parse_frontmatter:
+        subagent_profile, agent_name, profile_name,
+        find_rule_file:, load_profile_sources:, parse_frontmatter:
       )
-        return unless subagent_recipe.is_a?(Hash)
+        return unless subagent_profile.is_a?(Hash)
 
-        sources, = load_recipe_sources.call(recipe_name)
+        sources, = load_profile_sources.call(profile_name)
         dispatching_files = []
 
         sources.each do |source|
@@ -157,33 +157,33 @@ module Ruly
 
         file_list = dispatching_files.map { |f| "  - #{f[:file]} dispatches: #{f[:dispatch]}" }.join("\n")
         raise Ruly::Error,
-              "Subagent '#{agent_name}' (recipe: #{recipe_name})\n" \
+              "Subagent '#{agent_name}' (profile: #{profile_name})\n" \
               "contains files that dispatch other subagents:\n\n" \
               "#{file_list}\n\n" \
               "Subagents cannot dispatch other subagents.\n" \
-              "Remove these files from the recipe, or inline\n" \
+              "Remove these files from the profile, or inline\n" \
               'the functionality without subagent dispatch.'
       end
 
       # Generate the agent .md file for a subagent.
       # @param agent_name [String] the agent name
-      # @param recipe_name [String] the recipe name
-      # @param recipe_config [Hash] the recipe configuration
-      # @param parent_recipe_name [String] the parent recipe name
-      # @param parent_recipe_config [Hash] the parent recipe configuration
+      # @param profile_name [String] the profile name
+      # @param profile_config [Hash] the profile configuration
+      # @param parent_profile_name [String] the parent profile name
+      # @param parent_profile_config [Hash] the parent profile configuration
       # @param subagent_config [Hash] the subagent configuration
       def generate_agent_file(
-        agent_name, recipe_name, recipe_config, parent_recipe_name,
-        parent_recipe_config: {}, subagent_config: {}, **deps
+        agent_name, profile_name, profile_config, parent_profile_name,
+        parent_profile_config: {}, subagent_config: {}, **deps
       )
         agent_file = ".claude/agents/#{agent_name}.md"
         local_sources, command_files, skill_files = load_agent_sources(
-          recipe_name, recipe_config,
-          load_recipe_sources: deps[:load_recipe_sources],
+          profile_name, profile_config,
+          load_profile_sources: deps[:load_profile_sources],
           process_sources_for_squash: deps[:process_sources_for_squash]
         )
 
-        mcp_servers = Services::MCPManager.collect_agent_mcp_servers(recipe_config, local_sources)
+        mcp_servers = Services::MCPManager.collect_agent_mcp_servers(profile_config, local_sources)
 
         skill_names = extract_skill_names(skill_files)
         unless skill_files.empty?
@@ -192,28 +192,28 @@ module Ruly
         end
 
         context = build_agent_context(
-          agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-          mcp_servers:, parent_recipe_config:, skill_names:, subagent_config:
+          agent_name, profile_name, profile_config, parent_profile_name, local_sources,
+          mcp_servers:, parent_profile_config:, skill_names:, subagent_config:
         )
         write_agent_file(agent_file, context)
         unless command_files.empty?
-          save_subagent_commands(command_files, agent_name, recipe_config,
+          save_subagent_commands(command_files, agent_name, profile_config,
                                  verbose: deps[:verbose])
         end
       rescue StandardError => e
         puts "    \u{26A0}\u{FE0F}  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
       end
 
-      # Load sources for an agent recipe.
-      # @param recipe_name [String] recipe name
-      # @param recipe_config [Hash] recipe configuration
-      # @param load_recipe_sources [Proc] callable(recipe_name) returning [sources, ...]
+      # Load sources for an agent profile.
+      # @param profile_name [String] profile name
+      # @param profile_config [Hash] profile configuration
+      # @param load_profile_sources [Proc] callable(profile_name) returning [sources, ...]
       # @param process_sources_for_squash [Proc] callable(sources, agent, config, opts)
       # @return [Array] [local_sources, command_files, skill_files]
-      def load_agent_sources(recipe_name, recipe_config, load_recipe_sources:, process_sources_for_squash:)
-        sources, = load_recipe_sources.call(recipe_name)
+      def load_agent_sources(profile_name, profile_config, load_profile_sources:, process_sources_for_squash:)
+        sources, = load_profile_sources.call(profile_name)
         local_sources, command_files, _bin_files, skill_files = process_sources_for_squash.call(
-          sources, 'claude', recipe_config, {}
+          sources, 'claude', profile_config, {}
         )
         [local_sources, command_files, skill_files]
       end
@@ -228,31 +228,31 @@ module Ruly
       # Build the context hash used for writing an agent file.
       # @return [Hash] context with all necessary data for the agent file
       def build_agent_context(
-        agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
-        mcp_servers: [], parent_recipe_config: {}, skill_names: [], subagent_config: {}
+        agent_name, profile_name, profile_config, parent_profile_name, local_sources,
+        mcp_servers: [], parent_profile_config: {}, skill_names: [], subagent_config: {}
       )
         {
           agent_name:,
-          description: recipe_config['description'] || "Subagent for #{recipe_name}",
+          description: profile_config['description'] || "Subagent for #{profile_name}",
           local_sources:,
           mcp_servers:,
-          model: resolve_agent_model(subagent_config, parent_recipe_config),
-          parent_recipe_name:,
-          recipe_config:,
-          recipe_name:,
+          model: resolve_agent_model(subagent_config, parent_profile_config),
+          parent_profile_name:,
+          profile_config:,
+          profile_name:,
           skill_names:,
           timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
         }
       end
 
       # Determine the model to use for an agent.
-      # Priority: subagent model > parent recipe model > 'inherit'
+      # Priority: subagent model > parent profile model > 'inherit'
       # @param subagent_config [Hash] subagent configuration
-      # @param parent_recipe_config [Hash] parent recipe configuration
+      # @param parent_profile_config [Hash] parent profile configuration
       # @return [String] model name
-      def resolve_agent_model(subagent_config, parent_recipe_config)
+      def resolve_agent_model(subagent_config, parent_profile_config)
         return subagent_config['model'] if subagent_config['model']
-        return parent_recipe_config['model'] if parent_recipe_config.is_a?(Hash) && parent_recipe_config['model']
+        return parent_profile_config['model'] if parent_profile_config.is_a?(Hash) && parent_profile_config['model']
 
         'inherit'
       end
@@ -264,7 +264,7 @@ module Ruly
         File.open(agent_file, 'w') do |output|
           write_agent_frontmatter(output, context)
           write_agent_content(output, context)
-          write_agent_footer(output, context[:timestamp], context[:recipe_name])
+          write_agent_footer(output, context[:timestamp], context[:profile_name])
         end
       end
 
@@ -289,8 +289,8 @@ module Ruly
           tools: Bash, Read, Write, Edit, Glob, Grep
           model: #{context[:model]}#{skills_line}#{mcp_line}
           permissionMode: bypassPermissions
-          # Auto-generated from recipe: #{context[:recipe_name]}
-          # Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'
+          # Auto-generated from profile: #{context[:profile_name]}
+          # Do not edit manually - regenerate using 'ruly squash #{context[:parent_profile_name]}'
           ---
 
         YAML
@@ -304,7 +304,7 @@ module Ruly
         output.puts
         output.puts context[:description]
         output.puts
-        output.puts '## Recipe Content'
+        output.puts '## Profile Content'
         output.puts
 
         context[:local_sources].each do |source|
@@ -320,25 +320,25 @@ module Ruly
       # Write the footer section of the agent file.
       # @param output [IO] output stream
       # @param timestamp [String] generation timestamp
-      # @param recipe_name [String] source recipe name
-      def write_agent_footer(output, timestamp, recipe_name)
+      # @param profile_name [String] source profile name
+      def write_agent_footer(output, timestamp, profile_name)
         output.puts '---'
         output.puts "*Last generated: #{timestamp}*"
-        output.puts "*Source recipe: #{recipe_name}*"
+        output.puts "*Source profile: #{profile_name}*"
       end
 
       # Save command files for a subagent to .claude/commands/{agent_name}/.
       # @param command_files [Array<Hash>] command file hashes with :path and :content
       # @param agent_name [String] agent name
-      # @param recipe_config [Hash, nil] recipe configuration
+      # @param profile_config [Hash, nil] profile configuration
       # @param verbose [Boolean] whether to output verbose messages
-      def save_subagent_commands(command_files, agent_name, recipe_config = nil, verbose: false)
+      def save_subagent_commands(command_files, agent_name, profile_config = nil, verbose: false)
         return if command_files.empty?
 
         commands_dir = ".claude/commands/#{agent_name}"
         FileUtils.mkdir_p(commands_dir)
 
-        omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
+        omit_prefix = profile_config && profile_config['omit_command_prefix'] ? profile_config['omit_command_prefix'] : nil
 
         command_files.each do |file|
           next unless file.is_a?(Hash)

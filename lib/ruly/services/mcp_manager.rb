@@ -6,10 +6,10 @@ require 'yaml'
 module Ruly
   module Services
     # Manages MCP (Model Context Protocol) server configuration.
-    # Handles loading definitions, collecting servers from recipes/sources,
+    # Handles loading definitions, collecting servers from profiles/sources,
     # and writing .mcp.json output files.
     # All methods are stateless module functions; external dependencies
-    # (load_all_recipes, etc.) are injected via keyword arguments.
+    # (load_all_profiles, etc.) are injected via keyword arguments.
     module MCPManager # rubocop:disable Metrics/ModuleLength
       module_function
 
@@ -32,37 +32,37 @@ module Ruly
         servers.uniq
       end
 
-      # Recursively collect all MCP servers from a recipe and its subagent recipes.
-      # @param recipe_config [Hash] recipe configuration with optional 'mcp_servers' and 'subagents'
-      # @param visited [Set] already-visited recipe names (prevents infinite loops)
-      # @param load_all_recipes [Proc] callable returning all recipes hash
+      # Recursively collect all MCP servers from a profile and its subagent profiles.
+      # @param profile_config [Hash] profile configuration with optional 'mcp_servers' and 'subagents'
+      # @param visited [Set] already-visited profile names (prevents infinite loops)
+      # @param load_all_profiles [Proc] callable returning all profiles hash
       # @return [Array<String>] unique server names
-      def collect_all_mcp_servers(recipe_config, load_all_recipes:, visited: Set.new)
-        servers = Array(recipe_config['mcp_servers']).dup
+      def collect_all_mcp_servers(profile_config, load_all_profiles:, visited: Set.new)
+        servers = Array(profile_config['mcp_servers']).dup
 
-        return servers unless recipe_config['subagents'].is_a?(Array)
+        return servers unless profile_config['subagents'].is_a?(Array)
 
-        recipes = load_all_recipes.call
+        profiles = load_all_profiles.call
 
-        recipe_config['subagents'].each do |subagent|
-          recipe_name = subagent['recipe']
-          next unless recipe_name
-          next if visited.include?(recipe_name)
+        profile_config['subagents'].each do |subagent|
+          profile_name = subagent['profile']
+          next unless profile_name
+          next if visited.include?(profile_name)
 
-          visited.add(recipe_name)
-          subagent_recipe = recipes[recipe_name]
-          next unless subagent_recipe
+          visited.add(profile_name)
+          subagent_profile = profiles[profile_name]
+          next unless subagent_profile
 
-          servers.concat(collect_all_mcp_servers(subagent_recipe, load_all_recipes:, visited:))
+          servers.concat(collect_all_mcp_servers(subagent_profile, load_all_profiles:, visited:))
         end
 
         servers.uniq
       end
 
-      # Update MCP settings based on recipe config, writing .mcp.json or .mcp.yml.
-      # @param recipe_config [Hash, nil] recipe configuration with optional 'mcp_servers'
+      # Update MCP settings based on profile config, writing .mcp.json or .mcp.yml.
+      # @param profile_config [Hash, nil] profile configuration with optional 'mcp_servers'
       # @param agent [String] target agent name ('claude' writes JSON, others write YAML)
-      def update_mcp_settings(recipe_config = nil, agent = 'claude')
+      def update_mcp_settings(profile_config = nil, agent = 'claude')
         require 'yaml'
         require 'json'
 
@@ -75,10 +75,10 @@ module Ruly
           mcp_servers.merge!(mcp_config['mcpServers']) if mcp_config && mcp_config['mcpServers']
         end
 
-        # Then, load MCP servers from recipe configuration
-        if recipe_config && recipe_config['mcp_servers']
-          mcp_servers_from_recipe = load_mcp_servers_from_config(recipe_config['mcp_servers'])
-          mcp_servers.merge!(mcp_servers_from_recipe) if mcp_servers_from_recipe
+        # Then, load MCP servers from profile configuration
+        if profile_config && profile_config['mcp_servers']
+          mcp_servers_from_profile = load_mcp_servers_from_config(profile_config['mcp_servers'])
+          mcp_servers.merge!(mcp_servers_from_profile) if mcp_servers_from_profile
         end
 
         # Determine output format based on agent
@@ -140,24 +140,24 @@ module Ruly
         JSON.parse(File.read(mcp_config_file))
       end
 
-      # Collect MCP server names from a recipe specified by name.
-      # @param recipe_name [String, nil] recipe name to look up
-      # @param load_all_recipes [Proc] callable returning all recipes hash
-      # @return [Array<String>, nil] server names, empty array if no recipe, nil if recipe not found
-      def collect_recipe_mcp_servers(recipe_name, load_all_recipes:)
-        return [] unless recipe_name
+      # Collect MCP server names from a profile specified by name.
+      # @param profile_name [String, nil] profile name to look up
+      # @param load_all_profiles [Proc] callable returning all profiles hash
+      # @return [Array<String>, nil] server names, empty array if no profile, nil if profile not found
+      def collect_profile_mcp_servers(profile_name, load_all_profiles:)
+        return [] unless profile_name
 
-        recipes = load_all_recipes.call
-        recipe_config = recipes[recipe_name]
+        profiles = load_all_profiles.call
+        profile_config = profiles[profile_name]
 
-        if recipe_config.nil?
-          puts "\u274c Error: Recipe '#{recipe_name}' not found"
+        if profile_config.nil?
+          puts "\u274c Error: Profile '#{profile_name}' not found"
           return nil
         end
 
-        recipe_servers = recipe_config['mcp_servers'] || []
-        puts "\u26a0\ufe0f  Warning: Recipe '#{recipe_name}' has no MCP servers defined" if recipe_servers.empty?
-        recipe_servers
+        profile_servers = profile_config['mcp_servers'] || []
+        puts "\u26a0\ufe0f  Warning: Profile '#{profile_name}' has no MCP servers defined" if profile_servers.empty?
+        profile_servers
       end
 
       # Filter server definitions to only requested names, cleaning metadata.
@@ -201,14 +201,14 @@ module Ruly
         end
       end
 
-      # Collect MCP servers from both recipe config and rule-file frontmatter.
+      # Collect MCP servers from both profile config and rule-file frontmatter.
       # Used when generating agent files.
-      # @param recipe_config [Hash] recipe configuration
+      # @param profile_config [Hash] profile configuration
       # @param local_sources [Array<Hash>] source hashes
       # @return [Array<String>] unique server names
-      def collect_agent_mcp_servers(recipe_config, local_sources)
+      def collect_agent_mcp_servers(profile_config, local_sources)
         servers = []
-        servers.concat(recipe_config['mcp_servers']) if recipe_config['mcp_servers'].is_a?(Array)
+        servers.concat(profile_config['mcp_servers']) if profile_config['mcp_servers'].is_a?(Array)
         servers.concat(collect_mcp_servers_from_sources(local_sources))
         servers.uniq
       end

@@ -28,28 +28,28 @@ RSpec.describe Ruly::CLI, type: :cli do
       File.write(File.join(test_dir, 'rules', 'test.md'), '# Test Rule')
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     recipes_file: File.join(test_dir, 'recipes.yml'),
+                                     profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when subagent entry has model' do
       before do
-        recipes_content = {
-          'child-recipe' => {
-            'description' => 'Child recipe',
+        profiles_content = {
+          'child-profile' => {
+            'description' => 'Child profile',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent recipe',
+            'description' => 'Parent profile',
             'files' => ['rules/test.md'],
             'subagents' => [
-              {'model' => 'haiku', 'name' => 'child_agent', 'recipe' => 'child-recipe'}
+              {'model' => 'haiku', 'name' => 'child_agent', 'profile' => 'child-profile'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -61,29 +61,29 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when recipe has model but subagent does not' do
+    context 'when profile has model but subagent does not' do
       before do
-        recipes_content = {
-          'child-recipe' => {
-            'description' => 'Child recipe',
+        profiles_content = {
+          'child-profile' => {
+            'description' => 'Child profile',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent recipe',
+            'description' => 'Parent profile',
             'files' => ['rules/test.md'],
             'model' => 'sonnet',
             'subagents' => [
-              {'name' => 'child_agent', 'recipe' => 'child-recipe'}
+              {'name' => 'child_agent', 'profile' => 'child-profile'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'falls back to the parent recipe model' do
+      it 'falls back to the parent profile model' do
         cli.invoke(:squash, ['parent'])
 
         content = File.read('.claude/agents/child_agent.md', encoding: 'UTF-8')
@@ -91,29 +91,29 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when subagent model overrides recipe model' do
+    context 'when subagent model overrides profile model' do
       before do
-        recipes_content = {
-          'child-recipe' => {
-            'description' => 'Child recipe',
+        profiles_content = {
+          'child-profile' => {
+            'description' => 'Child profile',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent recipe',
+            'description' => 'Parent profile',
             'files' => ['rules/test.md'],
             'model' => 'sonnet',
             'subagents' => [
-              {'model' => 'haiku', 'name' => 'child_agent', 'recipe' => 'child-recipe'}
+              {'model' => 'haiku', 'name' => 'child_agent', 'profile' => 'child-profile'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'uses the subagent model over the recipe model' do
+      it 'uses the subagent model over the profile model' do
         cli.invoke(:squash, ['parent'])
 
         content = File.read('.claude/agents/child_agent.md', encoding: 'UTF-8')
@@ -122,24 +122,24 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when neither subagent nor recipe has model' do
+    context 'when neither subagent nor profile has model' do
       before do
-        recipes_content = {
-          'child-recipe' => {
-            'description' => 'Child recipe',
+        profiles_content = {
+          'child-profile' => {
+            'description' => 'Child profile',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent recipe',
+            'description' => 'Parent profile',
             'files' => ['rules/test.md'],
             'subagents' => [
-              {'name' => 'child_agent', 'recipe' => 'child-recipe'}
+              {'name' => 'child_agent', 'profile' => 'child-profile'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 

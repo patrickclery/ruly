@@ -50,10 +50,10 @@ RSpec.describe Ruly::CLI do
     end
   end
 
-  describe '#load_recipe_sources' do
-    let(:recipes_content) do
+  describe '#load_profile_sources' do
+    let(:profiles_content) do
       {
-        'recipes' => {
+        'profiles' => {
           'test_legacy' => {
             'files' => ['rules/local.md'],
             'remote_sources' => ['https://example.com/remote.md']
@@ -73,8 +73,8 @@ RSpec.describe Ruly::CLI do
     end
 
     before do
-      # Mock the recipes file
-      File.write(File.join(test_dir, 'recipes.yml'), recipes_content.to_yaml)
+      # Mock the profiles file
+      File.write(File.join(test_dir, 'profiles.yml'), profiles_content.to_yaml)
 
       # Create mock local files
       FileUtils.mkdir_p(File.join(test_dir, 'rules'))
@@ -82,11 +82,11 @@ RSpec.describe Ruly::CLI do
       File.write(File.join(test_dir, 'rules', 'local.md'), '# Local')
 
       # Mock gem_root to point to test_dir
-      allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'))
+      allow(cli).to receive_messages(gem_root: test_dir, profiles_file: File.join(test_dir, 'profiles.yml'))
     end
 
     it "loads local files from 'files' array" do
-      sources, _recipe = cli.send(:load_recipe_sources, 'test_local')
+      sources, _profile = cli.send(:load_profile_sources, 'test_local')
 
       expect(sources.size).to eq(1)
       expect(sources.first[:type]).to eq('local')
@@ -94,7 +94,7 @@ RSpec.describe Ruly::CLI do
     end
 
     it "loads mixed sources from 'sources' array" do
-      sources, _recipe = cli.send(:load_recipe_sources, 'test_mixed')
+      sources, _profile = cli.send(:load_profile_sources, 'test_mixed')
 
       expect(sources.size).to eq(3)
 
@@ -111,7 +111,7 @@ RSpec.describe Ruly::CLI do
     end
 
     it 'supports legacy format with separate files and remote_sources' do
-      sources, _recipe = cli.send(:load_recipe_sources, 'test_legacy')
+      sources, _profile = cli.send(:load_profile_sources, 'test_legacy')
 
       expect(sources.size).to eq(2)
 
@@ -170,8 +170,8 @@ RSpec.describe Ruly::CLI do
 
       # Mock gem_root and rules_dir for all tests in this describe block
 
-      # Also mock recipes_file to use test directory by default
-      allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'),
+      # Also mock profiles_file to use test directory by default
+      allow(cli).to receive_messages(gem_root: test_dir, profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
@@ -183,30 +183,30 @@ RSpec.describe Ruly::CLI do
       expect(content).to include('Combined Ruly Documentation')
     end
 
-    it 'raises error for non-existent recipe' do
-      # Create an empty recipes file
-      recipes = {
-        'recipes' => {}
+    it 'raises error for non-existent profile' do
+      # Create an empty profiles file
+      profiles = {
+        'profiles' => {}
       }
-      File.write(File.join(test_dir, 'recipes.yml'), recipes.to_yaml)
+      File.write(File.join(test_dir, 'profiles.yml'), profiles.to_yaml)
 
       # Mock cli to return test directories and prevent loading user config
 
-      # Mock load_all_recipes to return only our test recipes
-      allow(cli).to receive_messages(load_all_recipes: recipes['recipes'],
-                                     recipes_file: File.join(test_dir,
-                                                             'recipes.yml'))
+      # Mock load_all_profiles to return only our test profiles
+      allow(cli).to receive_messages(load_all_profiles: profiles['profiles'],
+                                     profiles_file: File.join(test_dir,
+                                                             'profiles.yml'))
 
       # Suppress output to avoid cluttering test output
       allow(cli).to receive(:puts)
       allow(cli).to receive(:say)
       allow(cli.shell).to receive(:say)
 
-      # Use a truly non-existent recipe name with random component
-      nonexistent_recipe = "nonexistent_recipe_#{SecureRandom.hex(16)}"
+      # Use a truly non-existent profile name with random component
+      nonexistent_profile = "nonexistent_profile_#{SecureRandom.hex(16)}"
       expect do
-        cli.invoke(:squash, [nonexistent_recipe])
-      end.to raise_error(Thor::Error, /Recipe '#{nonexistent_recipe}' not found/)
+        cli.invoke(:squash, [nonexistent_profile])
+      end.to raise_error(Thor::Error, /Profile '#{nonexistent_profile}' not found/)
     end
   end
 
@@ -321,12 +321,12 @@ RSpec.describe Ruly::CLI do
       FileUtils.mkdir_p(File.join(test_dir, 'rules'))
       File.write(File.join(test_dir, 'rules', 'test.md'), '# Test Rule')
 
-      # Mock gem_root and recipes_file to use test directory
-      allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'),
+      # Mock gem_root and profiles_file to use test directory
+      allow(cli).to receive_messages(gem_root: test_dir, profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
 
-      # Create empty recipes file to prevent loading external recipes
-      File.write(File.join(test_dir, 'recipes.yml'), {'recipes' => {}}.to_yaml)
+      # Create empty profiles file to prevent loading external profiles
+      File.write(File.join(test_dir, 'profiles.yml'), {'profiles' => {}}.to_yaml)
     end
 
     it 'cleans existing files before squashing' do
@@ -374,7 +374,7 @@ RSpec.describe Ruly::CLI do
       expect(content).not_to include('Old content')
     end
 
-    it 'passes recipe name to clean when specified' do
+    it 'passes profile name to clean when specified' do
       # Create old file to clean
       File.write('CLAUDE.local.md', '# Old content')
 
@@ -692,10 +692,10 @@ RSpec.describe Ruly::CLI do
       }
     end
 
-    it 'saves commands with prefix omitted when recipe config has omit_command_prefix' do
-      recipe_config = {'omit_command_prefix' => 'workaxle/core'}
+    it 'saves commands with prefix omitted when profile config has omit_command_prefix' do
+      profile_config = {'omit_command_prefix' => 'workaxle/core'}
 
-      cli.send(:save_command_files, [test_command], recipe_config)
+      cli.send(:save_command_files, [test_command], profile_config)
 
       # Check file was saved to the correct location without the prefix
       expected_file = File.join(commands_dir, 'jira', 'details.md')
@@ -708,9 +708,9 @@ RSpec.describe Ruly::CLI do
     end
 
     it 'saves commands with full path when no omit_command_prefix is set' do
-      recipe_config = {}
+      profile_config = {}
 
-      cli.send(:save_command_files, [test_command], recipe_config)
+      cli.send(:save_command_files, [test_command], profile_config)
 
       # Check file was saved to the correct location with the full path
       expected_file = File.join(commands_dir, 'workaxle', 'core', 'jira', 'details.md')
@@ -718,7 +718,7 @@ RSpec.describe Ruly::CLI do
       expect(File.read(expected_file)).to eq('# Test Command')
     end
 
-    it 'handles nil recipe_config' do
+    it 'handles nil profile_config' do
       cli.send(:save_command_files, [test_command], nil)
 
       # Should save with full path when config is nil
@@ -728,26 +728,26 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#introspect preserving custom keys' do
-    let(:user_recipes_file) { File.join(Dir.home, '.config', 'ruly', 'recipes.yml') }
+    let(:user_profiles_file) { File.join(Dir.home, '.config', 'ruly', 'profiles.yml') }
 
     before do
       # Ensure the config directory exists
-      FileUtils.mkdir_p(File.dirname(user_recipes_file))
+      FileUtils.mkdir_p(File.dirname(user_profiles_file))
 
-      # Create initial recipe with custom keys
+      # Create initial profile with custom keys
       initial_config = {
-        'recipes' => {
-          'test_recipe' => {
+        'profiles' => {
+          'test_profile' => {
             'custom_key' => 'custom_value',
-            'description' => 'Test recipe',
+            'description' => 'Test profile',
             'files' => ['rules/test.md'],
             'mcp_servers' => %w[github atlassian],
             'omit_command_prefix' => 'workaxle/core',
-            'plan' => 'claude_max'
+            'tier' => 'claude_max'
           }
         }
       }
-      File.write(user_recipes_file, initial_config.to_yaml)
+      File.write(user_profiles_file, initial_config.to_yaml)
 
       # Create test markdown files
       FileUtils.mkdir_p(File.join(test_dir, 'rules'))
@@ -755,22 +755,22 @@ RSpec.describe Ruly::CLI do
     end
 
     after do
-      FileUtils.rm_f(user_recipes_file)
+      FileUtils.rm_f(user_profiles_file)
     end
 
-    it 'preserves all custom keys except files/sources when updating a recipe' do
-      # Run introspect to update the recipe
-      cli.invoke(:introspect, ['test_recipe', File.join(test_dir, 'rules')])
+    it 'preserves all custom keys except files/sources when updating a profile' do
+      # Run introspect to update the profile
+      cli.invoke(:introspect, ['test_profile', File.join(test_dir, 'rules')])
 
       # Check that all custom keys were preserved
-      updated_config = YAML.safe_load_file(user_recipes_file)
-      recipe = updated_config['recipes']['test_recipe']
+      updated_config = YAML.safe_load_file(user_profiles_file)
+      profile = updated_config['profiles']['test_profile']
 
-      expect(recipe['omit_command_prefix']).to eq('workaxle/core')
-      expect(recipe['mcp_servers']).to eq(%w[github atlassian])
-      expect(recipe['custom_key']).to eq('custom_value')
-      expect(recipe['plan']).to eq('claude_max')
-      expect(recipe['files']).to include(File.join(test_dir, 'rules', 'new.md'))
+      expect(profile['omit_command_prefix']).to eq('workaxle/core')
+      expect(profile['mcp_servers']).to eq(%w[github atlassian])
+      expect(profile['custom_key']).to eq('custom_value')
+      expect(profile['tier']).to eq('claude_max')
+      expect(profile['files']).to include(File.join(test_dir, 'rules', 'new.md'))
     end
   end
 end

@@ -73,8 +73,8 @@ module Ruly
           index += 1
         end
 
-        # Copy bin files to .ruly/bin if any exist
-        Services::ScriptManager.copy_bin_files(bin_files) unless bin_files.empty? || dry_run
+        # Copy script files to .claude/scripts/ if any exist
+        Services::ScriptManager.copy_script_files(bin_files) unless bin_files.empty? || dry_run
 
         puts if verbose
 
@@ -202,7 +202,7 @@ module Ruly
         end
 
         # Use explicit category markers instead of path-based auto-detection
-        is_bin = source[:category] == :bin
+        is_bin = source[:category] == :script
 
         if is_bin
           puts " \u{2705} (bin)" if verbose

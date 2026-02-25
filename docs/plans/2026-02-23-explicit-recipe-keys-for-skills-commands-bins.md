@@ -1,10 +1,10 @@
-# Explicit Recipe Keys for Skills, Commands, and Bins
+# Explicit Profile Keys for Skills, Commands, and Bins
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Replace path-based auto-inference of skills, commands, and bin files with explicit recipe-level keys (`skills`, `commands`, `bins`). Files not in these explicit keys get squashed into CLAUDE.local.md regardless of their directory path.
+**Goal:** Replace path-based auto-inference of skills, commands, and bin files with explicit profile-level keys (`skills`, `commands`, `bins`). Files not in these explicit keys get squashed into CLAUDE.local.md regardless of their directory path.
 
-**Architecture:** Add three new keys to the recipe YAML schema. Tag sources with their category at load time. Replace all path-based detection in the processing pipeline with marker-based categorization. Keep the `skills:` frontmatter mechanism (it's already explicit, not auto-inferred).
+**Architecture:** Add three new keys to the profile YAML schema. Tag sources with their category at load time. Replace all path-based detection in the processing pipeline with marker-based categorization. Keep the `skills:` frontmatter mechanism (it's already explicit, not auto-inferred).
 
 **Tech Stack:** Ruby, RSpec, YAML
 
@@ -22,16 +22,16 @@
 
 ### New behavior (explicit keys)
 
-| Category | Recipe key | Frontmatter | Path detection |
+| Category | Profile key | Frontmatter | Path detection |
 |----------|-----------|-------------|----------------|
 | Skills | `skills:` | `skills:` (kept) | **Removed** |
 | Commands | `commands:` | N/A | **Removed** |
-| Bins | `bins:` | N/A | **Removed** |
+| Bins | `scripts:` | N/A | **Removed** |
 
-### New recipe schema
+### New profile schema
 
 ```yaml
-recipe-name:
+profile-name:
   description: "..."
   files:
     - /path/to/rule.md          # Always squashed into CLAUDE.local.md
@@ -42,8 +42,8 @@ recipe-name:
   commands:
     - /path/to/command.md       # Output as .claude/commands/{name}.md
     - /path/to/commands-dir/    # Directory expansion (all .md files → commands)
-  bins:
-    - /path/to/script.sh        # Output as .ruly/bin/{name}.sh
+  scripts:
+    - /path/to/script.sh        # Output as .claude/scripts/{name}.sh
     - /path/to/bin-dir/         # Directory expansion (all .sh files → bins)
   mcp_servers: [...]            # Unchanged
   subagents: [...]              # Unchanged
@@ -51,15 +51,15 @@ recipe-name:
 
 ---
 
-## Task 1: Add recipe-level key processing in RecipeLoader
+## Task 1: Add profile-level key processing in ProfileLoader
 
 **Files:**
-- Modify: `lib/ruly/services/recipe_loader.rb:17-43` (load_recipe_sources)
-- Test: `spec/ruly/cli_recipe_explicit_keys_spec.rb` (new)
+- Modify: `lib/ruly/services/profile_loader.rb:17-43` (load_profile_sources)
+- Test: `spec/ruly/cli_profile_explicit_keys_spec.rb` (new)
 
 ### Step 1: Write the failing test
 
-Create `spec/ruly/cli_recipe_explicit_keys_spec.rb`:
+Create `spec/ruly/cli_profile_explicit_keys_spec.rb`:
 
 ```ruby
 # frozen_string_literal: true
@@ -84,7 +84,7 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
   end
 
-  describe 'recipe-level skills key' do
+  describe 'profile-level skills key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-skills'))
@@ -104,12 +104,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        recipes_file: File.join(test_dir, 'recipes.yml'),
+        profiles_file: File.join(test_dir, 'profiles.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      recipes_content = {
-        'test_recipe' => {
+      profiles_content = {
+        'test_profile' => {
           'description' => 'Test with explicit skills key',
           'files' => ['rules/core/main.md'],
           'skills' => ['rules/my-skills/deploy.md']
@@ -117,19 +117,19 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'outputs files in skills key as SKILL.md' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       expect(File.exist?('.claude/skills/deploy/SKILL.md')).to be(true)
       expect(File.read('.claude/skills/deploy/SKILL.md')).to include('Deploy steps')
     end
 
     it 'does not include skills key files in main output' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).not_to include('Deploy steps')
@@ -148,37 +148,37 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        recipes_file: File.join(test_dir, 'recipes.yml'),
+        profiles_file: File.join(test_dir, 'profiles.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      recipes_content = {
-        'test_recipe' => {
+      profiles_content = {
+        'test_profile' => {
           'description' => 'Test without explicit skills key',
           'files' => ['rules/core/skills/debug.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'squashes files in /skills/ path into main output when in files key' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).to include('Debug content that should be squashed')
     end
 
     it 'does not create SKILL.md for files in files key' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       expect(File.exist?('.claude/skills/debug/SKILL.md')).to be(false)
     end
   end
 
-  describe 'recipe-level commands key' do
+  describe 'profile-level commands key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-commands'))
@@ -195,12 +195,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        recipes_file: File.join(test_dir, 'recipes.yml'),
+        profiles_file: File.join(test_dir, 'profiles.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      recipes_content = {
-        'test_recipe' => {
+      profiles_content = {
+        'test_profile' => {
           'description' => 'Test with explicit commands key',
           'files' => ['rules/core/main.md'],
           'commands' => ['rules/my-commands/deploy.md']
@@ -208,19 +208,19 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'outputs files in commands key to .claude/commands/' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       expect(File.exist?('.claude/commands/deploy.md')).to be(true)
       expect(File.read('.claude/commands/deploy.md')).to include('Deploy command content')
     end
 
     it 'does not include commands key files in main output' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).not_to include('Deploy command content')
@@ -228,7 +228,7 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
   end
 
-  describe 'recipe-level bins key' do
+  describe 'profile-level bins key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-bin'))
@@ -242,12 +242,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        recipes_file: File.join(test_dir, 'recipes.yml'),
+        profiles_file: File.join(test_dir, 'profiles.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      recipes_content = {
-        'test_recipe' => {
+      profiles_content = {
+        'test_profile' => {
           'description' => 'Test with explicit bins key',
           'files' => ['rules/core/main.md'],
           'bins' => ['rules/my-bin/deploy.sh']
@@ -255,15 +255,15 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
-    it 'copies files in bins key to .ruly/bin/' do
-      cli.invoke(:squash, ['test_recipe'])
+    it 'copies files in bins key to .claude/scripts/' do
+      cli.invoke(:squash, ['test_profile'])
 
-      expect(File.exist?('.ruly/bin/deploy.sh')).to be(true)
-      expect(File.executable?('.ruly/bin/deploy.sh')).to be(true)
+      expect(File.exist?('.claude/scripts/deploy.sh')).to be(true)
+      expect(File.executable?('.claude/scripts/deploy.sh')).to be(true)
     end
   end
 
@@ -292,12 +292,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        recipes_file: File.join(test_dir, 'recipes.yml'),
+        profiles_file: File.join(test_dir, 'profiles.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      recipes_content = {
-        'test_recipe' => {
+      profiles_content = {
+        'test_profile' => {
           'description' => 'Test with skills directory',
           'files' => ['rules/core/main.md'],
           'skills' => [File.join(test_dir, 'rules', 'all-skills/')]
@@ -305,12 +305,12 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'expands directories in skills key to individual skill files' do
-      cli.invoke(:squash, ['test_recipe'])
+      cli.invoke(:squash, ['test_profile'])
 
       expect(File.exist?('.claude/skills/a/SKILL.md')).to be(true)
       expect(File.exist?('.claude/skills/b/SKILL.md')).to be(true)
@@ -321,52 +321,52 @@ end
 
 ### Step 2: Run tests to verify they fail
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: FAIL — `skills`, `commands`, `bins` keys not yet processed
 
-### Step 3: Implement recipe key processing in RecipeLoader
+### Step 3: Implement profile key processing in ProfileLoader
 
-In `lib/ruly/services/recipe_loader.rb`, update `load_recipe_sources` to call new methods:
+In `lib/ruly/services/profile_loader.rb`, update `load_profile_sources` to call new methods:
 
 ```ruby
-def load_recipe_sources(recipe_name, gem_root:, base_recipes_file: nil,
-                        recipes: nil, scan_files_for_recipe_tags: nil)
-  recipes ||= begin
-    validate_recipes_file!(gem_root:)
-    load_all_recipes(base_recipes_file:, gem_root:)
+def load_profile_sources(profile_name, gem_root:, base_profiles_file: nil,
+                        profiles: nil, scan_files_for_profile_tags: nil)
+  profiles ||= begin
+    validate_profiles_file!(gem_root:)
+    load_all_profiles(base_profiles_file:, gem_root:)
   end
-  recipe = validate_recipe!(recipe_name, recipes)
+  profile = validate_profile!(profile_name, profiles)
 
   sources = []
 
-  process_recipe_files(recipe, sources, gem_root:)
-  process_recipe_skills(recipe, sources, gem_root:)
-  process_recipe_commands(recipe, sources, gem_root:)
-  process_recipe_bins(recipe, sources, gem_root:)
-  process_recipe_sources(recipe, sources, gem_root:)
-  process_legacy_remote_sources(recipe, sources)
+  process_profile_files(profile, sources, gem_root:)
+  process_profile_skills(profile, sources, gem_root:)
+  process_profile_commands(profile, sources, gem_root:)
+  process_profile_bins(profile, sources, gem_root:)
+  process_profile_sources(profile, sources, gem_root:)
+  process_legacy_remote_sources(profile, sources)
 
-  # Scan for files with matching recipe tags in frontmatter
-  if scan_files_for_recipe_tags
-    tagged_sources = scan_files_for_recipe_tags.call(recipe_name)
+  # Scan for files with matching profile tags in frontmatter
+  if scan_files_for_profile_tags
+    tagged_sources = scan_files_for_profile_tags.call(profile_name)
     existing_paths = sources.to_set { |s| s[:path] }
     tagged_sources.each do |tagged_source|
       sources << tagged_source unless existing_paths.include?(tagged_source[:path])
     end
   end
 
-  [sources, recipe]
+  [sources, profile]
 end
 ```
 
 Add three new methods:
 
 ```ruby
-# Processes the 'skills' key from a recipe config.
-def process_recipe_skills(recipe, sources, gem_root:)
-  return if recipe.is_a?(Array)
+# Processes the 'skills' key from a profile config.
+def process_profile_skills(profile, sources, gem_root:)
+  return if profile.is_a?(Array)
 
-  recipe['skills']&.each do |file|
+  profile['skills']&.each do |file|
     full_path = find_rule_file(file, gem_root:)
     if full_path
       if File.directory?(full_path)
@@ -382,11 +382,11 @@ def process_recipe_skills(recipe, sources, gem_root:)
   end
 end
 
-# Processes the 'commands' key from a recipe config.
-def process_recipe_commands(recipe, sources, gem_root:)
-  return if recipe.is_a?(Array)
+# Processes the 'commands' key from a profile config.
+def process_profile_commands(profile, sources, gem_root:)
+  return if profile.is_a?(Array)
 
-  recipe['commands']&.each do |file|
+  profile['commands']&.each do |file|
     full_path = find_rule_file(file, gem_root:)
     if full_path
       if File.directory?(full_path)
@@ -402,11 +402,11 @@ def process_recipe_commands(recipe, sources, gem_root:)
   end
 end
 
-# Processes the 'bins' key from a recipe config.
-def process_recipe_bins(recipe, sources, gem_root:)
-  return if recipe.is_a?(Array)
+# Processes the 'bins' key from a profile config.
+def process_profile_bins(profile, sources, gem_root:)
+  return if profile.is_a?(Array)
 
-  recipe['bins']&.each do |file|
+  profile['bins']&.each do |file|
     full_path = find_rule_file(file, gem_root:)
     if full_path
       if File.directory?(full_path)
@@ -426,14 +426,14 @@ end
 
 ### Step 4: Run tests to verify they still fail (need SourceProcessor changes)
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: Still failing — SourceProcessor doesn't use category markers yet
 
 ### Step 5: Commit
 
 ```bash
-git add lib/ruly/services/recipe_loader.rb spec/ruly/cli_recipe_explicit_keys_spec.rb
-git commit -m "feat: add skills, commands, bins key processing in RecipeLoader"
+git add lib/ruly/services/profile_loader.rb spec/ruly/cli_profile_explicit_keys_spec.rb
+git commit -m "feat: add skills, commands, bins key processing in ProfileLoader"
 ```
 
 ---
@@ -508,7 +508,7 @@ is_skill = source[:category] == :skill || source[:from_skills]
 
 ### Step 5: Run tests
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: PASS
 
 ### Step 6: Run existing tests to check for regressions
@@ -532,7 +532,7 @@ git commit -m "feat: replace path-based auto-detection with marker-based categor
 
 ### Step 1: Write the failing test
 
-Add to `spec/ruly/cli_recipe_explicit_keys_spec.rb`:
+Add to `spec/ruly/cli_profile_explicit_keys_spec.rb`:
 
 ```ruby
 describe 'skills: frontmatter referencing files outside /skills/ directory' do
@@ -559,28 +559,28 @@ describe 'skills: frontmatter referencing files outside /skills/ directory' do
 
     allow(cli).to receive_messages(
       gem_root: test_dir,
-      recipes_file: File.join(test_dir, 'recipes.yml'),
+      profiles_file: File.join(test_dir, 'profiles.yml'),
       rules_dir: File.join(test_dir, 'rules')
     )
 
-    recipes_content = {
-      'test_recipe' => {
+    profiles_content = {
+      'test_profile' => {
         'description' => 'Test with skill outside /skills/',
         'files' => ['rules/core/main.md']
       }
     }
 
     # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
     # rubocop:enable RSpec/AnyInstance
   end
 
   it 'allows skills: frontmatter to reference files outside /skills/ directory' do
-    expect { cli.invoke(:squash, ['test_recipe']) }.not_to raise_error
+    expect { cli.invoke(:squash, ['test_profile']) }.not_to raise_error
   end
 
   it 'creates SKILL.md for frontmatter-referenced skills' do
-    cli.invoke(:squash, ['test_recipe'])
+    cli.invoke(:squash, ['test_profile'])
     expect(File.exist?('.claude/skills/helper-skill/SKILL.md')).to be(true)
   end
 end
@@ -588,7 +588,7 @@ end
 
 ### Step 2: Run test to verify it fails
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -t "allows skills: frontmatter" -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -t "allows skills: frontmatter" -v`
 Expected: FAIL with "must be in a /skills/ directory"
 
 ### Step 3: Update `validate_skill!` to remove path restriction
@@ -603,7 +603,7 @@ end
 
 ### Step 4: Run tests
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: PASS
 
 ### Step 5: Update `save_skill_files` to handle skills without `/skills/` in path
@@ -647,13 +647,13 @@ end
 
 ### Step 6: Run tests
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: PASS
 
 ### Step 7: Commit
 
 ```bash
-git add lib/ruly/services/dependency_resolver.rb lib/ruly/services/script_manager.rb lib/ruly/services/subagent_processor.rb spec/ruly/cli_recipe_explicit_keys_spec.rb
+git add lib/ruly/services/dependency_resolver.rb lib/ruly/services/script_manager.rb lib/ruly/services/subagent_processor.rb spec/ruly/cli_profile_explicit_keys_spec.rb
 git commit -m "feat: relax skill path validation, support skills from any directory"
 ```
 
@@ -693,15 +693,15 @@ end
 
 ### Step 3: Fix `cli_bin_files_spec.rb`
 
-Bins are no longer auto-detected by path. Update the recipe to use `bins:` key:
+Bins are no longer auto-detected by path. Update the profile to use `scripts:` key:
 
 ```ruby
-let(:recipe_content) do
+let(:profile_content) do
   <<~YAML
-    recipes:
+    profiles:
       test_with_bin:
-        description: "Test recipe with bin files"
-        bins:
+        description: "Test profile with bin files"
+        scripts:
           - rules/bin/
   YAML
 end
@@ -718,7 +718,7 @@ Expected: ALL PASS
 
 ```bash
 git add spec/ruly/cli_skills_frontmatter_spec.rb spec/cli_bin_files_spec.rb
-git commit -m "fix: update tests for explicit recipe keys (remove path auto-detection)"
+git commit -m "fix: update tests for explicit profile keys (remove path auto-detection)"
 ```
 
 ---
@@ -727,7 +727,7 @@ git commit -m "fix: update tests for explicit recipe keys (remove path auto-dete
 
 **Files:**
 - Modify: `lib/ruly/cli.rb:15` (MERGE_SKIP_KEYS)
-- Modify: `lib/ruly/services/display.rb:141-156` (collect_recipe_display_files)
+- Modify: `lib/ruly/services/display.rb:141-156` (collect_profile_display_files)
 
 ### Step 1: Update `MERGE_SKIP_KEYS`
 
@@ -737,12 +737,12 @@ In `lib/ruly/cli.rb`, update line 15:
 MERGE_SKIP_KEYS = %w[files sources skills commands bins].freeze
 ```
 
-### Step 2: Update `collect_recipe_display_files`
+### Step 2: Update `collect_profile_display_files`
 
 In `lib/ruly/services/display.rb`, update to include new keys:
 
 ```ruby
-def collect_recipe_display_files(config)
+def collect_profile_display_files(config)
   all_files = Array(config['files']).dup
   all_files.concat(Array(config['skills']))
   all_files.concat(Array(config['commands']))
@@ -777,25 +777,25 @@ git commit -m "feat: add skills/commands/bins to MERGE_SKIP_KEYS and display"
 
 ---
 
-## Task 6: Update recipes.yml to use explicit keys
+## Task 6: Update profiles.yml to use explicit keys
 
 **Files:**
-- Modify: `/Users/patrick/Projects/ruly/recipes.yml`
-- Modify: `/Users/patrick/.config/ruly/recipes.yml` (must match)
+- Modify: `/Users/patrick/Projects/ruly/profiles.yml`
+- Modify: `/Users/patrick/.config/ruly/profiles.yml` (must match)
 
-### Step 1: Audit current recipes for files that need moving
+### Step 1: Audit current profiles for files that need moving
 
-Scan all recipes for files currently in `files:` that have `/skills/`, `/commands/`, or `bin/` in their paths. These need to be moved to the appropriate explicit key.
+Scan all profiles for files currently in `files:` that have `/skills/`, `/commands/`, or `bin/` in their paths. These need to be moved to the appropriate explicit key.
 
 **Files with `/skills/` in path (currently auto-detected as skills):**
 
-Check each recipe — files like `rules/bug/skills/debugging.md` or `rules/github/pr/skills/pr-review-loop.md` that are in `files:`. These may be intentionally squashed (not skills) or may need moving.
+Check each profile — files like `rules/bug/skills/debugging.md` or `rules/github/pr/skills/pr-review-loop.md` that are in `files:`. These may be intentionally squashed (not skills) or may need moving.
 
 **Decision rule:** If a file was being used as a Claude Code skill (output as SKILL.md), move it to `skills:`. If it was meant to be squashed content (inlined into CLAUDE.local.md), leave it in `files:`.
 
-Looking at the recipes:
-- Most `/skills/` files in `files:` are intentionally squashed (e.g., `rules/bug/skills/debugging.md` appears in many recipes as squashed content)
-- Files in `core-engineer-skilled` recipe's `files:` that are explicitly labeled "Compiled Skills (loaded on demand via Skill tool)" should move to `skills:`
+Looking at the profiles:
+- Most `/skills/` files in `files:` are intentionally squashed (e.g., `rules/bug/skills/debugging.md` appears in many profiles as squashed content)
+- Files in `core-engineer-skilled` profile's `files:` that are explicitly labeled "Compiled Skills (loaded on demand via Skill tool)" should move to `skills:`
 
 **Files with `/commands/` in path (currently auto-detected as commands):**
 
@@ -803,11 +803,11 @@ All files with `/commands/` in path under `files:` are currently auto-detected a
 
 **Files with `bin/` in path:**
 
-No recipes currently list bin files directly in `files:` — they come through directory expansion. The `bins:` key handles this now.
+No profiles currently list bin files directly in `files:` — they come through directory expansion. The `scripts:` key handles this now.
 
-### Step 2: Update `recipes.yml`
+### Step 2: Update `profiles.yml`
 
-For each recipe, move files from `files:` to the appropriate key. Example for the `core` recipe:
+For each profile, move files from `files:` to the appropriate key. Example for the `core` profile:
 
 ```yaml
 core:
@@ -831,12 +831,12 @@ core:
   # ... rest unchanged
 ```
 
-**Important:** Apply this pattern to EVERY recipe in the file. Check each file path and move to the correct key.
+**Important:** Apply this pattern to EVERY profile in the file. Check each file path and move to the correct key.
 
-### Step 3: Copy updated recipes.yml to user config
+### Step 3: Copy updated profiles.yml to user config
 
 ```bash
-cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/.config/ruly/recipes.yml
+cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/.config/ruly/profiles.yml
 ```
 
 Wait — the user config may differ. Read both files and reconcile.
@@ -845,7 +845,7 @@ Wait — the user config may differ. Read both files and reconcile.
 
 ```bash
 cd $(mktemp -d)
-ruly squash --recipe core --dry-run --verbose
+ruly squash --profile core --dry-run --verbose
 ```
 
 Verify that:
@@ -856,8 +856,8 @@ Verify that:
 ### Step 5: Commit
 
 ```bash
-git add recipes.yml
-git commit -m "chore: migrate recipes.yml to explicit skills/commands/bins keys"
+git add profiles.yml
+git commit -m "chore: migrate profiles.yml to explicit skills/commands/bins keys"
 ```
 
 ---
@@ -865,11 +865,11 @@ git commit -m "chore: migrate recipes.yml to explicit skills/commands/bins keys"
 ## Task 7: Update the local directory processing to not auto-include bins
 
 **Files:**
-- Modify: `lib/ruly/services/recipe_loader.rb:267-287` (process_local_directory)
+- Modify: `lib/ruly/services/profile_loader.rb:267-287` (process_local_directory)
 
 ### Step 1: Remove auto-inclusion of `bin/*.sh` files from directory expansion
 
-Currently `process_local_directory` auto-includes `bin/**/*.sh` files. Since bins now need explicit `bins:` key, remove this:
+Currently `process_local_directory` auto-includes `bin/**/*.sh` files. Since bins now need explicit `scripts:` key, remove this:
 
 ```ruby
 def process_local_directory(directory_path, sources, gem_root:)
@@ -893,7 +893,7 @@ Expected: ALL PASS (bin tests already updated in Task 4)
 ### Step 3: Commit
 
 ```bash
-git add lib/ruly/services/recipe_loader.rb
+git add lib/ruly/services/profile_loader.rb
 git commit -m "feat: remove auto-inclusion of bin/*.sh from directory expansion"
 ```
 
@@ -906,7 +906,7 @@ git commit -m "feat: remove auto-inclusion of bin/*.sh from directory expansion"
 
 ### Step 1: Update command path calculation for non-`/commands/` paths
 
-Currently `get_command_relative_path` assumes the file path contains `/commands/`. For files specified via the recipe `commands:` key, the path might not contain `/commands/`. Update to handle this:
+Currently `get_command_relative_path` assumes the file path contains `/commands/`. For files specified via the profile `commands:` key, the path might not contain `/commands/`. Update to handle this:
 
 ```ruby
 def get_command_relative_path(file_path, omit_prefix = nil)
@@ -914,7 +914,7 @@ def get_command_relative_path(file_path, omit_prefix = nil)
     # existing logic unchanged
     # ...
   else
-    # For files from recipe commands: key, use basename
+    # For files from profile commands: key, use basename
     File.basename(file_path)
   end
 end
@@ -924,7 +924,7 @@ This already works as the existing fallback (line 322: `File.basename(file_path)
 
 ### Step 2: Run tests
 
-Run: `bundle exec rspec spec/ruly/cli_recipe_explicit_keys_spec.rb -v`
+Run: `bundle exec rspec spec/ruly/cli_profile_explicit_keys_spec.rb -v`
 Expected: PASS
 
 ### Step 3: Commit (if changes needed)
@@ -943,11 +943,11 @@ git commit -m "fix: handle command paths without /commands/ directory"
 Run: `bundle exec rspec spec/ -v`
 Expected: ALL PASS
 
-### Step 2: Test end-to-end with a real recipe
+### Step 2: Test end-to-end with a real profile
 
 ```bash
 cd $(mktemp -d)
-RULY_HOME=/Users/patrick/Projects/ruly ruly squash --recipe core --verbose
+RULY_HOME=/Users/patrick/Projects/ruly ruly squash --profile core --verbose
 ```
 
 Verify:
@@ -966,12 +966,12 @@ cd /Users/patrick/Projects/ruly && bundle exec rake install
 
 ```bash
 git add -A
-git commit -m "feat: explicit recipe keys for skills, commands, and bins
+git commit -m "feat: explicit profile keys for skills, commands, and bins
 
-Replaces path-based auto-inference with explicit recipe keys:
+Replaces path-based auto-inference with explicit profile keys:
 - skills: → .claude/skills/{name}/SKILL.md
 - commands: → .claude/commands/{name}.md
-- bins: → .ruly/bin/{name}.sh
+- scripts: → .claude/scripts/{name}.sh
 
 Files in 'files:' are always squashed into main output regardless of path.
 Frontmatter 'skills:' references still work (already explicit, not auto-inferred).

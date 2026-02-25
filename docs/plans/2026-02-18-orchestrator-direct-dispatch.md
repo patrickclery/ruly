@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Eliminate the double-dispatch pattern (orchestrator → core → core_engineer) by having the orchestrator dispatch directly to specialized subagents, while keeping `core` unchanged as a standalone recipe.
+**Goal:** Eliminate the double-dispatch pattern (orchestrator → core → core_engineer) by having the orchestrator dispatch directly to specialized subagents, while keeping `core` unchanged as a standalone profile.
 
 **Architecture:** Currently, `orchestrator` dispatches to `core`, which is itself a dispatcher that routes to 11 subagents. This means backend work goes through two dispatch layers. The fix: promote all of `core`'s dispatch rules and subagents into `orchestrator` directly, so `orchestrator` routes to `core_engineer`, `core_debugger`, etc. without the intermediate `core` layer. `core` remains unchanged for standalone backend-only use.
 
-**Tech Stack:** Ruly recipe YAML configuration, markdown dispatch rules
+**Tech Stack:** Ruly profile YAML configuration, markdown dispatch rules
 
 ---
 
@@ -42,7 +42,7 @@ TARGET:
                → context_fetcher (direct)
 ```
 
-The `core` recipe stays exactly as-is for standalone use (`ruly squash --recipe core`).
+The `core` profile stays exactly as-is for standalone use (`ruly squash --profile core`).
 
 ---
 
@@ -128,15 +128,15 @@ git commit -m "refactor: update orchestrator dispatch to route directly to speci
 
 ---
 
-### Task 2: Update orchestrator recipe in recipes.yml
+### Task 2: Update orchestrator profile in profiles.yml
 
 **Files:**
-- Modify: `recipes.yml` (lines 389-401)
-- Modify: `~/.config/ruly/recipes.yml` (same section — must stay identical)
+- Modify: `profiles.yml` (lines 389-401)
+- Modify: `~/.config/ruly/profiles.yml` (same section — must stay identical)
 
-**Step 1: Read the current orchestrator recipe definition**
+**Step 1: Read the current orchestrator profile definition**
 
-Current (lines 389-401 of recipes.yml):
+Current (lines 389-401 of profiles.yml):
 ```yaml
 orchestrator:
   description: "WorkAxle multi-service dispatcher - routes to core and frontend subagents"
@@ -144,25 +144,25 @@ orchestrator:
     - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
   subagents:
     - name: core
-      recipe: core
+      profile: core
     - name: frontend
-      recipe: frontend
+      profile: frontend
     - name: qa
-      recipe: qa
+      profile: qa
     - name: comms
-      recipe: comms
+      profile: comms
 ```
 
-**Step 2: Replace the orchestrator recipe with expanded version**
+**Step 2: Replace the orchestrator profile with expanded version**
 
-The new recipe should include:
+The new profile should include:
 1. The updated dispatch.md (already there)
-2. WorkAxle core essentials (for context, same as core recipe lines 17-24)
-3. All dispatch rules from core recipe (lines 26-36) — the `use-*.md` files
-4. PR operations from core recipe (lines 38-41)
-5. Git skills from core recipe (line 43)
-6. Context fetching from core recipe (lines 45-46)
-7. All subagents from core recipe (lines 48-71) PLUS frontend and qa
+2. WorkAxle core essentials (for context, same as core profile lines 17-24)
+3. All dispatch rules from core profile (lines 26-36) — the `use-*.md` files
+4. PR operations from core profile (lines 38-41)
+5. Git skills from core profile (line 43)
+6. Context fetching from core profile (lines 45-46)
+7. All subagents from core profile (lines 48-71) PLUS frontend and qa
 
 Replace lines 389-401 with:
 
@@ -208,48 +208,48 @@ Replace lines 389-401 with:
     subagents:
       # === Backend Subagents (promoted from core) ===
       - name: core_debugger
-        recipe: core-debugger
+        profile: core-debugger
       - name: core_engineer
-        recipe: core-engineer
+        profile: core-engineer
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
       - name: core_architect
-        recipe: core-architect
+        profile: core-architect
       # === Frontend Subagent ===
       - name: frontend
-        recipe: frontend
+        profile: frontend
       # === Cross-Cutting Subagents (promoted from core) ===
       - name: context_fetcher
-        recipe: context-fetcher
+        profile: context-fetcher
       - name: comms
-        recipe: comms
+        profile: comms
       - name: merger
-        recipe: merger
+        profile: merger
       - name: dashboard
-        recipe: dashboard
+        profile: dashboard
       - name: pr_readiness
-        recipe: pr-readiness
+        profile: pr-readiness
       - name: reviewer
-        recipe: reviewer
+        profile: reviewer
       - name: pr_review_loop
-        recipe: pr-review-loop
+        profile: pr-review-loop
       - name: qa_tester
-        recipe: qa
+        profile: qa
 ```
 
-**Step 3: Apply the same change to `~/.config/ruly/recipes.yml`**
+**Step 3: Apply the same change to `~/.config/ruly/profiles.yml`**
 
 The two files must be identical (per CLAUDE.md: "they should be identical").
 
 **Step 4: Verify both files are identical**
 
-Run: `diff recipes.yml ~/.config/ruly/recipes.yml`
+Run: `diff profiles.yml ~/.config/ruly/profiles.yml`
 Expected: No output (files are identical)
 
 **Step 5: Commit**
 
 ```bash
-git add recipes.yml
+git add profiles.yml
 git commit -m "refactor: orchestrator dispatches directly to specialized subagents
 
 Promotes all core subagents (core_engineer, core_debugger, comms, merger, etc.)
@@ -261,11 +261,11 @@ dispatched to core which then dispatched to the actual workers."
 
 ### Task 3: Test the squashed output
 
-**Step 1: Create temp directory and squash the orchestrator recipe**
+**Step 1: Create temp directory and squash the orchestrator profile**
 
 Run:
 ```bash
-cd $(mktemp -d) && ruly squash --recipe orchestrator
+cd $(mktemp -d) && ruly squash --profile orchestrator
 ```
 
 Expected: Squashed output containing:
@@ -281,11 +281,11 @@ Run: `grep -c 'subagent_type.*core"' CLAUDE.local.md` (or whatever the output fi
 
 The word "core" should only appear in `core_engineer`, `core_debugger`, `core_debugging`, `core_architect` — NOT as a standalone `core` subagent.
 
-**Step 3: Verify the `core` recipe still squashes correctly (unchanged)**
+**Step 3: Verify the `core` profile still squashes correctly (unchanged)**
 
 Run:
 ```bash
-cd $(mktemp -d) && ruly squash --recipe core
+cd $(mktemp -d) && ruly squash --profile core
 ```
 
 Expected: Same output as before — all 11 subagents, all dispatch rules, all PR commands.
@@ -313,13 +313,13 @@ This ensures the installed `ruly` binary at `/Users/patrick/.local/share/mise/in
 | File | Change |
 |------|--------|
 | `rules/workaxle/orchestrator/dispatch.md` | Rewritten with direct routing to all specialized subagents |
-| `recipes.yml` | Orchestrator recipe expanded with dispatch rules, PR ops, and all subagents |
-| `~/.config/ruly/recipes.yml` | Mirror of recipes.yml |
+| `profiles.yml` | Orchestrator profile expanded with dispatch rules, PR ops, and all subagents |
+| `~/.config/ruly/profiles.yml` | Mirror of profiles.yml |
 
 | What stays the same | Why |
 |---------------------|-----|
-| `core` recipe | Still works standalone for backend-only sessions |
-| All subagent recipes | No changes to core-engineer, core-debugger, comms, etc. |
-| All dispatch rule files | Reused by both core and orchestrator recipes |
+| `core` profile | Still works standalone for backend-only sessions |
+| All subagent profiles | No changes to core-engineer, core-debugger, comms, etc. |
+| All dispatch rule files | Reused by both core and orchestrator profiles |
 
-**Key insight:** The `use-*.md` dispatch rule files are shared — both `core` and `orchestrator` include them. This is DRY: the rules are authored once and consumed by both dispatcher recipes.
+**Key insight:** The `use-*.md` dispatch rule files are shared — both `core` and `orchestrator` include them. This is DRY: the rules are authored once and consumed by both dispatcher profiles.

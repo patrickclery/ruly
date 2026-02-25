@@ -43,17 +43,17 @@ RSpec.describe Ruly::CLI do
     }
   end
 
-  # Sample recipes configuration
-  let(:recipes_config) do
+  # Sample profiles configuration
+  let(:profiles_config) do
     {
-      'recipes' => {
-        'test-recipe' => {
-          'description' => 'Test recipe with MCP servers',
+      'profiles' => {
+        'test-profile' => {
+          'description' => 'Test profile with MCP servers',
           'files' => [],
           'mcp_servers' => %w[atlassian teams]
         },
-        'test-recipe-no-mcp' => {
-          'description' => 'Test recipe without MCP servers',
+        'test-profile-no-mcp' => {
+          'description' => 'Test profile without MCP servers',
           'files' => []
         }
       }
@@ -70,8 +70,8 @@ RSpec.describe Ruly::CLI do
       FileUtils.mkdir_p(mcp_config_dir)
       File.write(mcp_config_file, JSON.pretty_generate(mcp_servers_config))
 
-      # Create recipes.yml
-      File.write(File.join(test_dir, 'recipes.yml'), recipes_config.to_yaml)
+      # Create profiles.yml
+      File.write(File.join(test_dir, 'profiles.yml'), profiles_config.to_yaml)
 
       Dir.chdir(test_dir)
       example.run
@@ -146,33 +146,33 @@ RSpec.describe Ruly::CLI do
       end
     end
 
-    context 'with --recipe option' do
+    context 'with --profile option' do
       before do
-        allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+        allow(cli).to receive(:profiles_file).and_return(File.join(test_dir, 'profiles.yml'))
       end
 
-      it 'loads MCP servers from recipe' do
-        cli.options = {recipe: 'test-recipe'}
+      it 'loads MCP servers from profile' do
+        cli.options = {profile: 'test-profile'}
         cli.mcp
 
         content = JSON.parse(File.read('.mcp.json'))
         expect(content['mcpServers'].keys).to contain_exactly('atlassian', 'teams')
       end
 
-      it 'warns when recipe has no mcp_servers' do
-        cli.options = {recipe: 'test-recipe-no-mcp'}
+      it 'warns when profile has no mcp_servers' do
+        cli.options = {profile: 'test-profile-no-mcp'}
         expect { cli.mcp }.to output(/no MCP servers/i).to_stdout
       end
 
-      it 'warns when recipe is not found' do
-        cli.options = {recipe: 'nonexistent-recipe'}
+      it 'warns when profile is not found' do
+        cli.options = {profile: 'nonexistent-profile'}
         expect { cli.mcp }.to output(/not found/i).to_stdout
       end
     end
 
-    context 'with --recipe and --append options combined' do
+    context 'with --profile and --append options combined' do
       before do
-        allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+        allow(cli).to receive(:profiles_file).and_return(File.join(test_dir, 'profiles.yml'))
 
         existing = {
           'mcpServers' => {
@@ -182,8 +182,8 @@ RSpec.describe Ruly::CLI do
         File.write('.mcp.json', JSON.pretty_generate(existing))
       end
 
-      it 'appends recipe servers to existing .mcp.json' do
-        cli.options = {append: true, recipe: 'test-recipe'}
+      it 'appends profile servers to existing .mcp.json' do
+        cli.options = {append: true, profile: 'test-profile'}
         cli.mcp
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -191,13 +191,13 @@ RSpec.describe Ruly::CLI do
       end
     end
 
-    context 'with servers and --recipe combined' do
+    context 'with servers and --profile combined' do
       before do
-        allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+        allow(cli).to receive(:profiles_file).and_return(File.join(test_dir, 'profiles.yml'))
       end
 
-      it 'combines explicit servers with recipe servers' do
-        cli.options = {recipe: 'test-recipe'}
+      it 'combines explicit servers with profile servers' do
+        cli.options = {profile: 'test-profile'}
         cli.mcp('playwright')
 
         content = JSON.parse(File.read('.mcp.json'))
@@ -205,7 +205,7 @@ RSpec.describe Ruly::CLI do
       end
     end
 
-    context 'with no arguments and no recipe' do
+    context 'with no arguments and no profile' do
       it 'shows error message' do
         cli.options = {}
         expect { cli.mcp }.to output(/no servers specified/i).to_stdout
@@ -224,9 +224,9 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#collect_all_mcp_servers' do
-    let(:recipes_with_subagents) do
+    let(:profiles_with_subagents) do
       {
-        'recipes' => {
+        'profiles' => {
           'child-a' => {
             'description' => 'Child A with MCP',
             'files' => [],
@@ -237,7 +237,7 @@ RSpec.describe Ruly::CLI do
             'files' => [],
             'mcp_servers' => ['atlassian'],
             'subagents' => [
-              {'name' => 'grandchild', 'recipe' => 'grandchild'}
+              {'name' => 'grandchild', 'profile' => 'grandchild'}
             ]
           },
           'grandchild' => {
@@ -246,12 +246,12 @@ RSpec.describe Ruly::CLI do
             'mcp_servers' => ['Ref']
           },
           'parent' => {
-            'description' => 'Parent recipe',
+            'description' => 'Parent profile',
             'files' => [],
             'mcp_servers' => ['playwright'],
             'subagents' => [
-              {'name' => 'child_a', 'recipe' => 'child-a'},
-              {'name' => 'child_b', 'recipe' => 'child-b'}
+              {'name' => 'child_a', 'profile' => 'child-a'},
+              {'name' => 'child_b', 'profile' => 'child-b'}
             ]
           }
         }
@@ -259,100 +259,100 @@ RSpec.describe Ruly::CLI do
     end
 
     before do
-      File.write(File.join(test_dir, 'recipes.yml'), recipes_with_subagents.to_yaml)
-      allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+      File.write(File.join(test_dir, 'profiles.yml'), profiles_with_subagents.to_yaml)
+      allow(cli).to receive(:profiles_file).and_return(File.join(test_dir, 'profiles.yml'))
     end
 
     it 'collects MCP servers from direct subagents' do
-      recipe_config = recipes_with_subagents['recipes']['parent']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = profiles_with_subagents['profiles']['parent']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to include('teams', 'mattermost', 'atlassian')
     end
 
     it 'collects MCP servers from nested subagents (grandchildren)' do
-      recipe_config = recipes_with_subagents['recipes']['parent']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = profiles_with_subagents['profiles']['parent']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to include('Ref')
     end
 
     it 'includes parent MCP servers unchanged' do
-      recipe_config = recipes_with_subagents['recipes']['parent']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = profiles_with_subagents['profiles']['parent']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to include('playwright')
     end
 
     it 'deduplicates MCP servers' do
-      recipe_config = recipes_with_subagents['recipes']['parent']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = profiles_with_subagents['profiles']['parent']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to eq(result.uniq)
     end
 
     it 'returns only own servers when no subagents' do
-      recipe_config = recipes_with_subagents['recipes']['child-a']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = profiles_with_subagents['profiles']['child-a']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to eq(%w[teams mattermost])
     end
 
     it 'handles circular references without infinite loop' do
-      circular_recipes = {
-        'recipes' => {
-          'recipe-a' => {
-            'description' => 'Recipe A',
+      circular_profiles = {
+        'profiles' => {
+          'profile-a' => {
+            'description' => 'Profile A',
             'files' => [],
             'mcp_servers' => ['teams'],
-            'subagents' => [{'name' => 'b', 'recipe' => 'recipe-b'}]
+            'subagents' => [{'name' => 'b', 'profile' => 'profile-b'}]
           },
-          'recipe-b' => {
-            'description' => 'Recipe B',
+          'profile-b' => {
+            'description' => 'Profile B',
             'files' => [],
             'mcp_servers' => ['mattermost'],
-            'subagents' => [{'name' => 'a', 'recipe' => 'recipe-a'}]
+            'subagents' => [{'name' => 'a', 'profile' => 'profile-a'}]
           }
         }
       }
-      File.write(File.join(test_dir, 'recipes.yml'), circular_recipes.to_yaml)
+      File.write(File.join(test_dir, 'profiles.yml'), circular_profiles.to_yaml)
 
-      recipe_config = circular_recipes['recipes']['recipe-a']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = circular_profiles['profiles']['profile-a']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to contain_exactly('teams', 'mattermost')
     end
 
-    it 'handles missing subagent recipes gracefully' do
-      missing_recipes = {
-        'recipes' => {
+    it 'handles missing subagent profiles gracefully' do
+      missing_profiles = {
+        'profiles' => {
           'parent' => {
             'description' => 'Parent',
             'files' => [],
             'mcp_servers' => ['teams'],
-            'subagents' => [{'name' => 'missing', 'recipe' => 'nonexistent'}]
+            'subagents' => [{'name' => 'missing', 'profile' => 'nonexistent'}]
           }
         }
       }
-      File.write(File.join(test_dir, 'recipes.yml'), missing_recipes.to_yaml)
+      File.write(File.join(test_dir, 'profiles.yml'), missing_profiles.to_yaml)
 
-      recipe_config = missing_recipes['recipes']['parent']
-      result = cli.send(:collect_all_mcp_servers, recipe_config)
+      profile_config = missing_profiles['profiles']['parent']
+      result = cli.send(:collect_all_mcp_servers, profile_config)
       expect(result).to eq(['teams'])
     end
   end
 
   describe 'squash MCP propagation' do
-    let(:propagation_recipes) do
+    let(:propagation_profiles) do
       {
-        'recipes' => {
+        'profiles' => {
           'comms-sub' => {
             'description' => 'Comms subagent with MCP servers',
             'files' => [],
             'mcp_servers' => %w[teams mattermost],
             'subagents' => [
-              {'name' => 'teams_dm', 'recipe' => 'teams-dm-sub'}
+              {'name' => 'teams_dm', 'profile' => 'teams-dm-sub'}
             ]
           },
           'parent-no-mcp' => {
             'description' => 'Parent with no MCP but subagents that have MCP',
             'files' => [],
             'subagents' => [
-              {'name' => 'comms', 'recipe' => 'comms-sub'}
+              {'name' => 'comms', 'profile' => 'comms-sub'}
             ]
           },
           'teams-dm-sub' => {
@@ -365,26 +365,26 @@ RSpec.describe Ruly::CLI do
     end
 
     before do
-      File.write(File.join(test_dir, 'recipes.yml'), propagation_recipes.to_yaml)
-      allow(cli).to receive(:recipes_file).and_return(File.join(test_dir, 'recipes.yml'))
+      File.write(File.join(test_dir, 'profiles.yml'), propagation_profiles.to_yaml)
+      allow(cli).to receive(:profiles_file).and_return(File.join(test_dir, 'profiles.yml'))
     end
 
     it 'propagates subagent MCP servers into parent .mcp.json during squash' do
-      recipe_config = propagation_recipes['recipes']['parent-no-mcp']
-      all_servers = cli.send(:collect_all_mcp_servers, recipe_config)
-      recipe_config_with_mcp = recipe_config.merge('mcp_servers' => all_servers)
-      cli.send(:update_mcp_settings, recipe_config_with_mcp)
+      profile_config = propagation_profiles['profiles']['parent-no-mcp']
+      all_servers = cli.send(:collect_all_mcp_servers, profile_config)
+      profile_config_with_mcp = profile_config.merge('mcp_servers' => all_servers)
+      cli.send(:update_mcp_settings, profile_config_with_mcp)
 
       content = JSON.parse(File.read('.mcp.json'))
       expect(content['mcpServers'].keys).to contain_exactly('teams', 'mattermost')
     end
 
     it 'merges parent MCP servers with subagent MCP servers' do
-      recipe_config = propagation_recipes['recipes']['parent-no-mcp'].dup
-      recipe_config['mcp_servers'] = ['playwright']
-      all_servers = cli.send(:collect_all_mcp_servers, recipe_config)
-      recipe_config_with_mcp = recipe_config.merge('mcp_servers' => all_servers)
-      cli.send(:update_mcp_settings, recipe_config_with_mcp)
+      profile_config = propagation_profiles['profiles']['parent-no-mcp'].dup
+      profile_config['mcp_servers'] = ['playwright']
+      all_servers = cli.send(:collect_all_mcp_servers, profile_config)
+      profile_config_with_mcp = profile_config.merge('mcp_servers' => all_servers)
+      cli.send(:update_mcp_settings, profile_config_with_mcp)
 
       content = JSON.parse(File.read('.mcp.json'))
       expect(content['mcpServers'].keys).to contain_exactly('playwright', 'teams', 'mattermost')

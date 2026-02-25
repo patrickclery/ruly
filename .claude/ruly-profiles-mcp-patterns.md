@@ -1,14 +1,14 @@
-# Ruly Recipes and MCP Server Configuration Patterns
+# Ruly Profiles and MCP Server Configuration Patterns
 
 ## Description
 
-This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that achieved 85% token reduction through conditional documentation loading.
+This document captures essential patterns and rules for configuring Ruly profiles with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that achieved 85% token reduction through conditional documentation loading.
 
 ## Key Patterns
 
 ### 1. Path Specification Rules
 
-**Critical Rule**: Ruly does NOT support glob patterns or wildcards in recipe paths.
+**Critical Rule**: Ruly does NOT support glob patterns or wildcards in profile paths.
 
 ```yaml
 # ❌ WRONG - Glob patterns don't work
@@ -68,31 +68,31 @@ Assign models to subagents for cost/speed optimization:
 ```yaml
 subagents:
   - name: context_grabber
-    recipe: context-grabber
+    profile: context-grabber
     model: haiku          # Lightweight fetch tasks
   - name: core_engineer
-    recipe: core-engineer
+    profile: core-engineer
     model: opus           # Complex implementation
   - name: comms
-    recipe: comms
-    # Omitted — inherits from recipe 'model' or defaults to 'inherit'
+    profile: comms
+    # Omitted — inherits from profile 'model' or defaults to 'inherit'
 ```
 
-Recipe-level default:
+Profile-level default:
 ```yaml
 core:
   model: sonnet           # All subagents default to sonnet
   subagents:
     - name: fast_agent
-      recipe: fast
+      profile: fast
       model: haiku        # Override: haiku beats sonnet here
 ```
 
-Inheritance chain: subagent `model` > recipe `model` > `inherit`
+Inheritance chain: subagent `model` > profile `model` > `inherit`
 
 ## Examples
 
-### Complete WorkAxle Recipe Example
+### Complete WorkAxle Profile Example
 
 ```yaml
 workaxle-bug:
@@ -109,10 +109,10 @@ workaxle-bug:
     # Note: Jira uses CLI (jira issue view, jira issue move, etc.)
 ```
 
-### Task-Specific Recipes
+### Task-Specific Profiles
 
 ```yaml
-# Final Review Stage Recipe (with Confluence access)
+# Final Review Stage Profile (with Confluence access)
 workaxle-review:
   description: "WorkAxle final review and QA stage"
   files:
@@ -128,29 +128,29 @@ workaxle-review:
 
 ## Best Practices
 
-### 1. Recipe Organization
+### 1. Profile Organization
 
-- **Create task-specific recipes** rather than loading everything
+- **Create task-specific profiles** rather than loading everything
 - **Use `workaxle-core`** as the base with minimal always-loaded files
-- **Extend with focused recipes** for specific workflows (bug, testing, PR, etc.)
+- **Extend with focused profiles** for specific workflows (bug, testing, PR, etc.)
 
 ### 2. MCP Server Assignment
 
-- **Minimal servers per recipe** - Only include what's actually needed
+- **Minimal servers per profile** - Only include what's actually needed
 - **Document the purpose** - Add comments explaining why each server is included
 - **Consider task flow** - Think about the actual workflow when selecting servers
 
 ### 3. File Synchronization
 
-**Critical**: Always update BOTH recipe files when making changes:
+**Critical**: Always update BOTH profile files when making changes:
 
-1. `/Users/patrick/Projects/ruly/recipes.yml` - Project recipes
-2. `/Users/patrick/.config/ruly/recipes.yml` - User config
+1. `/Users/patrick/Projects/ruly/profiles.yml` - Project profiles
+2. `/Users/patrick/.config/ruly/profiles.yml` - User config
 
 ### 4. Token Optimization
 
 - **Only `core.md` should have `alwaysApply: true`** in the actual rule files
-- **Use recipes to conditionally load** documentation based on current task
+- **Use profiles to conditionally load** documentation based on current task
 - **Achieved 85% token reduction** through this approach
 
 ## Anti-patterns
@@ -194,11 +194,11 @@ workaxle-bug:
 
 ## Related Files
 
-### Recipe Configuration Files
+### Profile Configuration Files
 
-- `/Users/patrick/Projects/ruly/recipes.yml` - Main project recipes
-- `/Users/patrick/.config/ruly/recipes.yml` - User configuration (must match)
-- `/Users/patrick/Projects/ruly/rules/workaxle/recipe-config.yml` - WorkAxle recipe definitions
+- `/Users/patrick/Projects/ruly/profiles.yml` - Main project profiles
+- `/Users/patrick/.config/ruly/profiles.yml` - User configuration (must match)
+- `/Users/patrick/Projects/ruly/rules/workaxle/profile-config.yml` - WorkAxle profile definitions
 
 ### Documentation Files
 
@@ -237,15 +237,15 @@ post-jira-comment.sh WA-1234 "markdown with [@Name](mention:ID)"
 ## Usage Commands
 
 ```bash
-# Import a specific recipe
-ruly import --recipe workaxle-bug
+# Import a specific profile
+ruly import --profile workaxle-bug
 
-# Squash a recipe for testing (run from temp directory)
+# Squash a profile for testing (run from temp directory)
 cd $(mktemp -d)
-ruly squash --recipe workaxle-testing
+ruly squash --profile workaxle-testing
 
-# List available recipes
-ruly recipes
+# List available profiles
+ruly list-profiles
 
 # Update installed ruly after changes
 mise install ruby
@@ -256,12 +256,12 @@ mise install ruby
 - **85% token reduction** from ~15,000 tokens to ~2,000 tokens base usage
 - **Conditional loading** based on file patterns and task profiles
 - **MCP server integration** for automated tool availability
-- **Task-specific recipes** for focused workflows
+- **Task-specific profiles** for focused workflows
 
 ## Important Notes
 
-1. When updating recipes, always update both the project and user config files
-2. Test recipe changes using `ruly squash` in a temporary directory
+1. When updating profiles, always update both the project and user config files
+2. Test profile changes using `ruly squash` in a temporary directory
 3. Update the installed ruly binary after making changes to the gem
-4. WorkAxle recipes follow a naming convention: `workaxle-[task]` (e.g., workaxle-bug, workaxle-testing)
-5. The `workaxle-full` recipe exists for rare cases when complete documentation is needed
+4. WorkAxle profiles follow a naming convention: `workaxle-[task]` (e.g., workaxle-bug, workaxle-testing)
+5. The `workaxle-full` profile exists for rare cases when complete documentation is needed

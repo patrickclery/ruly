@@ -8,11 +8,11 @@ Replace Ruly's cooking-inspired terminology with people/role-oriented language t
 
 | Current | New | Scope |
 |---------|-----|-------|
-| recipe | **profile** | YAML keys, CLI flags, Ruby classes, docs |
+| profile | **profile** | YAML keys, CLI flags, Ruby classes, docs |
 | plan | **tier** | YAML key, Ruby code, contexts.yml |
 | bins | **scripts** | YAML key, Ruby code, output path |
-| `recipes.yml` | **`profiles.yml`** | Config files (project + `~/.config/ruly/`) |
-| `.ruly/bin/` | **`.claude/scripts/`** | Output directory |
+| `profiles.yml` | **`profiles.yml`** | Config files (project + `~/.config/ruly/`) |
+| `.claude/scripts/` | **`.claude/scripts/`** | Output directory |
 | `.ruly/` | **removed** | Directory no longer needed |
 
 ### Unchanged Terms
@@ -23,12 +23,12 @@ squash, dispatches, essential, skills, commands, subagents, MCP servers, hooks, 
 
 | Current | New |
 |---------|-----|
-| `ruly squash --recipe X` | `ruly squash --profile X` |
-| `ruly list-recipes` | `ruly list-profiles` |
-| `ruly analyze --recipe X` | `ruly analyze --profile X` |
+| `ruly squash --profile X` | `ruly squash --profile X` |
+| `ruly list-profiles` | `ruly list-profiles` |
+| `ruly analyze --profile X` | `ruly analyze --profile X` |
 | `ruly import RECIPE` | `ruly import PROFILE` |
 | `ruly stats [RECIPE]` | `ruly stats [PROFILE]` |
-| `ruly clean --recipe X` | `ruly clean --profile X` |
+| `ruly clean --profile X` | `ruly clean --profile X` |
 
 The `-r` shorthand flag stays (works as shorthand for `--profile`).
 
@@ -82,16 +82,16 @@ profiles:
 
 | Current | New |
 |---------|-----|
-| `services/recipe_loader.rb` | `services/profile_loader.rb` |
-| `Services::RecipeLoader` | `Services::ProfileLoader` |
-| `load_recipe_sources()` | `load_profile_sources()` |
-| All `recipe` variables/params | `profile` |
+| `services/profile_loader.rb` | `services/profile_loader.rb` |
+| `Services::ProfileLoader` | `Services::ProfileLoader` |
+| `load_profile_sources()` | `load_profile_sources()` |
+| All `profile` variables/params | `profile` |
 
 ### Output Path Changes
 
 | Current | New |
 |---------|-----|
-| `.ruly/bin/{script}.sh` | `.claude/scripts/{script}.sh` |
+| `.claude/scripts/{script}.sh` | `.claude/scripts/{script}.sh` |
 
 ### contexts.yml
 
@@ -101,23 +101,23 @@ profiles:
 
 ### Config Files
 
-1. `recipes.yml` → `profiles.yml` (project root)
-2. `~/.config/ruly/recipes.yml` → `~/.config/ruly/profiles.yml`
+1. `profiles.yml` → `profiles.yml` (project root)
+2. `~/.config/ruly/profiles.yml` → `~/.config/ruly/profiles.yml`
 3. `~/.config/ruly/mcp.json` (unchanged)
 
 ### Documentation
 
-1. `CLAUDE.md` — update all references from recipes.yml to profiles.yml, recipe to profile
-2. `.claude/ruly-recipes-mcp-patterns.md` — rename/rewrite for profiles terminology
+1. `CLAUDE.md` — update all references from profiles.yml to profiles.yml, profile to profile
+2. `.claude/ruly-profiles-mcp-patterns.md` — rename/rewrite for profiles terminology
 3. `README.md` — update all terminology
 4. Memory files — update MEMORY.md references
 
 ### Ruby Source Files
 
-Every file in `lib/ruly/` that references recipe, plan (as tier), or bins:
+Every file in `lib/ruly/` that references profile, plan (as tier), or scripts:
 
 - `lib/ruly/cli.rb`
-- `lib/ruly/services/recipe_loader.rb` → `profile_loader.rb`
+- `lib/ruly/services/profile_loader.rb` → `profile_loader.rb`
 - `lib/ruly/services/source_processor.rb`
 - `lib/ruly/services/subagent_processor.rb`
 - `lib/ruly/services/script_manager.rb`
@@ -129,11 +129,11 @@ Every file in `lib/ruly/` that references recipe, plan (as tier), or bins:
 
 ### Rules Source Files
 
-Any rule files with `recipes:` frontmatter → `profiles:` frontmatter.
+Any rule files with `profiles:` frontmatter → `profiles:` frontmatter.
 
 ## Migration Approach
 
-**Clean break.** Major version bump. No backward compatibility aliases or deprecation warnings. Old `recipes.yml` files will fail with a clear error message suggesting the rename.
+**Clean break.** Major version bump. No backward compatibility aliases or deprecation warnings. Old `profiles.yml` files will fail with a clear error message suggesting the rename.
 
 ## Output Directory Structure (After)
 
@@ -144,7 +144,7 @@ project/
 ├── .claude/
 │   ├── agents/{name}.md
 │   ├── commands/{path}.md
-│   ├── scripts/{script}.sh    # NEW location (was .ruly/bin/)
+│   ├── scripts/{script}.sh    # NEW location (was .claude/scripts/)
 │   └── skills/{name}/SKILL.md
-└── profiles.yml                # NEW name (was recipes.yml)
+└── profiles.yml                # NEW name (was profiles.yml)
 ```

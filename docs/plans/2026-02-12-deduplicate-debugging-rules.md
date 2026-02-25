@@ -4,9 +4,9 @@
 
 **Goal:** Remove generic debugging methodology from `rules/bug/` files that duplicates `superpowers:systematic-debugging`, keeping only WorkAxle-specific domain patterns.
 
-**Architecture:** The `bug-diagnose` recipe already loads `superpowers:systematic-debugging/SKILL.md`. The `rules/bug/` files re-state the same generic methodology (root cause before fix, read-only investigation, phased analysis). We'll strip redundant methodology, consolidate domain-specific patterns into fewer files, and update all recipe references.
+**Architecture:** The `bug-diagnose` profile already loads `superpowers:systematic-debugging/SKILL.md`. The `rules/bug/` files re-state the same generic methodology (root cause before fix, read-only investigation, phased analysis). We'll strip redundant methodology, consolidate domain-specific patterns into fewer files, and update all profile references.
 
-**Tech Stack:** Markdown rules, YAML recipe configs, Ruly CLI
+**Tech Stack:** Markdown rules, YAML profile configs, Ruly CLI
 
 ---
 
@@ -29,7 +29,7 @@
 | `bug-fix.md` | 435 | NONE (dispatch rule) |
 | `use-core-debugger.md` | 387 | NONE (dispatch rule) |
 | `bug-diagnose.md` | 383 | NONE (dispatch rule) |
-| `bug-investigation.md` | 241 | REDUNDANT (profile loader, recipe handles this) |
+| `bug-investigation.md` | 241 | REDUNDANT (profile loader, profile handles this) |
 | **TOTAL** | **11,966** | |
 
 ### What superpowers:systematic-debugging already covers
@@ -58,9 +58,9 @@
 - Destructive operations warning (just db-restore-remote, etc.)
 - Bug workflow: Jira/PR/QA/deployment phases (NOT the investigation phases)
 
-### Recipes affected
+### Profiles affected
 
-| Recipe | Bug files loaded | Notes |
+| Profile | Bug files loaded | Notes |
 |--------|-----------------|-------|
 | `core-debugger` | 9 files | Primary consumer |
 | `core-debugging` | 6 files | Tooling patterns |
@@ -92,9 +92,9 @@ Read these files to confirm the Jira/PR/QA workflow is already documented:
 
 If any unique WorkAxle-specific workflow content exists that isn't elsewhere, extract it into `rules/workaxle/core/debugging.md` before deleting.
 
-**Step 2: Remove from recipes**
+**Step 2: Remove from profiles**
 
-Remove `bug/bug-workflow.md` from these recipes in `recipes.yml`:
+Remove `bug/bug-workflow.md` from these profiles in `profiles.yml`:
 - `core-debugger` (line 72)
 
 **Step 3: Update requires**
@@ -111,7 +111,7 @@ git rm rules/bug/bug-workflow.md
 **Step 5: Commit**
 
 ```bash
-git add rules/bug/bug-workflow.md recipes.yml
+git add rules/bug/bug-workflow.md profiles.yml
 git commit -m "refactor: remove bug-workflow.md (covered by superpowers + comms/github rules)"
 ```
 
@@ -150,9 +150,9 @@ NEVER run without explicit user confirmation:
 | `just reset-remote`      | Reset with remote data            |
 ```
 
-**Step 3: Remove from recipes**
+**Step 3: Remove from profiles**
 
-Remove `bug/debugging.md` from these recipes in `recipes.yml`:
+Remove `bug/debugging.md` from these profiles in `profiles.yml`:
 - `core-debugger` (line 73)
 - `finalize` (lines 267-268 — listed TWICE, remove both)
 - `spike` (lines 415-416 — listed TWICE, remove both)
@@ -179,7 +179,7 @@ git rm rules/bug/debugging.md
 **Step 6: Commit**
 
 ```bash
-git add -A rules/bug/debugging.md rules/workaxle/core/debugging.md rules/bug/rspec-debugging-guide.md rules/bug/commands/fix.md rules/bug/commands/grpc.md recipes.yml
+git add -A rules/bug/debugging.md rules/workaxle/core/debugging.md rules/bug/rspec-debugging-guide.md rules/bug/commands/fix.md rules/bug/commands/grpc.md profiles.yml
 git commit -m "refactor: remove bug/debugging.md, merge destructive ops warning into core/debugging.md"
 ```
 
@@ -325,14 +325,14 @@ git commit -m "refactor: simplify fix command (defer TDD to superpowers)"
 
 ## Task 6: Delete `workaxle/profiles/bug-investigation.md` (241 tokens saved)
 
-This is a profile loader that just lists what modules to load. The recipe system (`core-debugger` recipe) already handles this — the profile is redundant.
+This is a profile loader that just lists what modules to load. The profile system (`core-debugger` profile) already handles this — the profile is redundant.
 
 **Files:**
 - Delete: `rules/workaxle/profiles/bug-investigation.md`
 
-**Step 1: Remove from recipes**
+**Step 1: Remove from profiles**
 
-Remove from these recipes in `recipes.yml`:
+Remove from these profiles in `profiles.yml`:
 - `core-debugger` (line 71)
 - `spike` (line 411)
 
@@ -345,13 +345,13 @@ git rm rules/workaxle/profiles/bug-investigation.md
 **Step 3: Commit**
 
 ```bash
-git add rules/workaxle/profiles/bug-investigation.md recipes.yml
-git commit -m "refactor: remove bug-investigation profile (recipe handles loading)"
+git add rules/workaxle/profiles/bug-investigation.md profiles.yml
+git commit -m "refactor: remove bug-investigation profile (profile handles loading)"
 ```
 
 ---
 
-## Task 7: Consider merging `core-debugging` recipe into `core-debugger` (optional — removes one dispatch layer)
+## Task 7: Consider merging `core-debugging` profile into `core-debugger` (optional — removes one dispatch layer)
 
 Currently:
 ```
@@ -359,7 +359,7 @@ core → use-core-debugger → core_debugger (subagent)
 core → use-core-debugging → core_debugging (subagent)
 ```
 
-The `core-debugging` recipe provides debugging *tooling* patterns (how to use Sequel, how to inspect containers). The `core-debugger` recipe provides the bug *workflow*. But `core-debugger` already dispatches to `core_debugging` as a sub-subagent — this is 3 layers deep.
+The `core-debugging` profile provides debugging *tooling* patterns (how to use Sequel, how to inspect containers). The `core-debugger` profile provides the bug *workflow*. But `core-debugger` already dispatches to `core_debugging` as a sub-subagent — this is 3 layers deep.
 
 **Decision needed:** Should `core-debugging` files be merged into `core-debugger` to eliminate one dispatch layer?
 
@@ -370,25 +370,25 @@ The `core-debugging` recipe provides debugging *tooling* patterns (how to use Se
 
 **Arguments AGAINST merging:**
 - `core_debugging` is also dispatched from `core-engineer` and `bug-fix` (not just `core-debugger`)
-- Keeping it separate means any recipe can access debugging tooling without the full bug workflow
+- Keeping it separate means any profile can access debugging tooling without the full bug workflow
 - It's a reusable component
 
-**Recommendation:** KEEP separate for now. The reusability across 3+ recipes justifies the separate recipe. Revisit if token budget is still tight.
+**Recommendation:** KEEP separate for now. The reusability across 3+ profiles justifies the separate profile. Revisit if token budget is still tight.
 
 ---
 
-## Task 8: Update ALL recipe config files
+## Task 8: Update ALL profile config files
 
-Both recipe files must stay in sync.
+Both profile files must stay in sync.
 
 **Files:**
-- Modify: `/Users/patrick/Projects/ruly/recipes.yml`
-- Modify: `/Users/patrick/.config/ruly/recipes.yml`
-- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/recipes.yml`
+- Modify: `/Users/patrick/Projects/ruly/profiles.yml`
+- Modify: `/Users/patrick/.config/ruly/profiles.yml`
+- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/profiles.yml`
 
-**Step 1: Apply all recipe changes from Tasks 1-6**
+**Step 1: Apply all profile changes from Tasks 1-6**
 
-Summary of recipe changes:
+Summary of profile changes:
 - `core-debugger`: Remove `bug-workflow.md`, `bug/debugging.md`, `bug-investigation.md`
 - `finalize`: Remove both `bug/debugging.md` references (duplicated)
 - `spike`: Remove both `bug/debugging.md` references (duplicated), remove `bug-investigation.md`
@@ -398,16 +398,16 @@ Summary of recipe changes:
 **Step 2: Copy to user config and chezmoi**
 
 ```bash
-cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/.config/ruly/recipes.yml
-cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml
+cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/.config/ruly/profiles.yml
+cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml
 ```
 
 **Step 3: Verify with ruly stats**
 
 ```bash
-cd $(mktemp -d) && ruly squash --recipe core-debugger && wc -c CLAUDE.local.md
-cd $(mktemp -d) && ruly squash --recipe bug-diagnose && wc -c CLAUDE.local.md
-cd $(mktemp -d) && ruly squash --recipe core-debugging && wc -c CLAUDE.local.md
+cd $(mktemp -d) && ruly squash --profile core-debugger && wc -c CLAUDE.local.md
+cd $(mktemp -d) && ruly squash --profile bug-diagnose && wc -c CLAUDE.local.md
+cd $(mktemp -d) && ruly squash --profile core-debugging && wc -c CLAUDE.local.md
 ```
 
 **Step 4: Commit both repos**
@@ -419,13 +419,13 @@ git add -A && git commit -m "refactor: deduplicate debugging rules against super
 
 # Parent ruly repo
 cd /Users/patrick/Projects/ruly
-git add recipes.yml rules
-git commit -m "refactor: deduplicate debugging rules, update recipes"
+git add profiles.yml rules
+git commit -m "refactor: deduplicate debugging rules, update profiles"
 
 # Chezmoi
 cd /Users/patrick/Projects/chezmoi
-git add config/ruly/recipes.yml
-git commit -m "chore: sync ruly recipes after debugging deduplication"
+git add config/ruly/profiles.yml
+git commit -m "chore: sync ruly profiles after debugging deduplication"
 ```
 
 ---
@@ -443,7 +443,7 @@ git commit -m "chore: sync ruly recipes after debugging deduplication"
 | `workaxle/core/debugging.md` | 812 | ~900 (added destructive ops) | **-88** |
 | **TOTAL** | **7,668** | **~2,900** | **~4,768** |
 
-**Per-recipe context savings (files loaded):**
+**Per-profile context savings (files loaded):**
 - `core-debugger`: ~3,500 tokens saved (loads 5 of the affected files)
 - `bug-diagnose`: ~2,700 tokens saved (loads 4 of the affected files)
 - `core-debugging`: ~1,050 tokens saved (loads 2 of the affected files)

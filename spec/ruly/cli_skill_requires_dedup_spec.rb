@@ -75,15 +75,15 @@ RSpec.describe Ruly::CLI, type: :cli do
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     recipes_file: File.join(test_dir, 'recipes.yml'),
+                                     profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when a skill requires a file already in the profile' do
       before do
-        recipes_content = {
-          'test_recipe' => {
-            'description' => 'Test recipe',
+        profiles_content = {
+          'test_profile' => {
+            'description' => 'Test profile',
             'files' => [
               'rules/shared/accounts.md',    # In profile
               'rules/comms/messaging.md'      # Has skill with requires: accounts.md
@@ -92,12 +92,12 @@ RSpec.describe Ruly::CLI, type: :cli do
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'does not inline the required file into the skill' do
-        cli.invoke(:squash, ['test_recipe'])
+        cli.invoke(:squash, ['test_profile'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
         # Should NOT contain the accounts data since it's in the profile
@@ -110,7 +110,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'includes the required file in the profile' do
-        cli.invoke(:squash, ['test_recipe'])
+        cli.invoke(:squash, ['test_profile'])
 
         profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
         expect(profile_content).to include('Team Directory')
@@ -121,9 +121,9 @@ RSpec.describe Ruly::CLI, type: :cli do
     context 'when a skill requires a file NOT in the profile' do
       before do
         # Profile does NOT include accounts.md
-        recipes_content = {
-          'test_recipe' => {
-            'description' => 'Test recipe',
+        profiles_content = {
+          'test_profile' => {
+            'description' => 'Test profile',
             'files' => [
               'rules/comms/messaging.md'  # Has skill, but accounts.md NOT in profile
             ]
@@ -131,12 +131,12 @@ RSpec.describe Ruly::CLI, type: :cli do
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'does not inline into the skill but adds the required file to the profile' do
-        cli.invoke(:squash, ['test_recipe'])
+        cli.invoke(:squash, ['test_profile'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).not_to include('Alice')
@@ -208,27 +208,27 @@ RSpec.describe Ruly::CLI, type: :cli do
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     recipes_file: File.join(test_dir, 'recipes.yml'),
+                                     profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when squashing produces duplicate skill requires' do
       before do
         # Profile does NOT include accounts.md
-        recipes_content = {
-          'test_recipe' => {
-            'description' => 'Test recipe',
+        profiles_content = {
+          'test_profile' => {
+            'description' => 'Test profile',
             'files' => ['rules/comms/messaging.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'adds the required file to the profile (no duplication warning needed)' do
-        output = capture(:stdout) { cli.invoke(:squash, ['test_recipe']) }
+        output = capture(:stdout) { cli.invoke(:squash, ['test_profile']) }
         # Requires are resolved into the profile, so accounts.md appears once in CLAUDE.local.md
         # No duplication warning because the file is in the profile
         expect(output).not_to include('optimization suggestion')
@@ -306,36 +306,36 @@ RSpec.describe Ruly::CLI, type: :cli do
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     recipes_file: File.join(test_dir, 'recipes.yml'),
+                                     profiles_file: File.join(test_dir, 'profiles.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when subagent profile includes a file also required by its skill' do
       before do
-        recipes_content = {
-          'comms-recipe' => {
-            'description' => 'Comms recipe',
+        profiles_content = {
+          'comms-profile' => {
+            'description' => 'Comms profile',
             'files' => [
               'rules/shared/agent-base.md',  # requires accounts.md → in subagent profile
               'rules/agent/comms.md'          # has skill requiring accounts.md
             ]
           },
-          'parent_recipe' => {
+          'parent_profile' => {
             'description' => 'Parent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              { 'name' => 'comms', 'recipe' => 'comms-recipe' }
+              { 'name' => 'comms', 'profile' => 'comms-profile' }
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'does not add subagent skill requires to the parent profile' do
-        cli.invoke(:squash, ['parent_recipe'])
+        cli.invoke(:squash, ['parent_profile'])
 
         skill_content = File.read('.claude/skills/post-comment/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).not_to include('Alice')
@@ -373,30 +373,30 @@ RSpec.describe Ruly::CLI, type: :cli do
           Handle all comms tasks.
         MD
 
-        recipes_content = {
-          'comms-recipe' => {
-            'description' => 'Comms recipe',
+        profiles_content = {
+          'comms-profile' => {
+            'description' => 'Comms profile',
             'files' => [
               'rules/shared/agent-base.md',
               'rules/agent/comms.md'
             ]
           },
-          'parent_recipe' => {
+          'parent_profile' => {
             'description' => 'Parent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              { 'name' => 'comms', 'recipe' => 'comms-recipe' }
+              { 'name' => 'comms', 'profile' => 'comms-profile' }
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'does not add subagent skill requires to the parent profile' do
-        output = capture(:stdout) { cli.invoke(:squash, ['parent_recipe']) }
+        output = capture(:stdout) { cli.invoke(:squash, ['parent_profile']) }
 
         profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
         expect(profile_content).not_to include('Alice')

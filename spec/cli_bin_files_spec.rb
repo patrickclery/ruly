@@ -14,8 +14,8 @@ RSpec.describe Ruly::CLI do
     begin
       Dir.chdir(temp_dir)
 
-      # Create a test recipe file
-      File.write('recipes.yml', recipe_content)
+      # Create a test profile file
+      File.write('profiles.yml', profile_content)
 
       # Create test markdown files
       FileUtils.mkdir_p('rules')
@@ -37,11 +37,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#squash with bin files' do
-    let(:recipe_content) do
+    let(:profile_content) do
       <<~YAML
-        recipes:
+        profiles:
           test_with_bin:
-            description: "Test recipe with bin files"
+            description: "Test profile with bin files"
             files:
               - rules/test.md
             bins:
@@ -51,63 +51,63 @@ RSpec.describe Ruly::CLI do
 
     before do
       allow(cli).to receive_messages(gem_root: temp_dir,
-                                     recipes_file: File.join(temp_dir, 'recipes.yml'))
+                                     profiles_file: File.join(temp_dir, 'profiles.yml'))
 
-      recipes_content = {
+      profiles_content = {
         'test_with_bin' => {
-          'bins' => ['rules/bin/'],
-          'description' => 'Test recipe with bin files',
+          'scripts' => ['rules/bin/'],
+          'description' => 'Test profile with bin files',
           'files' => ['rules/test.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
+      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     context 'when processing sources with bin files' do
-      it 'copies bin files to .ruly/bin/' do
+      it 'copies bin files to .claude/scripts/' do
         cli.squash('test_with_bin')
 
-        expect(Dir.exist?('.ruly/bin')).to be(true)
-        expect(File.exist?('.ruly/bin/testing/test-script.sh')).to be(true)
-        expect(File.exist?('.ruly/bin/common/helper.sh')).to be(true)
-        expect(File.exist?('.ruly/bin/standalone.sh')).to be(true)
+        expect(Dir.exist?('.claude/scripts')).to be(true)
+        expect(File.exist?('.claude/scripts/testing/test-script.sh')).to be(true)
+        expect(File.exist?('.claude/scripts/common/helper.sh')).to be(true)
+        expect(File.exist?('.claude/scripts/standalone.sh')).to be(true)
       end
 
       it 'makes bin files executable' do
         cli.squash('test_with_bin')
 
-        expect(File.executable?('.ruly/bin/testing/test-script.sh')).to be(true)
-        expect(File.executable?('.ruly/bin/common/helper.sh')).to be(true)
-        expect(File.executable?('.ruly/bin/standalone.sh')).to be(true)
+        expect(File.executable?('.claude/scripts/testing/test-script.sh')).to be(true)
+        expect(File.executable?('.claude/scripts/common/helper.sh')).to be(true)
+        expect(File.executable?('.claude/scripts/standalone.sh')).to be(true)
       end
 
       it 'preserves subdirectory structure' do
         cli.squash('test_with_bin')
 
-        expect(Dir.exist?('.ruly/bin/testing')).to be(true)
-        expect(Dir.exist?('.ruly/bin/common')).to be(true)
+        expect(Dir.exist?('.claude/scripts/testing')).to be(true)
+        expect(Dir.exist?('.claude/scripts/common')).to be(true)
       end
 
-      it 'outputs message about copying bin files' do
-        expect { cli.squash('test_with_bin') }.to output(%r{Copied 3 bin files to \.ruly/bin/}).to_stdout
+      it 'outputs message about copying script files' do
+        expect { cli.squash('test_with_bin') }.to output(%r{Copied 3 script files to \.claude/scripts/}).to_stdout
       end
     end
 
     context 'with --dry-run option' do
-      it 'does not copy bin files' do
+      it 'does not copy script files' do
         cli.options = {agent: 'claude', dry_run: true, output_file: 'CLAUDE.local.md'}
         cli.squash('test_with_bin')
 
-        expect(Dir.exist?('.ruly/bin')).to be(false)
+        expect(Dir.exist?('.claude/scripts')).to be(false)
       end
 
       it 'shows what would be copied' do
         cli.options = {agent: 'claude', dry_run: true, output_file: 'CLAUDE.local.md'}
 
-        expect { cli.squash('test_with_bin') }.to output(%r{Would copy bin files to \.ruly/bin/}).to_stdout
+        expect { cli.squash('test_with_bin') }.to output(%r{Would copy script files to \.claude/scripts/}).to_stdout
         expect { cli.squash('test_with_bin') }.to output(%r{testing/test-script\.sh \(executable\)}).to_stdout
         expect { cli.squash('test_with_bin') }.to output(%r{common/helper\.sh \(executable\)}).to_stdout
         expect { cli.squash('test_with_bin') }.to output(/standalone\.sh \(executable\)/).to_stdout
@@ -116,44 +116,44 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#clean with --deepclean' do
-    let(:recipe_content) do
+    let(:profile_content) do
       <<~YAML
-        recipes:
+        profiles:
           dummy:
-            description: "Dummy recipe for clean tests"
+            description: "Dummy profile for clean tests"
             files:
               - rules/test.md
       YAML
     end
 
     before do
-      # Create .ruly/bin directory with files
-      FileUtils.mkdir_p('.ruly/bin/testing')
-      File.write('.ruly/bin/testing/script.sh', '#!/bin/bash')
-      File.write('.ruly/bin/other.sh', '#!/bin/bash')
+      # Create .claude/scripts directory with files
+      FileUtils.mkdir_p('.claude/scripts/testing')
+      File.write('.claude/scripts/testing/script.sh', '#!/bin/bash')
+      File.write('.claude/scripts/other.sh', '#!/bin/bash')
     end
 
-    it 'removes .ruly directory including bin files' do
+    it 'removes .claude directory including script files' do
       cli.options = {deepclean: true}
       cli.clean
 
-      expect(Dir.exist?('.ruly')).to be(false)
-      expect(Dir.exist?('.ruly/bin')).to be(false)
+      expect(Dir.exist?('.claude')).to be(false)
+      expect(Dir.exist?('.claude/scripts')).to be(false)
     end
 
-    it 'lists .ruly/ in cleanup message' do
+    it 'lists .claude/scripts/ in cleanup message' do
       cli.options = {deepclean: true}
 
-      expect { cli.clean }.to output(%r{\.ruly/}).to_stdout
+      expect { cli.clean }.to output(%r{\.claude/scripts/}).to_stdout
     end
   end
 
   describe 'processing GitHub sources with bin files' do
-    let(:recipe_content) do
+    let(:profile_content) do
       <<~YAML
-        recipes:
+        profiles:
           github_bin:
-            description: "GitHub recipe with bin files"
+            description: "GitHub profile with bin files"
             sources:
               - github: someuser/somerepo
                 branch: main
@@ -170,11 +170,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe 'bin file detection without bins: key' do
-    let(:recipe_content) do
+    let(:profile_content) do
       <<~YAML
-        recipes:
+        profiles:
           dummy:
-            description: "Dummy recipe for detection tests"
+            description: "Dummy profile for detection tests"
             files:
               - rules/test.md
       YAML
@@ -182,7 +182,7 @@ RSpec.describe Ruly::CLI do
 
     it 'does not auto-detect bin files from path' do
       sources = []
-      Ruly::Services::RecipeLoader.process_local_directory('rules', sources, gem_root: temp_dir)
+      Ruly::Services::ProfileLoader.process_local_directory('rules', sources, gem_root: temp_dir)
 
       # bin/*.sh files are still collected by process_local_directory
       # but they are NOT categorized as bins (no :category marker)

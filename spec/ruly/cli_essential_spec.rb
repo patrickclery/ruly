@@ -15,17 +15,17 @@ RSpec.describe Ruly::CLI, '#essential' do
     FileUtils.mkdir_p(File.join(test_dir, 'rules', 'ruby'))
     FileUtils.mkdir_p(File.join(test_dir, 'rules', 'testing'))
 
-    # Create recipes.yml
-    recipes_content = <<~YAML
-      recipes:
-        test_recipe:
-          description: Test recipe
+    # Create profiles.yml
+    profiles_content = <<~YAML
+      profiles:
+        test_profile:
+          description: Test profile
           files:
             - rules/ruby/common.md
             - rules/ruby/extra.md
     YAML
-    File.write(File.join(test_dir, 'recipes.yml'), recipes_content)
-    allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'),
+    File.write(File.join(test_dir, 'profiles.yml'), profiles_content)
+    allow(cli).to receive_messages(gem_root: test_dir, profiles_file: File.join(test_dir, 'profiles.yml'),
                                    rules_dir: File.join(test_dir, 'rules'))
   end
 
@@ -236,12 +236,12 @@ RSpec.describe Ruly::CLI, '#essential' do
       expect(paths).not_to include('rules/ruby/extra.md')
     end
 
-    it 'excludes non-essential files even if they are in recipe' do
+    it 'excludes non-essential files even if they are in profile' do
       File.write(File.join(test_dir, 'rules', 'ruby', 'common.md'), <<~MD)
         ---
         description: Common patterns
         ---
-        # Common Ruby (in recipe but not essential)
+        # Common Ruby (in profile but not essential)
       MD
 
       File.write(File.join(test_dir, 'rules', 'ruby', 'extra.md'), <<~MD)
@@ -266,9 +266,9 @@ RSpec.describe Ruly::CLI, '#essential' do
       }
       allow(cli).to receive(:options).and_return(options)
 
-      sources, = cli.send(:load_recipe_sources, 'test_recipe')
+      sources, = cli.send(:load_profile_sources, 'test_profile')
 
-      # Both files should be in sources from recipe
+      # Both files should be in sources from profile
       expect(sources.length).to eq(2)
 
       # After filtering, only essential file remains
@@ -312,12 +312,12 @@ RSpec.describe Ruly::CLI, '#essential' do
       expect(result).not_to include('essential:')
     end
 
-    it 'strips essential along with recipes and requires' do
+    it 'strips essential along with profiles and requires' do
       content = <<~MD
         ---
         description: Test file
-        recipes:
-          - test_recipe
+        profiles:
+          - test_profile
         requires:
           - common.md
         essential: true
@@ -330,7 +330,7 @@ RSpec.describe Ruly::CLI, '#essential' do
 
       expect(result).to include('description: Test file')
       expect(result).to include('other_field: value')
-      expect(result).not_to include('recipes:')
+      expect(result).not_to include('profiles:')
       expect(result).not_to include('requires:')
       expect(result).not_to include('essential:')
     end

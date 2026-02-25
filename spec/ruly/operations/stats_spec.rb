@@ -204,26 +204,26 @@ RSpec.describe Ruly::Operations::Stats do
   end
 
   describe 'orphaned files detection' do
-    let(:recipes_file) { File.join(test_dir, 'recipes.yml') }
+    let(:profiles_file) { File.join(test_dir, 'profiles.yml') }
     let(:rules_dir) { File.join(test_dir, 'rules') }
 
-    def create_recipes_file(recipes_hash)
-      File.write(recipes_file, YAML.dump({'recipes' => recipes_hash}))
+    def create_profiles_file(profiles_hash)
+      File.write(profiles_file, YAML.dump({'profiles' => profiles_hash}))
     end
 
     describe '#find_orphaned_files' do
-      context 'when all files are used by recipes' do
+      context 'when all files are used by profiles' do
         it 'returns empty array' do
           used_file = create_test_file('rules/used.md', '# Used file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [used_file]
                                 }
                               })
 
           sources = [{path: used_file, type: 'local'}]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -231,13 +231,13 @@ RSpec.describe Ruly::Operations::Stats do
         end
       end
 
-      context 'when files are not used by any recipe' do
+      context 'when files are not used by any profile' do
         it 'returns orphaned files' do
           used_file = create_test_file('rules/used.md', '# Used file')
           orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [used_file]
                                 }
                               })
@@ -246,7 +246,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: used_file, type: 'local'},
             {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -254,14 +254,14 @@ RSpec.describe Ruly::Operations::Stats do
         end
       end
 
-      context 'when recipe uses directory path' do
+      context 'when profile uses directory path' do
         it 'considers all files in directory as used' do
           FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
           file_in_dir = create_test_file('rules/subdir/file.md', '# File in dir')
           orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [File.join(test_dir, 'rules', 'subdir/')]
                                 }
                               })
@@ -270,7 +270,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: file_in_dir, type: 'local'},
             {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -283,8 +283,8 @@ RSpec.describe Ruly::Operations::Stats do
           parent_file = create_test_file('rules/parent.md', "# Parent\n@./child.md")
           child_file = create_test_file('rules/child.md', '# Child file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [parent_file]
                                 }
                               })
@@ -293,7 +293,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: parent_file, type: 'local'},
             {path: child_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -307,8 +307,8 @@ RSpec.describe Ruly::Operations::Stats do
           parent_file = create_test_file('rules/subdir/parent.md', "# Parent\n@../sibling.md")
           sibling_file = create_test_file('rules/sibling.md', '# Sibling file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [parent_file]
                                 }
                               })
@@ -317,7 +317,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: parent_file, type: 'local'},
             {path: sibling_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -338,8 +338,8 @@ RSpec.describe Ruly::Operations::Stats do
           MARKDOWN
           child_file = create_test_file('rules/child.md', '# Child file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [parent_file]
                                 }
                               })
@@ -348,7 +348,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: parent_file, type: 'local'},
             {path: child_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -369,8 +369,8 @@ RSpec.describe Ruly::Operations::Stats do
           sibling_file = create_test_file('rules/sibling.md', '# Sibling file')
           cousin_file = create_test_file('rules/subdir/cousin.md', '# Cousin file')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [parent_file]
                                 }
                               })
@@ -380,7 +380,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: sibling_file, type: 'local'},
             {path: cousin_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -401,8 +401,8 @@ RSpec.describe Ruly::Operations::Stats do
           frontmatter_child = create_test_file('rules/frontmatter-child.md', '# Frontmatter child')
           at_child = create_test_file('rules/at-child.md', '# At-syntax child')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [parent_file]
                                 }
                               })
@@ -412,7 +412,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: frontmatter_child, type: 'local'},
             {path: at_child, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -426,8 +426,8 @@ RSpec.describe Ruly::Operations::Stats do
           file_b = create_test_file('rules/b.md', "# B\n@./c.md")
           file_c = create_test_file('rules/c.md', '# C')
 
-          create_recipes_file({
-                                'test-recipe' => {
+          create_profiles_file({
+                                'test-profile' => {
                                   'files' => [file_a]
                                 }
                               })
@@ -437,7 +437,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: file_b, type: 'local'},
             {path: file_c, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -445,7 +445,7 @@ RSpec.describe Ruly::Operations::Stats do
         end
       end
 
-      context 'when no recipes file exists' do
+      context 'when no profiles file exists' do
         it 'considers all files as orphaned' do
           file1 = create_test_file('rules/file1.md', '# File 1')
           file2 = create_test_file('rules/file2.md', '# File 2')
@@ -456,7 +456,7 @@ RSpec.describe Ruly::Operations::Stats do
           ]
           operation = described_class.new(
             output_file:,
-            recipes_file: '/nonexistent/recipes.yml',
+            profiles_file: '/nonexistent/profiles.yml',
             rules_dir:,
             sources:
           )
@@ -467,15 +467,15 @@ RSpec.describe Ruly::Operations::Stats do
         end
       end
 
-      context 'with multiple recipes' do
-        it 'considers files used by any recipe as not orphaned' do
+      context 'with multiple profiles' do
+        it 'considers files used by any profile as not orphaned' do
           file1 = create_test_file('rules/file1.md', '# File 1')
           file2 = create_test_file('rules/file2.md', '# File 2')
           orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
 
-          create_recipes_file({
-                                'recipe1' => {'files' => [file1]},
-                                'recipe2' => {'files' => [file2]}
+          create_profiles_file({
+                                'profile1' => {'files' => [file1]},
+                                'profile2' => {'files' => [file2]}
                               })
 
           sources = [
@@ -483,7 +483,7 @@ RSpec.describe Ruly::Operations::Stats do
             {path: file2, type: 'local'},
             {path: orphaned_file, type: 'local'}
           ]
-          operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+          operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
           orphaned = operation.find_orphaned_files
 
@@ -497,8 +497,8 @@ RSpec.describe Ruly::Operations::Stats do
         used_file = create_test_file('rules/used.md', '# Used file')
         orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned file')
 
-        create_recipes_file({
-                              'test-recipe' => {
+        create_profiles_file({
+                              'test-profile' => {
                                 'files' => [used_file]
                               }
                             })
@@ -508,7 +508,7 @@ RSpec.describe Ruly::Operations::Stats do
           {path: orphaned_file, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('## Orphaned Files')
@@ -520,8 +520,8 @@ RSpec.describe Ruly::Operations::Stats do
         orphan1 = create_test_file('rules/orphan1.md', '# Orphan 1')
         orphan2 = create_test_file('rules/orphan2.md', '# Orphan 2')
 
-        create_recipes_file({
-                              'test-recipe' => {'files' => [used_file]}
+        create_profiles_file({
+                              'test-profile' => {'files' => [used_file]}
                             })
 
         sources = [
@@ -530,7 +530,7 @@ RSpec.describe Ruly::Operations::Stats do
           {path: orphan2, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).to include('2 files not used')
@@ -539,13 +539,13 @@ RSpec.describe Ruly::Operations::Stats do
       it 'does not show orphaned section when all files are used' do
         used_file = create_test_file('rules/used.md', '# Used file')
 
-        create_recipes_file({
-                              'test-recipe' => {'files' => [used_file]}
+        create_profiles_file({
+                              'test-profile' => {'files' => [used_file]}
                             })
 
         sources = [{path: used_file, type: 'local'}]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
         expect(content).not_to include('## Orphaned Files')
@@ -555,8 +555,8 @@ RSpec.describe Ruly::Operations::Stats do
         used_file = create_test_file('rules/used.md', '# Used')
         orphaned_file = create_test_file('rules/orphaned.md', '# Orphaned')
 
-        create_recipes_file({
-                              'test-recipe' => {'files' => [used_file]}
+        create_profiles_file({
+                              'test-profile' => {'files' => [used_file]}
                             })
 
         sources = [
@@ -564,7 +564,7 @@ RSpec.describe Ruly::Operations::Stats do
           {path: orphaned_file, type: 'local'}
         ]
 
-        result = described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        result = described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         expect(result[:data][:orphaned_files]).to contain_exactly(orphaned_file)
         expect(result[:data][:orphaned_count]).to eq(1)
@@ -742,15 +742,15 @@ RSpec.describe Ruly::Operations::Stats do
       end
     end
 
-    describe 'per-recipe token counts' do
-      it 'generates a Files by Token Count section for each recipe' do
+    describe 'per-profile token counts' do
+      it 'generates a Files by Token Count section for each profile' do
         file1 = create_test_file('rules/file1.md', '# File 1 content here')
         file2 = create_test_file('rules/file2.md', '# File 2 different content')
         file3 = create_test_file('rules/file3.md', '# File 3 more content')
 
-        create_recipes_file({
-                              'recipe-alpha' => {'files' => [file1, file2]},
-                              'recipe-beta' => {'files' => [file2, file3]}
+        create_profiles_file({
+                              'profile-alpha' => {'files' => [file1, file2]},
+                              'profile-beta' => {'files' => [file2, file3]}
                             })
 
         sources = [
@@ -759,19 +759,19 @@ RSpec.describe Ruly::Operations::Stats do
           {path: file3, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        expect(content).to include('## Recipe: recipe-alpha')
-        expect(content).to include('## Recipe: recipe-beta')
+        expect(content).to include('## Profile: profile-alpha')
+        expect(content).to include('## Profile: profile-beta')
       end
 
-      it 'shows token counts for files in each recipe' do
+      it 'shows token counts for files in each profile' do
         file1 = create_test_file('rules/file1.md', 'Short content')
         file2 = create_test_file('rules/file2.md', 'Much longer content ' * 50)
 
-        create_recipes_file({
-                              'test-recipe' => {'files' => [file1, file2]}
+        create_profiles_file({
+                              'test-profile' => {'files' => [file1, file2]}
                             })
 
         sources = [
@@ -779,23 +779,23 @@ RSpec.describe Ruly::Operations::Stats do
           {path: file2, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        expect(content).to include('## Recipe: test-recipe')
+        expect(content).to include('## Profile: test-profile')
         # Should contain a table with token counts
         expect(content).to match(/\|\s*#\s*\|\s*Tokens\s*\|/)
-        # Should list both files under the recipe section
+        # Should list both files under the profile section
         expect(content).to include('file1.md')
         expect(content).to include('file2.md')
       end
 
-      it 'shows recipe total tokens in the summary' do
+      it 'shows profile total tokens in the summary' do
         file1 = create_test_file('rules/file1.md', 'Content one')
         file2 = create_test_file('rules/file2.md', 'Content two')
 
-        create_recipes_file({
-                              'my-recipe' => {'files' => [file1, file2]}
+        create_profiles_file({
+                              'my-profile' => {'files' => [file1, file2]}
                             })
 
         sources = [
@@ -803,20 +803,20 @@ RSpec.describe Ruly::Operations::Stats do
           {path: file2, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        # Should show total tokens for the recipe
-        expect(content).to match(/## Recipe: my-recipe.*Total Tokens/m)
+        # Should show total tokens for the profile
+        expect(content).to match(/## Profile: my-profile.*Total Tokens/m)
       end
 
-      it 'expands directory paths in recipes' do
+      it 'expands directory paths in profiles' do
         FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
         file1 = create_test_file('rules/subdir/file1.md', '# File 1')
         file2 = create_test_file('rules/subdir/file2.md', '# File 2')
 
-        create_recipes_file({
-                              'dir-recipe' => {'files' => [File.join(test_dir, 'rules', 'subdir/')]}
+        create_profiles_file({
+                              'dir-profile' => {'files' => [File.join(test_dir, 'rules', 'subdir/')]}
                             })
 
         sources = [
@@ -824,10 +824,10 @@ RSpec.describe Ruly::Operations::Stats do
           {path: file2, type: 'local'}
         ]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        expect(content).to include('## Recipe: dir-recipe')
+        expect(content).to include('## Profile: dir-profile')
         expect(content).to include('file1.md')
         expect(content).to include('file2.md')
       end
@@ -836,9 +836,9 @@ RSpec.describe Ruly::Operations::Stats do
         file1 = create_test_file('rules/file1.md', '# File 1')
         file2 = create_test_file('rules/file2.md', '# File 2')
 
-        create_recipes_file({
-                              'recipe1' => {'files' => [file1]},
-                              'recipe2' => {'files' => [file1, file2]}
+        create_profiles_file({
+                              'profile1' => {'files' => [file1]},
+                              'profile2' => {'files' => [file1, file2]}
                             })
 
         sources = [
@@ -846,7 +846,7 @@ RSpec.describe Ruly::Operations::Stats do
           {path: file2, type: 'local'}
         ]
 
-        operation = described_class.new(output_file:, recipes_file:, rules_dir:, sources:)
+        operation = described_class.new(output_file:, profiles_file:, rules_dir:, sources:)
 
         # Mock count_tokens to track calls
         call_count = 0
@@ -857,33 +857,33 @@ RSpec.describe Ruly::Operations::Stats do
 
         operation.call
 
-        # Should only count tokens once per file, not once per recipe occurrence
+        # Should only count tokens once per file, not once per profile occurrence
         expect(call_count).to eq(2) # Once for file1, once for file2
       end
 
-      it 'sorts recipes alphabetically' do
+      it 'sorts profiles alphabetically' do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
-        create_recipes_file({
-                              'alpha-recipe' => {'files' => [file1]},
-                              'middle-recipe' => {'files' => [file1]},
-                              'zebra-recipe' => {'files' => [file1]}
+        create_profiles_file({
+                              'alpha-profile' => {'files' => [file1]},
+                              'middle-profile' => {'files' => [file1]},
+                              'zebra-profile' => {'files' => [file1]}
                             })
 
         sources = [{path: file1, type: 'local'}]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        alpha_pos = content.index('## Recipe: alpha-recipe')
-        middle_pos = content.index('## Recipe: middle-recipe')
-        zebra_pos = content.index('## Recipe: zebra-recipe')
+        alpha_pos = content.index('## Profile: alpha-profile')
+        middle_pos = content.index('## Profile: middle-profile')
+        zebra_pos = content.index('## Profile: zebra-profile')
 
         expect(alpha_pos).to be < middle_pos
         expect(middle_pos).to be < zebra_pos
       end
 
-      it 'does not generate recipe sections when no recipes file exists' do
+      it 'does not generate profile sections when no profiles file exists' do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
         sources = [{path: file1, type: 'local'}]
@@ -891,25 +891,25 @@ RSpec.describe Ruly::Operations::Stats do
         described_class.call(output_file:, sources:)
 
         content = File.read(output_file)
-        expect(content).not_to include('## Recipe:')
+        expect(content).not_to include('## Profile:')
       end
 
-      it 'handles recipes with no valid files gracefully' do
+      it 'handles profiles with no valid files gracefully' do
         file1 = create_test_file('rules/file1.md', '# File 1')
 
-        create_recipes_file({
-                              'empty-recipe' => {'files' => ['/nonexistent/file.md']},
-                              'valid-recipe' => {'files' => [file1]}
+        create_profiles_file({
+                              'empty-profile' => {'files' => ['/nonexistent/file.md']},
+                              'valid-profile' => {'files' => [file1]}
                             })
 
         sources = [{path: file1, type: 'local'}]
 
-        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+        described_class.call(output_file:, profiles_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        expect(content).to include('## Recipe: valid-recipe')
-        # Empty recipe should either not appear or show 0 files
-        expect(content).not_to include('## Recipe: empty-recipe')
+        expect(content).to include('## Profile: valid-profile')
+        # Empty profile should either not appear or show 0 files
+        expect(content).not_to include('## Profile: empty-profile')
       end
     end
   end

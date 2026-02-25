@@ -5,7 +5,7 @@ require 'find'
 module Ruly
   module Services
     # Helper methods for the squash pipeline that don't fit into other services.
-    # Includes filtering, dispatch validation, recipe-tag scanning, output file
+    # Includes filtering, dispatch validation, profile-tag scanning, output file
     # determination, and TaskMaster config copying.
     module SquashHelpers # rubocop:disable Metrics/ModuleLength
       module_function
@@ -51,14 +51,14 @@ module Ruly
 
       # Validate that all dispatches in source files match registered subagents.
       # @param collected_dispatches [Hash] filename => dispatch names
-      # @param recipe_config [Hash] recipe configuration with 'subagents' key
-      # @param recipe_name [String] recipe name (for error messages)
+      # @param profile_config [Hash] profile configuration with 'subagents' key
+      # @param profile_name [String] profile name (for error messages)
       # @raise [Ruly::Error] if unregistered dispatches found
-      def validate_dispatches_registered!(collected_dispatches, recipe_config, recipe_name)
+      def validate_dispatches_registered!(collected_dispatches, profile_config, profile_name)
         return if collected_dispatches.empty?
 
-        registered_subagents = if recipe_config['subagents'].is_a?(Array)
-                                 recipe_config['subagents'].filter_map { |s| s['name'] }
+        registered_subagents = if profile_config['subagents'].is_a?(Array)
+                                 profile_config['subagents'].filter_map { |s| s['name'] }
                                else
                                  []
                                end
@@ -68,21 +68,21 @@ module Ruly
             next if registered_subagents.include?(dispatch_name)
 
             raise Ruly::Error,
-                  "Recipe '#{recipe_name}' dispatches: #{dispatch_name}\n       " \
+                  "Profile '#{profile_name}' dispatches: #{dispatch_name}\n       " \
                   "but does not register it as a subagent.\n       " \
-                  "Add to recipe:\n         " \
+                  "Add to profile:\n         " \
                   "subagents:\n           " \
                   "- name: #{dispatch_name}\n             " \
-                  "recipe: #{dispatch_name.tr('_', '-')}"
+                  "profile: #{dispatch_name.tr('_', '-')}"
           end
         end
       end
 
-      # Scan the rules directory for files with matching recipe tags in frontmatter.
-      # @param recipe_name [String] recipe name to match
+      # Scan the rules directory for files with matching profile tags in frontmatter.
+      # @param profile_name [String] profile name to match
       # @param rules_dir [String] path to the rules directory
       # @return [Array<Hash>] source entries for tagged files
-      def scan_files_for_recipe_tags(recipe_name, rules_dir:)
+      def scan_files_for_profile_tags(profile_name, rules_dir:)
         sources = []
         return sources unless File.directory?(rules_dir)
 
@@ -93,7 +93,7 @@ module Ruly
             content = File.read(path, encoding: 'UTF-8')
             frontmatter, = Services::FrontmatterParser.parse(content)
 
-            if frontmatter['recipes']&.include?(recipe_name)
+            if frontmatter['profiles']&.include?(profile_name)
               relative_path = path.sub("#{rules_dir}/", 'rules/')
               sources << {path: relative_path, type: 'local'}
             end
@@ -105,20 +105,20 @@ module Ruly
         sources.sort_by { |s| s[:path] }
       end
 
-      # Determine output file path based on recipe type and options.
-      # @param recipe_name [String] name of the recipe
-      # @param recipe_value [Hash, Array] the recipe configuration
+      # Determine output file path based on profile type and options.
+      # @param profile_name [String] name of the profile
+      # @param profile_value [Hash, Array] the profile configuration
       # @param options [Hash] CLI options including :output_file
       # @return [String] path to output file
-      def determine_output_file(recipe_name, recipe_value, options)
+      def determine_output_file(profile_name, profile_value, options)
         default_output = 'CLAUDE.local.md'
 
         # User explicitly specified output file - use it (takes precedence)
         return options[:output_file] if options[:output_file] && options[:output_file] != default_output
 
-        if recipe_value.is_a?(Array)
-          # Array recipe = agent file goes to .claude/agents/
-          ".claude/agents/#{recipe_name}.md"
+        if profile_value.is_a?(Array)
+          # Array profile = agent file goes to .claude/agents/
+          ".claude/agents/#{profile_name}.md"
         else
           default_output
         end
@@ -150,7 +150,7 @@ module Ruly
         puts "⚠️  Warning: Could not copy TaskMaster config: #{e.message}"
       end
 
-      # Collect all local sources from the rules directory (non-recipe mode).
+      # Collect all local sources from the rules directory (non-profile mode).
       # @param rules_dir [String] path to the rules directory
       # @return [Array<Hash>] source entries
       def collect_local_sources(rules_dir)

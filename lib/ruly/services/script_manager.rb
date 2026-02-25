@@ -134,26 +134,26 @@ module Ruly
         mappings
       end
 
-      # Copy bin/* files to .ruly/bin/ and make them executable.
-      # @param bin_files [Array<Hash>] each with :source_path and :relative_path
-      def copy_bin_files(bin_files)
-        return if bin_files.empty?
+      # Copy script files to .claude/scripts/ and make them executable.
+      # @param script_files [Array<Hash>] each with :source_path and :relative_path
+      def copy_script_files(script_files)
+        return if script_files.empty?
 
-        ruly_bin_dir = '.ruly/bin'
-        FileUtils.mkdir_p(ruly_bin_dir)
+        scripts_dir = '.claude/scripts'
+        FileUtils.mkdir_p(scripts_dir)
 
         copied_count = 0
-        bin_files.each do |file|
+        script_files.each do |file|
           source_path = file[:source_path]
           relative_path = file[:relative_path]
 
-          target_relative = if (match = relative_path.match(%r{bin/(.+\.sh)$}))
+          target_relative = if (match = relative_path.match(%r{(?:bin|scripts)/(.+\.sh)$}))
                               match[1]
                             else
                               File.basename(source_path)
                             end
 
-          target_path = File.join(ruly_bin_dir, target_relative)
+          target_path = File.join(scripts_dir, target_relative)
           target_dir = File.dirname(target_path)
 
           FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
@@ -163,7 +163,7 @@ module Ruly
           copied_count += 1
         end
 
-        puts "🚀 Copied #{copied_count} bin files to .ruly/bin/ (made executable)"
+        puts "🚀 Copied #{copied_count} script files to .claude/scripts/ (made executable)"
       end
 
       # Copy collected scripts (local + remote) to destination and make executable.
@@ -249,15 +249,15 @@ module Ruly
 
       # Write command files to .claude/commands/.
       # @param command_files [Array] either Hashes with :path/:content or String paths
-      # @param recipe_config [Hash, nil] recipe configuration (for omit_command_prefix)
+      # @param profile_config [Hash, nil] profile configuration (for omit_command_prefix)
       # @param gem_root [String, nil] root path of the gem (needed for import mode paths)
-      def save_command_files(command_files, recipe_config = nil, gem_root: nil) # rubocop:disable Metrics/MethodLength
+      def save_command_files(command_files, profile_config = nil, gem_root: nil) # rubocop:disable Metrics/MethodLength
         return if command_files.empty?
 
         commands_dir = '.claude/commands'
         FileUtils.mkdir_p(commands_dir)
 
-        omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
+        omit_prefix = profile_config && profile_config['omit_command_prefix'] ? profile_config['omit_command_prefix'] : nil
         debug_warning_shown = false
 
         command_files.each do |file| # rubocop:disable Metrics/BlockLength
@@ -398,7 +398,7 @@ module Ruly
       end
 
       # Return skill content as-is. The `requires:` frontmatter is a dependency
-      # declaration — required content is provided by the recipe's top-level
+      # declaration — required content is provided by the profile's top-level
       # profile or agent file. Skills reference it via section anchors.
       # @param file [Hash] skill file hash with :path, :content, :original_content
       # @return [String] skill content (never inlines requires)

@@ -1,12 +1,12 @@
-# Recipe definitions for Ruly
-# Each recipe defines a collection of rule files to combine
-# Use 'ruly import --recipe <name>' or 'ruly squash --recipe <name>' to use a specific recipe
+# Profile definitions for Ruly
+# Each profile defines a collection of rule files to combine
+# Use 'ruly import --profile <name>' or 'ruly squash --profile <name>' to use a specific profile
 
-# Global default plan (can be overridden per recipe or in user config)
-plan: claude_pro
+# Global default tier (can be overridden per profile or in user config)
+tier: claude_pro
 
-recipes:
-  # WorkAxle recipes - Dynamic loading based on current task
+profiles:
+  # WorkAxle profiles - Dynamic loading based on current task
   core:
     description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
     omit_command_prefix:
@@ -41,45 +41,45 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
-        recipe: core-debugger
+        profile: core-debugger
       - name: core_engineer
-        recipe: core-engineer
+        profile: core-engineer
       - name: context_jira
-        recipe: context-jira
+        profile: context-jira
         model: haiku
       - name: context_github
-        recipe: context-github
+        profile: context-github
         model: haiku
       - name: context_teams
-        recipe: context-teams
+        profile: context-teams
         model: haiku
       - name: context_summarizer
-        recipe: context-summarizer
+        profile: context-summarizer
         model: haiku
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
       - name: comms_jira
-        recipe: comms-jira
+        profile: comms-jira
       - name: comms_teams
-        recipe: comms-teams
+        profile: comms-teams
       - name: comms_mattermost
-        recipe: comms-mattermost
+        profile: comms-mattermost
       - name: comms_github
-        recipe: comms-github
+        profile: comms-github
       - name: merger
-        recipe: merger
+        profile: merger
       - name: dashboard
-        recipe: dashboard
+        profile: dashboard
       - name: pr_readiness
-        recipe: pr-readiness
+        profile: pr-readiness
       - name: core_reviewer
-        recipe: core-reviewer
+        profile: core-reviewer
       - name: pr_review_loop
-        recipe: pr-review-loop
+        profile: pr-review-loop
       - name: qa_tester
-        recipe: qa
+        profile: qa
       - name: pr_creator
-        recipe: pr-creator
+        profile: pr-creator
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -236,26 +236,26 @@ recipes:
     subagents:
       # Only agents that genuinely need fresh context / isolation
       - name: comms_jira
-        recipe: comms-jira
+        profile: comms-jira
       - name: comms_teams
-        recipe: comms-teams
+        profile: comms-teams
       - name: comms_mattermost
-        recipe: comms-mattermost
+        profile: comms-mattermost
       - name: comms_github
-        recipe: comms-github
+        profile: comms-github
       - name: merger
-        recipe: merger
+        profile: merger
       - name: context_jira
-        recipe: context-jira
+        profile: context-jira
         model: haiku
       - name: context_github
-        recipe: context-github
+        profile: context-github
         model: haiku
       - name: context_teams
-        recipe: context-teams
+        profile: context-teams
         model: haiku
       - name: context_summarizer
-        recipe: context-summarizer
+        profile: context-summarizer
         model: haiku
 
   auth0:
@@ -292,16 +292,16 @@ recipes:
 
     subagents:
       - name: context_jira
-        recipe: context-jira
+        profile: context-jira
         model: haiku
       - name: context_github
-        recipe: context-github
+        profile: context-github
         model: haiku
       - name: context_teams
-        recipe: context-teams
+        profile: context-teams
         model: haiku
       - name: context_summarizer
-        recipe: context-summarizer
+        profile: context-summarizer
         model: haiku
 
   refactor:
@@ -482,51 +482,51 @@ recipes:
     subagents:
       # === Backend Subagents (promoted from core) ===
       - name: core_debugger
-        recipe: core-debugger
+        profile: core-debugger
       - name: core_engineer
-        recipe: core-engineer
+        profile: core-engineer
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
       # === Frontend Subagents ===
       - name: frontend_engineer
-        recipe: frontend-engineer
+        profile: frontend-engineer
       - name: frontend_reviewer
-        recipe: frontend-reviewer
+        profile: frontend-reviewer
       # === Context Subagents ===
       - name: context_jira
-        recipe: context-jira
+        profile: context-jira
         model: haiku
       - name: context_github
-        recipe: context-github
+        profile: context-github
         model: haiku
       - name: context_teams
-        recipe: context-teams
+        profile: context-teams
         model: haiku
       - name: context_summarizer
-        recipe: context-summarizer
+        profile: context-summarizer
         model: haiku
       - name: comms_jira
-        recipe: comms-jira
+        profile: comms-jira
       - name: comms_teams
-        recipe: comms-teams
+        profile: comms-teams
       - name: comms_mattermost
-        recipe: comms-mattermost
+        profile: comms-mattermost
       - name: comms_github
-        recipe: comms-github
+        profile: comms-github
       - name: merger
-        recipe: merger
+        profile: merger
       - name: dashboard
-        recipe: dashboard
+        profile: dashboard
       - name: pr_readiness
-        recipe: pr-readiness
+        profile: pr-readiness
       - name: core_reviewer
-        recipe: core-reviewer
+        profile: core-reviewer
       - name: pr_review_loop
-        recipe: pr-review-loop
+        profile: pr-review-loop
       - name: qa_tester
-        recipe: qa
+        profile: qa
       - name: bug_diagnose
-        recipe: bug-diagnose
+        profile: bug-diagnose
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
@@ -684,7 +684,7 @@ recipes:
       - Ref # Documentation reference lookup
     subagents:
       - name: media_stack
-        recipe: media-stack
+        profile: media-stack
 
   media-stack:
     description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
@@ -921,7 +921,7 @@ recipes:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
-  # === Frontend Recipes ===
+  # === Frontend Profiles ===
 
   frontend:
     description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
@@ -954,32 +954,32 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: frontend_engineer
-        recipe: frontend-engineer
+        profile: frontend-engineer
       - name: comms_jira
-        recipe: comms-jira
+        profile: comms-jira
       - name: comms_teams
-        recipe: comms-teams
+        profile: comms-teams
       - name: comms_mattermost
-        recipe: comms-mattermost
+        profile: comms-mattermost
       - name: comms_github
-        recipe: comms-github
+        profile: comms-github
       - name: merger
-        recipe: merger
+        profile: merger
       - name: pr_readiness
-        recipe: pr-readiness
+        profile: pr-readiness
       - name: core_reviewer
-        recipe: core-reviewer
+        profile: core-reviewer
       - name: context_jira
-        recipe: context-jira
+        profile: context-jira
         model: haiku
       - name: context_github
-        recipe: context-github
+        profile: context-github
         model: haiku
       - name: context_teams
-        recipe: context-teams
+        profile: context-teams
         model: haiku
       - name: context_summarizer
-        recipe: context-summarizer
+        profile: context-summarizer
         model: haiku
 
   frontend-engineer:

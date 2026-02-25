@@ -1,18 +1,18 @@
-# Core Dispatcher Architecture — Recipe Restructuring Plan
+# Core Dispatcher Architecture — Profile Restructuring Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Restructure `core` into a slim dispatcher (~5K tokens) that routes to `bug` or `feature` subagents, absorb `testing` into `feature`, and eliminate token waste from cross-recipe duplication.
+**Goal:** Restructure `core` into a slim dispatcher (~5K tokens) that routes to `bug` or `feature` subagents, absorb `testing` into `feature`, and eliminate token waste from cross-profile duplication.
 
-**Architecture:** Core becomes a lightweight orchestrator with only essential context and dispatch rules. All coding work delegates to specialized subagents — `feature` for new development (with TDD, full standards, testing, migrations) and `bug` for investigation/fixing (with its own bug_diagnose/bug_fix sub-dispatch). The `testing` recipe is removed since tests and code belong together.
+**Architecture:** Core becomes a lightweight orchestrator with only essential context and dispatch rules. All coding work delegates to specialized subagents — `feature` for new development (with TDD, full standards, testing, migrations) and `bug` for investigation/fixing (with its own bug_diagnose/bug_fix sub-dispatch). The `testing` profile is removed since tests and code belong together.
 
-**Tech Stack:** Ruly recipes (YAML), markdown dispatch rules, ruly squash for verification.
+**Tech Stack:** Ruly profiles (YAML), markdown dispatch rules, ruly squash for verification.
 
 ---
 
 ## Current State (token costs)
 
-| Recipe | Tokens | Role |
+| Profile | Tokens | Role |
 |--------|--------|------|
 | `core` | 29,340 (14.7%) | Monolithic — has everything |
 | `bug` | 15,519 (7.8%) | Bug investigation orchestrator |
@@ -21,7 +21,7 @@
 
 ## Target State (estimated)
 
-| Recipe | Est. Tokens | Role |
+| Profile | Est. Tokens | Role |
 |--------|-------------|------|
 | `core` | ~5-7K | Slim dispatcher — routes to bug/feature/debugging |
 | `bug` | ~12-14K | Bug orchestrator — leaner (no feature-flags/outbox) |
@@ -188,14 +188,14 @@ cat rules/workaxle/core/standards/use-feature.md | head -5
 
 ---
 
-## Task 3: Restructure `core` recipe → slim dispatcher
+## Task 3: Restructure `core` profile → slim dispatcher
 
 **Files:**
-- Modify: `recipes.yml` (core recipe section)
+- Modify: `profiles.yml` (core profile section)
 
-**Step 1: Replace core recipe definition**
+**Step 1: Replace core profile definition**
 
-The new core recipe keeps ONLY:
+The new core profile keeps ONLY:
 - `core.md` — always-apply WorkAxle patterns
 - `essential/common.md` — common conventions
 - `essential/development-commands.md` — just commands
@@ -210,10 +210,10 @@ The new core recipe keeps ONLY:
 - ALL standards except dispatch rules (architecture-patterns, code-patterns, runtime-concerns → subagents)
 - ALL migrations (3 files → feature subagent)
 - Superpowers (TDD, verification → feature subagent)
-- `bug-diagnose.md` and `bug-fix.md` dispatch rules → move to bug recipe
-- `commands/diagnose.md` → move to bug recipe
+- `bug-diagnose.md` and `bug-fix.md` dispatch rules → move to bug profile
+- `commands/diagnose.md` → move to bug profile
 
-**New core recipe:**
+**New core profile:**
 
 ```yaml
   core:
@@ -235,11 +235,11 @@ The new core recipe keeps ONLY:
       - task-master-ai
     subagents:
       - name: bug
-        recipe: bug
+        profile: bug
       - name: feature
-        recipe: feature
+        profile: feature
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
 ```
 
 **Step 2: Verify squash**
@@ -252,12 +252,12 @@ Expected: ~5-7K tokens, 8 files, 3 subagents.
 
 ---
 
-## Task 4: Restructure `bug` recipe — leaner, with dispatch rules
+## Task 4: Restructure `bug` profile — leaner, with dispatch rules
 
 **Files:**
-- Modify: `recipes.yml` (bug recipe section)
+- Modify: `profiles.yml` (bug profile section)
 
-**Step 1: Replace bug recipe definition**
+**Step 1: Replace bug profile definition**
 
 Changes from current:
 - Remove `essential/` directory → explicit files WITHOUT feature-flags.md and outbox.md
@@ -300,13 +300,13 @@ Changes from current:
       - task-master-ai
     subagents:
       - name: context_fetcher
-        recipe: context-fetcher
+        profile: context-fetcher
       - name: bug_diagnose
-        recipe: bug-diagnose
+        profile: bug-diagnose
       - name: bug_fix
-        recipe: bug-fix
+        profile: bug-fix
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
 ```
 
 **Step 2: Verify squash**
@@ -319,12 +319,12 @@ Expected: ~12-14K tokens, fewer than current 15.5K.
 
 ---
 
-## Task 5: Restructure `feature` recipe — full coding subagent
+## Task 5: Restructure `feature` profile — full coding subagent
 
 **Files:**
-- Modify: `recipes.yml` (feature recipe section)
+- Modify: `profiles.yml` (feature profile section)
 
-**Step 1: Replace feature recipe definition**
+**Step 1: Replace feature profile definition**
 
 Changes from current:
 - Add superpowers (TDD + verification) — currently missing
@@ -397,9 +397,9 @@ Changes from current:
       - task-master-ai
     subagents:
       - name: context_fetcher
-        recipe: context-fetcher
+        profile: context-fetcher
       - name: core_debugging
-        recipe: core-debugging
+        profile: core-debugging
 ```
 
 **Step 2: Verify squash**
@@ -412,39 +412,39 @@ Expected: ~28-30K tokens with all standards, testing, migrations.
 
 ---
 
-## Task 6: Remove `testing` recipe
+## Task 6: Remove `testing` profile
 
 **Files:**
-- Modify: `recipes.yml` (remove testing recipe section)
+- Modify: `profiles.yml` (remove testing profile section)
 
-**Step 1: Delete the entire `testing:` recipe block from recipes.yml**
+**Step 1: Delete the entire `testing:` profile block from profiles.yml**
 
-The testing recipe is now redundant because:
+The testing profile is now redundant because:
 - All RSpec testing files are in `feature` (5 testing files)
 - `bug-fix` already has its own testing files (rspec-reference, rspec-patterns, rspec-sequel, specs)
 - PR merge commands (squash-and-merge, merge-to-develop, etc.) belong in `merger` or `finalize`
 - The testing profile (`workaxle/profiles/testing.md`) can be added to feature if its content is valuable
 
-**Step 2: Verify no other recipes reference `testing` as a subagent**
+**Step 2: Verify no other profiles reference `testing` as a subagent**
 
 ```bash
-grep -n "recipe: testing" recipes.yml
+grep -n "profile: testing" profiles.yml
 ```
 
 Expected: no results (testing was never used as a subagent).
 
 ---
 
-## Task 7: Sync recipes and verify all squash
+## Task 7: Sync profiles and verify all squash
 
-**Step 1: Copy recipes.yml to both config locations**
+**Step 1: Copy profiles.yml to both config locations**
 
 ```bash
-cp recipes.yml ~/.config/ruly/recipes.yml
-cp recipes.yml ~/Projects/chezmoi/config/ruly/recipes.yml
+cp profiles.yml ~/.config/ruly/profiles.yml
+cp profiles.yml ~/Projects/chezmoi/config/ruly/profiles.yml
 ```
 
-**Step 2: Verify squash for all affected recipes**
+**Step 2: Verify squash for all affected profiles**
 
 ```bash
 cd $(mktemp -d) && ruly squash core
@@ -455,7 +455,7 @@ cd $(mktemp -d) && ruly squash bug-diagnose
 cd $(mktemp -d) && ruly squash core-debugging
 ```
 
-**Step 3: Verify no duplicate commands in bug recipe**
+**Step 3: Verify no duplicate commands in bug profile**
 
 Check that `/bug:diagnose` doesn't appear alongside `/bug_diagnose:bug:diagnose`.
 
@@ -472,16 +472,16 @@ git commit -m "feat: add use-bug and use-feature dispatch rules for core dispatc
 git push
 ```
 
-**Step 2: Commit parent repo** (recipes.yml + submodule ref)
+**Step 2: Commit parent repo** (profiles.yml + submodule ref)
 
 ```bash
 cd ..
-git add recipes.yml rules
+git add profiles.yml rules
 git commit -m "refactor: restructure core as slim dispatcher, absorb testing into feature
 
-Core recipe slimmed from ~29K to ~5-7K tokens. Feature subagent gains
-superpowers, framework standards, migrations. Bug recipe drops feature-flags
-and outbox. Testing recipe removed (absorbed into feature)."
+Core profile slimmed from ~29K to ~5-7K tokens. Feature subagent gains
+superpowers, framework standards, migrations. Bug profile drops feature-flags
+and outbox. Testing profile removed (absorbed into feature)."
 git push
 ```
 
@@ -489,8 +489,8 @@ git push
 
 ```bash
 cd ~/Projects/chezmoi
-git add config/ruly/recipes.yml
-git commit -m "chore: sync recipes.yml - core dispatcher architecture"
+git add config/ruly/profiles.yml
+git commit -m "chore: sync profiles.yml - core dispatcher architecture"
 git push
 ```
 
@@ -505,16 +505,16 @@ git push
 | Bug drops `feature-flags.md` + `outbox.md` | Bug investigation doesn't need these; bug_fix subagent has them |
 | Feature gains superpowers + framework standards | Feature is now the full coding subagent; needs TDD discipline and all standards |
 | Feature gains migrations | Building features often requires schema changes |
-| Testing recipe removed entirely | Tests and code belong together; feature and bug-fix already have testing files |
-| `bug-diagnose.md` + `bug-fix.md` move to bug recipe | Core dispatches to bug orchestrator, which handles sub-dispatch internally |
-| `commands/diagnose.md` moves to bug recipe | Diagnose command is bug-specific, not general |
+| Testing profile removed entirely | Tests and code belong together; feature and bug-fix already have testing files |
+| `bug-diagnose.md` + `bug-fix.md` move to bug profile | Core dispatches to bug orchestrator, which handles sub-dispatch internally |
+| `commands/diagnose.md` moves to bug profile | Diagnose command is bug-specific, not general |
 | `core_debugging` stays accessible from core AND bug/feature | Debugging techniques are orthogonal — needed regardless of task type |
 
-## Unchanged Recipes
+## Unchanged Profiles
 
-These recipes are NOT modified by this plan:
+These profiles are NOT modified by this plan:
 - `bug-diagnose` — subagent, unchanged
 - `bug-fix` — subagent, unchanged
 - `core-debugging` — subagent, unchanged
 - `merger`, `finalize`, `refactor`, `full`, `review`, `jira`, `confluence`, `orchestrator`, `gateway`, `playwright`, `spike`, `initiative-core`, `agile`, `local`, `awesomer`, `comms`, `dashboard` — unchanged
-- All subagent-only recipes (context-fetcher, ms-teams-dm, etc.) — unchanged
+- All subagent-only profiles (context-fetcher, ms-teams-dm, etc.) — unchanged

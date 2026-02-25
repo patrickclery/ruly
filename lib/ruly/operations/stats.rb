@@ -7,20 +7,20 @@ module Ruly
   module Operations
     # Generate token statistics for rule files
     class Stats < Base
-      attr_reader :sources, :output_file, :recipes_file, :rules_dir
+      attr_reader :sources, :output_file, :profiles_file, :rules_dir
 
       # State object for DFS cycle detection to reduce parameter count
       DfsState = Struct.new(:visited, :rec_stack, :cycles, keyword_init: true)
 
       # @param sources [Array<Hash>] Array of source hashes with :path and :type keys
       # @param output_file [String] Path to output markdown file
-      # @param recipes_file [String, nil] Path to recipes.yml file for orphan detection
+      # @param profiles_file [String, nil] Path to profiles.yml file for orphan detection
       # @param rules_dir [String, nil] Path to rules directory for relative path resolution
-      def initialize(sources:, output_file: 'stats.md', recipes_file: nil, rules_dir: nil)
+      def initialize(sources:, output_file: 'stats.md', profiles_file: nil, rules_dir: nil)
         super()
         @sources = sources
         @output_file = output_file
-        @recipes_file = recipes_file
+        @profiles_file = profiles_file
         @rules_dir = rules_dir
       end
 
@@ -72,7 +72,7 @@ module Ruly
         file_stats.sort_by { |f| -f[:tokens] }
       end
 
-      # Find files not used by any recipe and not required by any other file
+      # Find files not used by any profile and not required by any other file
       # @return [Array<String>] List of orphaned file paths
       def find_orphaned_files
         all_files = sources.filter_map do |s|
@@ -86,7 +86,7 @@ module Ruly
           abs_path = File.expand_path(path, rules_dir&.sub(%r{/rules$}, ''))
           abs_path if File.exist?(abs_path)
         end
-        return all_files if recipes_file.nil? || !File.exist?(recipes_file)
+        return all_files if profiles_file.nil? || !File.exist?(profiles_file)
 
         used_files = collect_used_files.map { |f| File.expand_path(f) }
         all_files.reject { |f| used_files.include?(File.expand_path(f)) }
@@ -126,14 +126,14 @@ module Ruly
         encoder.encode(utf8_text).length
       end
 
-      # Collect all files used by recipes (directly or via directory inclusion)
+      # Collect all files used by profiles (directly or via directory inclusion)
       # and files required by other files (transitively)
       def collect_used_files
         used = Set.new
 
-        # Get files directly referenced in recipes
-        recipe_files = collect_recipe_files
-        recipe_files.each { |f| used.add(f) }
+        # Get files directly referenced in profiles
+        profile_files = collect_profile_files
+        profile_files.each { |f| used.add(f) }
 
         # Expand requirements transitively
         expand_requirements(used)
@@ -141,17 +141,17 @@ module Ruly
         used.to_a
       end
 
-      # Parse recipes.yml and collect all referenced files
-      def collect_recipe_files
-        config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-        recipes = config['recipes'] || {}
+      # Parse profiles.yml and collect all referenced files
+      def collect_profile_files
+        config = YAML.safe_load_file(profiles_file, aliases: true) || {}
+        profiles = config['profiles'] || {}
 
         files = Set.new
 
-        recipes.each_value do |recipe|
-          next unless recipe.is_a?(Hash) && recipe['files']
+        profiles.each_value do |profile|
+          next unless profile.is_a?(Hash) && profile['files']
 
-          recipe['files'].each do |path|
+          profile['files'].each do |path|
             if File.directory?(path)
               # Directory reference - expand to all .md files
               Dir.glob(File.join(path, '**', '*.md')).each { |f| files.add(f) }
@@ -285,7 +285,7 @@ module Ruly
           write_header(f, file_stats.size, total_tokens, total_size)
           write_circular_section(f, circular_deps) if circular_deps.any?
           write_table(f, file_stats)
-          write_recipe_sections(f, file_stats)
+          write_profile_sections(f, file_stats)
           write_orphaned_section(f, orphaned_files) if orphaned_files.any?
           write_footer(f)
         end
@@ -364,36 +364,36 @@ module Ruly
         file.puts
       end
 
-      def write_recipe_sections(file, file_stats)
-        return unless recipes_file && File.exist?(recipes_file)
+      def write_profile_sections(file, file_stats)
+        return unless profiles_file && File.exist?(profiles_file)
 
-        recipe_files_map = build_recipe_files_map
-        return if recipe_files_map.empty?
+        profile_files_map = build_profile_files_map
+        return if profile_files_map.empty?
 
         # Build lookup from path to stats
         stats_by_path = file_stats.each_with_object({}) do |stat, hash|
           hash[File.expand_path(stat[:path])] = stat
         end
 
-        recipe_files_map.keys.sort.each do |recipe_name|
-          write_recipe_section(file, recipe_name, recipe_files_map[recipe_name], stats_by_path)
+        profile_files_map.keys.sort.each do |profile_name|
+          write_profile_section(file, profile_name, profile_files_map[profile_name], stats_by_path)
         end
       end
 
-      # Build a map of recipe name to list of file paths
-      def build_recipe_files_map
-        return {} unless recipes_file && File.exist?(recipes_file)
+      # Build a map of profile name to list of file paths
+      def build_profile_files_map
+        return {} unless profiles_file && File.exist?(profiles_file)
 
-        config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-        recipes = config['recipes'] || {}
+        config = YAML.safe_load_file(profiles_file, aliases: true) || {}
+        profiles = config['profiles'] || {}
 
-        recipe_files_map = {}
+        profile_files_map = {}
 
-        recipes.each do |name, recipe|
-          next unless recipe.is_a?(Hash) && recipe['files']
+        profiles.each do |name, profile|
+          next unless profile.is_a?(Hash) && profile['files']
 
           files = []
-          recipe['files'].each do |path|
+          profile['files'].each do |path|
             if File.directory?(path)
               Dir.glob(File.join(path, '**', '*.md')).each { |f| files << f }
             elsif File.exist?(path)
@@ -401,34 +401,34 @@ module Ruly
             end
           end
 
-          recipe_files_map[name] = files unless files.empty?
+          profile_files_map[name] = files unless files.empty?
         end
 
-        recipe_files_map
+        profile_files_map
       end
 
-      def write_recipe_section(file, recipe_name, recipe_file_paths, stats_by_path)
-        recipe_stats = recipe_file_paths.filter_map do |path|
+      def write_profile_section(file, profile_name, profile_file_paths, stats_by_path)
+        profile_stats = profile_file_paths.filter_map do |path|
           stats_by_path[File.expand_path(path)]
         end
 
-        return if recipe_stats.empty?
+        return if profile_stats.empty?
 
-        recipe_stats = recipe_stats.sort_by { |s| -s[:tokens] }
+        profile_stats = profile_stats.sort_by { |s| -s[:tokens] }
 
-        file.puts "## Recipe: #{recipe_name}"
+        file.puts "## Profile: #{profile_name}"
         file.puts
-        file.puts "- **Files**: #{recipe_stats.size}"
-        file.puts "- **Total Tokens**: #{format_number(recipe_stats.sum { |s| s[:tokens] })}"
-        file.puts "- **Total Size**: #{format_bytes(recipe_stats.sum { |s| s[:size] })}"
+        file.puts "- **Files**: #{profile_stats.size}"
+        file.puts "- **Total Tokens**: #{format_number(profile_stats.sum { |s| s[:tokens] })}"
+        file.puts "- **Total Size**: #{format_bytes(profile_stats.sum { |s| s[:size] })}"
         file.puts
-        write_stats_table(file, recipe_stats)
+        write_stats_table(file, profile_stats)
       end
 
       def write_orphaned_section(file, orphaned_files)
         file.puts '## Orphaned Files'
         file.puts
-        file.puts "#{orphaned_files.size} files not used by any recipe or required by any file:"
+        file.puts "#{orphaned_files.size} files not used by any profile or required by any file:"
         file.puts
         orphaned_files.sort.each do |path|
           filename = File.basename(path)
