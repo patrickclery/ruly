@@ -14,8 +14,8 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
           'files' => ['rules/base.md']
         },
         'child' => {
-          'extends' => 'base',
           'description' => 'Child profile',
+          'extends' => 'base',
           'files' => ['rules/child.md']
         }
       }
@@ -54,12 +54,12 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
       File.write(File.join(test_dir, 'profiles.yml'), profiles_yml)
 
       profiles = described_class.load_all_profiles(
-        gem_root: test_dir,
-        base_profiles_file: File.join(test_dir, 'profiles.yml')
+        base_profiles_file: File.join(test_dir, 'profiles.yml'),
+        gem_root: test_dir
       )
 
       expect(profiles['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
-      expect(profiles['child']['mcp_servers']).to eq(['task-master-ai', 'playwright'])
+      expect(profiles['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
       expect(profiles['child']).not_to have_key('extends')
       # Parent should be unchanged
       expect(profiles['base']['files']).to eq(['rules/base.md'])
@@ -69,8 +69,8 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'scalar override (child wins)' do
     it 'child description overrides parent' do
       profiles = {
-        'base' => { 'description' => 'Base', 'model' => 'sonnet' },
-        'child' => { 'extends' => 'base', 'description' => 'Child', 'model' => 'opus' }
+        'base' => {'description' => 'Base', 'model' => 'sonnet'},
+        'child' => {'description' => 'Child', 'extends' => 'base', 'model' => 'opus'}
       }
 
       described_class.resolve_extends!(profiles)
@@ -81,8 +81,8 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
 
     it 'child inherits scalars it does not define' do
       profiles = {
-        'base' => { 'description' => 'Base', 'model' => 'sonnet', 'tier' => 'claude_pro' },
-        'child' => { 'extends' => 'base', 'description' => 'Child' }
+        'base' => {'description' => 'Base', 'model' => 'sonnet', 'tier' => 'claude_pro'},
+        'child' => {'description' => 'Child', 'extends' => 'base'}
       }
 
       described_class.resolve_extends!(profiles)
@@ -95,8 +95,8 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'array union (deduped, parent first)' do
     it 'unions files without duplicates' do
       profiles = {
-        'base' => { 'files' => ['a.md', 'b.md'] },
-        'child' => { 'extends' => 'base', 'files' => ['b.md', 'c.md'] }
+        'base' => {'files' => ['a.md', 'b.md']},
+        'child' => {'extends' => 'base', 'files' => ['b.md', 'c.md']}
       }
 
       described_class.resolve_extends!(profiles)
@@ -106,19 +106,19 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
 
     it 'unions mcp_servers' do
       profiles = {
-        'base' => { 'mcp_servers' => ['task-master-ai'] },
-        'child' => { 'extends' => 'base', 'mcp_servers' => ['playwright'] }
+        'base' => {'mcp_servers' => ['task-master-ai']},
+        'child' => {'extends' => 'base', 'mcp_servers' => ['playwright']}
       }
 
       described_class.resolve_extends!(profiles)
 
-      expect(profiles['child']['mcp_servers']).to eq(['task-master-ai', 'playwright'])
+      expect(profiles['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
     end
 
     it 'handles child with no array key (inherits parent array)' do
       profiles = {
-        'base' => { 'files' => ['a.md'] },
-        'child' => { 'extends' => 'base' }
+        'base' => {'files' => ['a.md']},
+        'child' => {'extends' => 'base'}
       }
 
       described_class.resolve_extends!(profiles)
@@ -132,15 +132,15 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
       profiles = {
         'base' => {
           'subagents' => [
-            { 'name' => 'agent_a', 'profile' => 'prof-a' },
-            { 'name' => 'agent_b', 'profile' => 'prof-b', 'model' => 'sonnet' }
+            {'name' => 'agent_a', 'profile' => 'prof-a'},
+            {'model' => 'sonnet', 'name' => 'agent_b', 'profile' => 'prof-b'}
           ]
         },
         'child' => {
           'extends' => 'base',
           'subagents' => [
-            { 'name' => 'agent_b', 'profile' => 'prof-b', 'model' => 'haiku' },
-            { 'name' => 'agent_c', 'profile' => 'prof-c' }
+            {'model' => 'haiku', 'name' => 'agent_b', 'profile' => 'prof-b'},
+            {'name' => 'agent_c', 'profile' => 'prof-c'}
           ]
         }
       }
@@ -158,9 +158,9 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'transitive extends (A extends B extends C)' do
     it 'resolves multi-level inheritance' do
       profiles = {
-        'grandparent' => { 'files' => ['gp.md'], 'mcp_servers' => ['server-a'] },
-        'parent' => { 'extends' => 'grandparent', 'files' => ['p.md'] },
-        'child' => { 'extends' => 'parent', 'files' => ['c.md'] }
+        'child' => {'extends' => 'parent', 'files' => ['c.md']},
+        'grandparent' => {'files' => ['gp.md'], 'mcp_servers' => ['server-a']},
+        'parent' => {'extends' => 'grandparent', 'files' => ['p.md']}
       }
 
       described_class.resolve_extends!(profiles)
@@ -174,8 +174,8 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'circular extends detection' do
     it 'raises error on direct circular reference' do
       profiles = {
-        'a' => { 'extends' => 'b' },
-        'b' => { 'extends' => 'a' }
+        'a' => {'extends' => 'b'},
+        'b' => {'extends' => 'a'}
       }
 
       expect { described_class.resolve_extends!(profiles) }.to raise_error(
@@ -185,9 +185,9 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
 
     it 'raises error on indirect circular reference' do
       profiles = {
-        'a' => { 'extends' => 'b' },
-        'b' => { 'extends' => 'c' },
-        'c' => { 'extends' => 'a' }
+        'a' => {'extends' => 'b'},
+        'b' => {'extends' => 'c'},
+        'c' => {'extends' => 'a'}
       }
 
       expect { described_class.resolve_extends!(profiles) }.to raise_error(
@@ -199,7 +199,7 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'missing parent detection' do
     it 'raises error when parent does not exist' do
       profiles = {
-        'child' => { 'extends' => 'nonexistent' }
+        'child' => {'extends' => 'nonexistent'}
       }
 
       expect { described_class.resolve_extends!(profiles) }.to raise_error(
@@ -211,20 +211,20 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
   describe 'profiles without extends are unchanged' do
     it 'does not modify profiles that have no extends key' do
       profiles = {
-        'standalone' => { 'description' => 'Solo', 'files' => ['a.md'] }
+        'standalone' => {'description' => 'Solo', 'files' => ['a.md']}
       }
 
       described_class.resolve_extends!(profiles)
 
-      expect(profiles['standalone']).to eq({ 'description' => 'Solo', 'files' => ['a.md'] })
+      expect(profiles['standalone']).to eq({'description' => 'Solo', 'files' => ['a.md']})
     end
   end
 
   describe 'array profiles are skipped' do
     it 'does not attempt to resolve extends on array profiles' do
       profiles = {
-        'base' => { 'files' => ['a.md'] },
-        'agent' => ['file1.md', 'file2.md']
+        'agent' => ['file1.md', 'file2.md'],
+        'base' => {'files' => ['a.md']}
       }
 
       expect { described_class.resolve_extends!(profiles) }.not_to raise_error
@@ -260,8 +260,8 @@ RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
           'files' => ['rules/base.md']
         },
         'child' => {
-          'extends' => 'base',
           'description' => 'Child profile',
+          'extends' => 'base',
           'files' => ['rules/child.md']
         }
       }
@@ -277,8 +277,8 @@ RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
     # rubocop:disable RSpec/AnyInstance
     allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(
       Ruly::Services::ProfileLoader.load_all_profiles(
-        gem_root: test_dir,
-        base_profiles_file: File.join(test_dir, 'profiles.yml')
+        base_profiles_file: File.join(test_dir, 'profiles.yml'),
+        gem_root: test_dir
       )
     )
     # rubocop:enable RSpec/AnyInstance
