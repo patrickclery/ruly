@@ -784,6 +784,9 @@ profiles:
     commands:
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
+    subagents:
+      - name: comms_teams
+        profile: comms-teams
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
