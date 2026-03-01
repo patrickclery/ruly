@@ -26,7 +26,7 @@
 - When testing out `ruly squash ...`, always run it from a `mktmpdir` and not the main project directory
 - always update ruly after any changes. for instance, /Users/patrick/.local/share/mise/installs/ruby/3.3.3/bin/ruly is out of sync right now
 - Whenever you want token counts for profiles, run `ruly stats` and read the results from `stats.md`
-- After any changes to the `core` profile (either `profiles.yml` or any file it references), run: `cd ~/agents/core && ruly squash --deepclean core`
+- After any changes to the `core` profile (either `profiles.yml` or any file it references), run: `cd ~/agents/core && ruly squash --deepclean core`. **Do this before ending the session — check whether any file you modified is referenced by the core profile.**
 
 ## CRITICAL: Never Reference Filenames in Rules
 

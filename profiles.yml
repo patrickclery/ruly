@@ -746,6 +746,7 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/qa-report.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     mcp_servers:
       - teams  # for ready-for-qa Teams notification
