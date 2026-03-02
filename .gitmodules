@@ -4,5 +4,5 @@
 	ignore = all
 [submodule "superpowers"]
 	path = superpowers
-	url = https://github.com/obra/superpowers
+	url = https://github.com/patrickclery/superpowers
 	ignore = all
