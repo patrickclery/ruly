@@ -14,6 +14,8 @@ profiles:
       - github
       - comms
     files:
+      # === Branch Lock (main worktree stays on main) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
       # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
