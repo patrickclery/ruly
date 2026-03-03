@@ -368,6 +368,7 @@ module Ruly
       save_skill_files(skill_files, profile_paths:) if agent == 'claude' && !skill_files.empty?
       profile_config = merge_mcp_servers(profile_config, local_sources)
       Services::MCPManager.update_mcp_settings(profile_config, agent)
+      Services::SettingsManager.write_settings(profile_config)
       Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
       all_skill_files = skill_files.dup
       if profile_config.is_a?(Hash) && profile_config['subagents']

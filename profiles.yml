@@ -17,6 +17,7 @@ profiles:
       # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
       # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
@@ -33,6 +34,12 @@ profiles:
       # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - type: command
+              command: .claude/scripts/worktree-create.sh
+              timeout: 120
     skills:
       # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
