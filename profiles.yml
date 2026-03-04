@@ -454,6 +454,10 @@ profiles:
       - github
       - comms
     files:
+      # === Branch Lock (submodule repos stay on main) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/essential/branch-lock.md
+      # === Worktree Setup ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/reference/worktree-setup.md
       # === Orchestrator Dispatch ===
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
       # === WorkAxle Core Context (for understanding routing signals) ===
@@ -536,6 +540,12 @@ profiles:
         profile: qa
       - name: bug_diagnose
         profile: bug-diagnose
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - type: command
+              command: .claude/scripts/worktree-create.sh
+              timeout: 120
 
   gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
