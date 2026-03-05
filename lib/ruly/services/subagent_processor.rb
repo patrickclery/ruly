@@ -2,6 +2,7 @@
 
 require 'fileutils'
 require 'yaml'
+require 'ruly/services/repo_config_reader'
 
 module Ruly
   module Services
@@ -192,9 +193,22 @@ module Ruly
           deps[:all_skill_files].concat(skill_files)
         end
 
+        repo_content = ''
+        hooks = collect_hooks(parent_profile_config)
+
+        if subagent_config['append'] && subagent_config['cwd']
+          cwd_path = File.join(Dir.pwd, subagent_config['cwd'])
+          if Dir.exist?(cwd_path)
+            repo = Services::RepoConfigReader.read_repo_content(cwd_path)
+            repo_content = Services::RepoConfigReader.format_repo_content(repo)
+            hooks = hooks.merge(repo[:hooks]) if repo[:hooks].any?
+          end
+        end
+
         context = build_agent_context(
           agent_name, profile_name, profile_config, parent_profile_name, local_sources,
-          mcp_servers:, parent_profile_config:, skill_names:, subagent_config:
+          mcp_servers:, parent_profile_config:, skill_names:, subagent_config:,
+          hooks:, repo_content:
         )
         write_agent_file(agent_file, context)
         unless command_files.empty?
@@ -230,7 +244,8 @@ module Ruly
       # @return [Hash] context with all necessary data for the agent file
       def build_agent_context(
         agent_name, profile_name, profile_config, parent_profile_name, local_sources,
-        hooks: {}, mcp_servers: [], parent_profile_config: {}, skill_names: [], subagent_config: {}
+        hooks: {}, mcp_servers: [], parent_profile_config: {}, repo_content: '',
+        skill_names: [], subagent_config: {}
       )
         {
           agent_name:,
@@ -242,6 +257,7 @@ module Ruly
           parent_profile_name:,
           profile_config:,
           profile_name:,
+          repo_content:,
           skill_names:,
           timestamp: Time.now.strftime('%Y-%m-%d %H:%M:%S')
         }
@@ -257,6 +273,15 @@ module Ruly
         return parent_profile_config['model'] if parent_profile_config.is_a?(Hash) && parent_profile_config['model']
 
         'inherit'
+      end
+
+      # Collect hooks from parent profile config.
+      # @param parent_profile_config [Hash] parent profile configuration
+      # @return [Hash] hooks hash
+      def collect_hooks(parent_profile_config)
+        return {} unless parent_profile_config.is_a?(Hash)
+
+        parent_profile_config['hooks'] || {}
       end
 
       # Write the complete agent file.
@@ -320,6 +345,11 @@ module Ruly
           output.puts '---'
           output.puts
         end
+
+        return unless context[:repo_content].is_a?(String) && !context[:repo_content].strip.empty?
+
+        output.puts context[:repo_content]
+        output.puts
       end
 
       # Write the footer section of the agent file.
