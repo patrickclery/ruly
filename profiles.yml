@@ -497,19 +497,24 @@ profiles:
       - name: core_debugger
         profile: core-debugger
         cwd: workaxle-core
+        append: true
       - name: core_engineer
         profile: core-engineer
         cwd: workaxle-core
+        append: true
       - name: core_debugging
         profile: core-debugging
         cwd: workaxle-core
+        append: true
       # === Frontend Subagents ===
       - name: frontend_engineer
         profile: frontend-engineer
         cwd: workaxle-desktop
+        append: true
       - name: frontend_reviewer
         profile: frontend-reviewer
         cwd: workaxle-desktop
+        append: true
       # === Context Subagents ===
       - name: context_jira
         profile: context-jira
@@ -540,6 +545,7 @@ profiles:
       - name: core_reviewer
         profile: core-reviewer
         cwd: workaxle-core
+        append: true
       - name: pr_review_loop
         profile: pr-review-loop
       - name: qa_tester
@@ -547,6 +553,7 @@ profiles:
       - name: bug_diagnose
         profile: bug-diagnose
         cwd: workaxle-core
+        append: true
     hooks:
       WorktreeCreate:
         - hooks:
