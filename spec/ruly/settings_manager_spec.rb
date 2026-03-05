@@ -143,4 +143,83 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
     end
   end
+
+  describe '.propagate_hooks_to_subdirs' do
+    let(:hooks) do
+      {
+        'WorktreeCreate' => [
+          { 'hooks' => [{ 'type' => 'command', 'command' => '.claude/scripts/worktree-create.sh', 'timeout' => 120 }] }
+        ]
+      }
+    end
+
+    let(:profile_config) do
+      {
+        'hooks' => hooks,
+        'subagents' => [
+          { 'name' => 'core_engineer', 'profile' => 'core-engineer', 'cwd' => 'workaxle-core' },
+          { 'name' => 'core_debugger', 'profile' => 'core-debugger', 'cwd' => 'workaxle-core' },
+          { 'name' => 'frontend_engineer', 'profile' => 'frontend-engineer', 'cwd' => 'workaxle-desktop' },
+          { 'name' => 'comms_jira', 'profile' => 'comms-jira' }
+        ]
+      }
+    end
+
+    it 'writes settings.local.json into each unique cwd directory' do
+      FileUtils.mkdir_p('workaxle-core')
+      FileUtils.mkdir_p('workaxle-desktop')
+
+      described_class.propagate_hooks_to_subdirs(profile_config)
+
+      %w[workaxle-core workaxle-desktop].each do |subdir|
+        settings_path = File.join(subdir, '.claude', 'settings.local.json')
+        expect(File.exist?(settings_path)).to be true
+        settings = JSON.parse(File.read(settings_path))
+        expect(settings['hooks']).to eq(hooks)
+      end
+    end
+
+    it 'skips subagents without cwd' do
+      FileUtils.mkdir_p('workaxle-core')
+      FileUtils.mkdir_p('workaxle-desktop')
+
+      described_class.propagate_hooks_to_subdirs(profile_config)
+
+      expect(Dir.glob('*/.claude/settings.local.json').sort)
+        .to eq(%w[workaxle-core/.claude/settings.local.json workaxle-desktop/.claude/settings.local.json])
+    end
+
+    it 'does nothing when profile has no hooks' do
+      config = { 'subagents' => [{ 'name' => 'x', 'profile' => 'y', 'cwd' => 'sub' }] }
+      FileUtils.mkdir_p('sub')
+
+      described_class.propagate_hooks_to_subdirs(config)
+
+      expect(File.exist?('sub/.claude/settings.local.json')).to be false
+    end
+
+    it 'does nothing when no subagents have cwd' do
+      config = {
+        'hooks' => hooks,
+        'subagents' => [{ 'name' => 'x', 'profile' => 'y' }]
+      }
+
+      described_class.propagate_hooks_to_subdirs(config)
+
+      expect(Dir.glob('*/.claude/settings.local.json')).to be_empty
+    end
+
+    it 'copies script files into each cwd directory' do
+      FileUtils.mkdir_p('workaxle-core')
+      FileUtils.mkdir_p('.claude/scripts')
+      File.write('.claude/scripts/worktree-create.sh', "#!/bin/bash\necho hi")
+      File.chmod(0o755, '.claude/scripts/worktree-create.sh')
+
+      described_class.propagate_hooks_to_subdirs(profile_config, script_files: ['.claude/scripts/worktree-create.sh'])
+
+      target_script = 'workaxle-core/.claude/scripts/worktree-create.sh'
+      expect(File.exist?(target_script)).to be true
+      expect(File.executable?(target_script)).to be true
+    end
+  end
 end
