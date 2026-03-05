@@ -1052,3 +1052,68 @@ profiles:
     commands:
       # === PR readiness chart ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
+
+  # === Startup profiles — Generic Next.js + NestJS + Postgres stack ===
+  startup:
+    description: "Startup team orchestrator — dispatches to specialized roles"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/reference/technology-stack.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/reference/project-structure.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/dispatches/
+    mcp_servers:
+      - playwright
+    subagents:
+      - name: frontend_engineer
+        profile: startup-frontend
+      - name: backend_engineer
+        profile: startup-backend
+      - name: uiux_designer
+        profile: startup-uiux
+      - name: devops_engineer
+        profile: startup-devops
+      - name: marketing
+        profile: startup-marketing
+        model: haiku
+      - name: sales
+        profile: startup-sales
+        model: haiku
+
+  startup-frontend:
+    description: "Next.js frontend engineer — React 19, Tailwind 4, App Router"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/
+
+  startup-backend:
+    description: "NestJS backend engineer — Prisma 7, PostgreSQL, API design"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/backend/
+
+  startup-uiux:
+    description: "UI/UX designer — design systems, visual testing, cutting-edge UI"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/tailwind-patterns.md
+    # UI/UX Pro Max is loaded automatically via Claude Code plugin
+    mcp_servers:
+      - playwright
+
+  startup-devops:
+    description: "DevOps engineer — CI/CD, Docker, deployment"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/devops/
+
+  startup-marketing:
+    description: "Marketing — landing pages, SEO, blog posts, social content"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/content/marketing-patterns.md
+
+  startup-sales:
+    description: "Sales — product descriptions, pitch content, outreach"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/content/sales-patterns.md
