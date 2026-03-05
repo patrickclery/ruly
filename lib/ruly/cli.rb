@@ -376,6 +376,11 @@ module Ruly
         all_skill_files.concat(subagent_skill_files) if subagent_skill_files&.any?
       end
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+      # Propagate hooks + scripts to subagent cwd directories
+      if profile_config.is_a?(Hash) && profile_config['hooks']&.any?
+        script_paths = Dir.glob('.claude/scripts/*').select { |f| File.file?(f) }
+        Services::SettingsManager.propagate_hooks_to_subdirs(profile_config, script_files: script_paths)
+      end
       Ruly::Checks.run_all(local_sources, command_files,
                            skill_files: all_skill_files,
                            find_rule_file: method(:find_rule_file),
