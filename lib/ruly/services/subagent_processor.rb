@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'fileutils'
+require 'yaml'
 
 module Ruly
   module Services
@@ -229,11 +230,12 @@ module Ruly
       # @return [Hash] context with all necessary data for the agent file
       def build_agent_context(
         agent_name, profile_name, profile_config, parent_profile_name, local_sources,
-        mcp_servers: [], parent_profile_config: {}, skill_names: [], subagent_config: {}
+        hooks: {}, mcp_servers: [], parent_profile_config: {}, skill_names: [], subagent_config: {}
       )
         {
           agent_name:,
           description: profile_config['description'] || "Subagent for #{profile_name}",
+          hooks:,
           local_sources:,
           mcp_servers:,
           model: resolve_agent_model(subagent_config, parent_profile_config),
@@ -272,28 +274,31 @@ module Ruly
       # @param output [IO] output stream
       # @param context [Hash] agent context data
       def write_agent_frontmatter(output, context)
-        skills_line = if context[:skill_names]&.any?
-                        "\nskills: [#{context[:skill_names].join(', ')}]"
-                      else
-                        ''
-                      end
-        mcp_line = if context[:mcp_servers]&.any?
-                     "\nmcpServers: [#{context[:mcp_servers].join(', ')}]"
-                   else
-                     ''
-                   end
-        output.puts <<~YAML
-          ---
-          name: #{context[:agent_name]}
-          description: #{context[:description]}
-          tools: Bash, Read, Write, Edit, Glob, Grep
-          model: #{context[:model]}#{skills_line}#{mcp_line}
-          permissionMode: bypassPermissions
-          # Auto-generated from profile: #{context[:profile_name]}
-          # Do not edit manually - regenerate using 'ruly squash #{context[:parent_profile_name]}'
-          ---
+        frontmatter = {
+          'name' => context[:agent_name],
+          'description' => context[:description],
+          'tools' => 'Bash, Read, Write, Edit, Glob, Grep',
+          'model' => context[:model]
+        }
 
-        YAML
+        if context[:skill_names]&.any?
+          frontmatter['skills'] = "[#{context[:skill_names].join(', ')}]"
+        end
+        if context[:mcp_servers]&.any?
+          frontmatter['mcpServers'] = "[#{context[:mcp_servers].join(', ')}]"
+        end
+        frontmatter['permissionMode'] = 'bypassPermissions'
+
+        if context[:hooks].is_a?(Hash) && context[:hooks].any?
+          frontmatter['hooks'] = context[:hooks]
+        end
+
+        output.puts '---'
+        output.puts YAML.dump(frontmatter).sub(/\A---\n/, '').chomp
+        output.puts "# Auto-generated from profile: #{context[:profile_name]}"
+        output.puts "# Do not edit manually - regenerate using 'ruly squash #{context[:parent_profile_name]}'"
+        output.puts '---'
+        output.puts
       end
 
       # Write the main content section of the agent file.
