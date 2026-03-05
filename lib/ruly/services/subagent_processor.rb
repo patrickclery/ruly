@@ -2,7 +2,7 @@
 
 require 'fileutils'
 require 'yaml'
-require 'ruly/services/repo_config_reader'
+require_relative 'repo_config_reader'
 
 module Ruly
   module Services
