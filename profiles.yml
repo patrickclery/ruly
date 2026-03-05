@@ -496,15 +496,20 @@ profiles:
       # === Backend Subagents (promoted from core) ===
       - name: core_debugger
         profile: core-debugger
+        cwd: workaxle-core
       - name: core_engineer
         profile: core-engineer
+        cwd: workaxle-core
       - name: core_debugging
         profile: core-debugging
+        cwd: workaxle-core
       # === Frontend Subagents ===
       - name: frontend_engineer
         profile: frontend-engineer
+        cwd: workaxle-desktop
       - name: frontend_reviewer
         profile: frontend-reviewer
+        cwd: workaxle-desktop
       # === Context Subagents ===
       - name: context_jira
         profile: context-jira
@@ -534,12 +539,14 @@ profiles:
         profile: pr-readiness
       - name: core_reviewer
         profile: core-reviewer
+        cwd: workaxle-core
       - name: pr_review_loop
         profile: pr-review-loop
       - name: qa_tester
         profile: qa
       - name: bug_diagnose
         profile: bug-diagnose
+        cwd: workaxle-core
     hooks:
       WorktreeCreate:
         - hooks:
