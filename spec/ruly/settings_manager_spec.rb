@@ -82,6 +82,47 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
     end
 
+    context 'when target_dir is specified' do
+      let(:profile_config) do
+        {
+          'hooks' => {
+            'WorktreeCreate' => [
+              {
+                'hooks' => [
+                  { 'type' => 'command', 'command' => '.claude/scripts/worktree-create.sh', 'timeout' => 120 }
+                ]
+              }
+            ]
+          }
+        }
+      end
+
+      it 'writes settings.local.json into the target directory' do
+        target = File.join(Dir.pwd, 'submodule-a')
+        FileUtils.mkdir_p(target)
+
+        described_class.write_settings(profile_config, target_dir: target)
+
+        settings_path = File.join(target, '.claude', 'settings.local.json')
+        expect(File.exist?(settings_path)).to be true
+        settings = JSON.parse(File.read(settings_path))
+        expect(settings['hooks']['WorktreeCreate']).to be_a(Array)
+      end
+
+      it 'merges with existing settings in target directory' do
+        target = File.join(Dir.pwd, 'submodule-b')
+        FileUtils.mkdir_p(File.join(target, '.claude'))
+        File.write(File.join(target, '.claude', 'settings.local.json'),
+                   JSON.pretty_generate('permissions' => { 'allow' => ['Bash(*)'] }))
+
+        described_class.write_settings(profile_config, target_dir: target)
+
+        settings = JSON.parse(File.read(File.join(target, '.claude', 'settings.local.json')))
+        expect(settings['permissions']['allow']).to eq(['Bash(*)'])
+        expect(settings['hooks']).to have_key('WorktreeCreate')
+      end
+    end
+
     context 'with multiple hook types' do
       it 'writes all hook types' do
         profile_config = {

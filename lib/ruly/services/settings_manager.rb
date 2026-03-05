@@ -15,21 +15,23 @@ module Ruly
       # Write hooks from profile config into .claude/settings.local.json.
       # Merges with existing settings if the file already exists.
       # @param profile_config [Hash] profile configuration (may contain 'hooks' key)
-      def write_settings(profile_config)
+      def write_settings(profile_config, target_dir: nil)
         hooks = profile_config.is_a?(Hash) && profile_config['hooks']
         return unless hooks.is_a?(Hash) && hooks.any?
 
-        FileUtils.mkdir_p('.claude')
+        base = target_dir || Dir.pwd
+        settings_path = File.join(base, SETTINGS_FILE)
+        FileUtils.mkdir_p(File.dirname(settings_path))
 
-        existing = if File.exist?(SETTINGS_FILE)
-                     JSON.parse(File.read(SETTINGS_FILE))
+        existing = if File.exist?(settings_path)
+                     JSON.parse(File.read(settings_path))
                    else
                      {}
                    end
 
         existing['hooks'] = hooks
-        File.write(SETTINGS_FILE, JSON.pretty_generate(existing))
-        puts "Updated #{SETTINGS_FILE} with #{hooks.keys.join(', ')} hook(s)"
+        File.write(settings_path, JSON.pretty_generate(existing))
+        puts "Updated #{settings_path} with #{hooks.keys.join(', ')} hook(s)"
       end
     end
   end
