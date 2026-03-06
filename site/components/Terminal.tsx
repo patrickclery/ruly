@@ -63,7 +63,8 @@ export default function Terminal({ onFileSelect, onSquashComplete }: TerminalPro
     let i = 0;
     const interval = setInterval(() => {
       if (i < lines.length) {
-        setOutput((prev) => [...prev, lines[i]]);
+        const currentLine = lines[i];
+        setOutput((prev) => [...prev, currentLine]);
         i++;
       } else {
         clearInterval(interval);
