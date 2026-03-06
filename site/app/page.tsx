@@ -1,3 +1,5 @@
+import DemoSection from "@/components/DemoSection";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gray-950 text-white">
@@ -25,24 +27,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Demo placeholder */}
-      <section id="demo" className="mx-auto max-w-6xl px-4 py-16">
-        <div className="rounded-lg border border-gray-800 bg-gray-900 p-8 text-center text-gray-500">
-          Interactive demo coming soon...
+      {/* Interactive Demo */}
+      <DemoSection />
+
+      {/* Feature highlights */}
+      <section className="mx-auto max-w-4xl px-4 py-16">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h3 className="text-lg font-semibold text-white">Profiles</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Define task-specific profiles that load only the rules you need. One YAML file controls everything.
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h3 className="text-lg font-semibold text-white">Subagents</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Dispatch specialized agents into repos. Each inherits its repo&apos;s CLAUDE.md, rules, and hooks automatically.
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <h3 className="text-lg font-semibold text-white">Three Modes</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Override, merge, or ghost. Deploy your full stack without touching their codebase.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Feature highlights placeholder */}
-      <section className="mx-auto max-w-4xl px-4 py-16">
-        <div className="text-center text-gray-500">Features coming soon...</div>
-      </section>
-
       {/* Footer */}
-      <footer className="border-t border-gray-800 py-8 text-center text-sm text-gray-500">
-        <a href="https://github.com/patrickclery/ruly" className="hover:text-white transition">
-          ruly
-        </a>
-        {" "}&mdash; A rule manager for Claude Code
+      <footer className="border-t border-gray-800 py-8">
+        <div className="mx-auto max-w-4xl px-4 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <div className="text-sm text-gray-500">
+            <span className="font-mono">gem install ruly</span>
+          </div>
+          <div className="flex gap-6 text-sm text-gray-500">
+            <a href="https://github.com/patrickclery/ruly" className="hover:text-white transition">
+              GitHub
+            </a>
+            <a href="https://rubygems.org/gems/ruly" className="hover:text-white transition">
+              RubyGems
+            </a>
+          </div>
+        </div>
       </footer>
     </main>
   );
