@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0F172A;
+  --color-bg-secondary: #1E293B;
+  --color-bg-tertiary: #334155;
+  --color-accent: #22C55E;
+  --color-accent-glow: rgba(34, 197, 94, 0.15);
+}
+
+/* Terminal glow effect */
+.terminal-glow {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.1), 0 0 60px rgba(34, 197, 94, 0.05);
+}
+
+/* Subtle gradient background for hero */
+.hero-gradient {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 197, 94, 0.08), transparent);
+}
+
+/* Feature card hover glow */
+.card-glow:hover {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

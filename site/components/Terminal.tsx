@@ -11,6 +11,25 @@ interface TerminalProps {
 
 type Phase = "idle" | "typing-command" | "showing-output" | "menu";
 
+function colorForLine(line: string): string {
+  if (line.startsWith("Squashing") || line.startsWith("Done.") || line.startsWith("  Done.")) {
+    return "text-green-400";
+  }
+  if (line.includes("Subagent:")) {
+    return "text-cyan-400";
+  }
+  if (line.includes("Appending:") || line.includes("Merging:")) {
+    return "text-gray-400";
+  }
+  if (line.includes("Writing:") || line.includes("Copying:")) {
+    return "text-emerald-300";
+  }
+  if (line.includes("Reading:")) {
+    return "text-gray-500";
+  }
+  return "text-gray-300";
+}
+
 export default function Terminal({ onFileSelect, onSquashComplete }: TerminalProps) {
   const typedRef = useRef<HTMLSpanElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -26,7 +45,7 @@ export default function Terminal({ onFileSelect, onSquashComplete }: TerminalPro
       strings: [SQUASH_COMMAND],
       typeSpeed: 50,
       showCursor: true,
-      cursorChar: "█",
+      cursorChar: "\u2588",
       onComplete: () => {
         setPhase("showing-output");
       },
@@ -82,12 +101,12 @@ export default function Terminal({ onFileSelect, onSquashComplete }: TerminalPro
   }, [output, showMenu]);
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-950 font-mono text-sm shadow-2xl">
+    <div className="terminal-glow rounded-lg border border-gray-700 bg-gray-950 font-mono text-sm shadow-2xl">
       {/* Title bar */}
       <div className="flex items-center gap-2 border-b border-gray-700 px-4 py-2">
-        <div className="h-3 w-3 rounded-full bg-red-500" />
-        <div className="h-3 w-3 rounded-full bg-yellow-500" />
-        <div className="h-3 w-3 rounded-full bg-green-500" />
+        <div className="h-3 w-3 rounded-full bg-red-500 cursor-pointer hover:brightness-110 transition duration-150" />
+        <div className="h-3 w-3 rounded-full bg-yellow-500 cursor-pointer hover:brightness-110 transition duration-150" />
+        <div className="h-3 w-3 rounded-full bg-green-500 cursor-pointer hover:brightness-110 transition duration-150" />
         <span className="ml-2 text-xs text-gray-400">~/agents/orchestrator</span>
       </div>
 
@@ -101,7 +120,7 @@ export default function Terminal({ onFileSelect, onSquashComplete }: TerminalPro
 
         {/* Output lines */}
         {output.map((line, i) => (
-          <div key={i} className="text-gray-300">
+          <div key={i} className={colorForLine(line)}>
             {line}
           </div>
         ))}
@@ -114,7 +133,7 @@ export default function Terminal({ onFileSelect, onSquashComplete }: TerminalPro
               <button
                 key={opt.key}
                 onClick={() => onFileSelect(opt.fileKey)}
-                className="block text-left text-cyan-400 hover:text-cyan-300"
+                className="cursor-pointer block text-left text-cyan-400 hover:text-cyan-300 transition duration-150"
               >
                 <span className="text-yellow-400">[{opt.key}]</span> {opt.label}
               </button>

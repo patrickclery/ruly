@@ -26,11 +26,10 @@ function TreeItem({
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex w-full items-center gap-1 py-0.5 text-left text-gray-300 hover:text-white"
+          className="cursor-pointer flex w-full items-center gap-1 py-0.5 text-left text-gray-300 hover:text-white transition duration-150"
           style={{ paddingLeft: indent }}
         >
-          <span className="text-xs">{expanded ? "▼" : "▶"}</span>
-          <span className="text-blue-400">📁</span>
+          <span className="text-xs text-gray-500">{expanded ? "\u25BC" : "\u25B6"}</span>
           <span>{node.name}</span>
           {node.comment && (
             <span className="ml-2 text-xs text-gray-500">// {node.comment}</span>
@@ -47,7 +46,7 @@ function TreeItem({
   return (
     <button
       onClick={() => node.fileKey && onFileClick(node.fileKey)}
-      className={`flex w-full items-center gap-1 py-0.5 text-left ${
+      className={`flex w-full items-center gap-1 py-0.5 text-left transition duration-150 ${
         node.fileKey
           ? "text-gray-300 hover:text-white cursor-pointer"
           : "text-gray-500 cursor-default"
@@ -55,8 +54,8 @@ function TreeItem({
       style={{ paddingLeft: indent }}
       disabled={!node.fileKey}
     >
-      <span className="text-xs opacity-0">▶</span>
-      <span>📄</span>
+      <span className="text-xs opacity-0">{"\u25B6"}</span>
+      <span className="text-gray-600">&middot;</span>
       <span>{node.name}</span>
       {node.comment && (
         <span className="ml-2 text-xs text-gray-500">// {node.comment}</span>
@@ -68,7 +67,7 @@ function TreeItem({
 export default function FileTree({ tree, onFileClick, visible }: FileTreeProps) {
   return (
     <div
-      className={`rounded-lg border border-gray-700 bg-gray-900 font-mono text-xs transition-all duration-500 ${
+      className={`rounded-lg border border-gray-700 bg-bg-secondary font-mono text-xs transition-all duration-500 ${
         visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
       }`}
     >
