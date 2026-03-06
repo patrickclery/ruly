@@ -991,6 +991,185 @@ Ruly will automatically:
 - Display file count and output size
 - Show which profile was used in the output
 
+## Example Recipes
+
+### Multi-Repo Orchestrator
+
+An orchestrator that manages multiple repositories, each with their own `CLAUDE.md` and hooks. Subagents dispatched into each repo automatically pick up the repo's configuration.
+
+#### Directory Layout
+
+```
+~/agents/orchestrator/
+├── CLAUDE.local.md              # Generated orchestrator rules
+├── .mcp.json                    # MCP servers (collected from all subagents)
+├── .claude/
+│   ├── agents/
+│   │   ├── backend_engineer.md  # Has acme-api's CLAUDE.md + hooks baked in
+│   │   ├── frontend_engineer.md # Has acme-web's CLAUDE.md + rules + hooks baked in
+│   │   └── comms.md             # Pure ruly profile (no repo append)
+│   ├── scripts/
+│   │   └── worktree-create.sh   # Propagated to all submodule dirs
+│   └── settings.local.json      # Parent hooks (WorktreeCreate)
+├── acme-api/                    # Backend repo (git submodule)
+│   ├── CLAUDE.md                # 1800-line repo-specific guidance
+│   └── .claude/
+│       └── settings.json        # No custom hooks
+├── acme-web/                    # Frontend repo (git submodule)
+│   ├── CLAUDE.md                # 500-line repo-specific guidance
+│   └── .claude/
+│       ├── rules/
+│       │   └── command-timeouts.md  # Repo-specific rules
+│       ├── hooks/
+│       │   └── eslint-fix.sh        # Repo-specific hook script
+│       └── settings.json            # PostToolUse hook for ESLint
+```
+
+#### Profile Configuration
+
+```yaml
+profiles:
+  orchestrator:
+    description: "Multi-repo dispatcher"
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - type: command
+              command: ".claude/scripts/worktree-create.sh"
+              timeout: 120
+    files:
+      - /path/to/rules/orchestrator/dispatch.md
+    scripts:
+      - /path/to/rules/orchestrator/bin/worktree-create.sh
+    subagents:
+      # Backend — reads acme-api's CLAUDE.md and hooks
+      - name: backend_engineer
+        profile: backend-engineer
+        cwd: acme-api
+        append: true
+      # Frontend — reads acme-web's CLAUDE.md, rules, and hooks
+      - name: frontend_engineer
+        profile: frontend-engineer
+        cwd: acme-web
+        append: true
+      # Comms — pure ruly profile, no repo to append
+      - name: comms
+        profile: comms
+```
+
+#### What `append: true` Does
+
+When a subagent has both `cwd:` and `append: true`, ruly reads from the repo directory during squash:
+
+| Source | What's read | Where it goes |
+|--------|------------|---------------|
+| `{cwd}/CLAUDE.md` | Repo's main guidance doc | Appended to agent body as `## Repository Context` |
+| `{cwd}/.claude/rules/*.md` | Repo-specific rules | Appended to agent body as `## Repository Rules` |
+| `{cwd}/.claude/settings.json` | Repo's hooks | Merged into agent frontmatter `hooks:` |
+
+Each subagent gets only its own repo's hooks — no cross-contamination between subagents.
+
+#### Generated Agent Frontmatter
+
+The `frontend_engineer` subagent gets the parent's `WorktreeCreate` hook merged with the repo's `PostToolUse` hook:
+
+```yaml
+---
+name: frontend_engineer
+description: Frontend feature development - React/TypeScript with TDD
+tools: Bash, Read, Write, Edit, Glob, Grep
+model: inherit
+mcpServers: "[playwright, Ref]"
+permissionMode: bypassPermissions
+hooks:
+  WorktreeCreate:
+  - hooks:
+    - type: command
+      command: ".claude/scripts/worktree-create.sh"
+      timeout: 120
+  PostToolUse:
+  - matcher: Edit|Write
+    hooks:
+    - type: command
+      command: ".claude/hooks/eslint-fix.sh"
+# Auto-generated from profile: frontend-engineer
+# Do not edit manually - regenerate using 'ruly squash orchestrator'
+---
+```
+
+The `backend_engineer` subagent only gets the parent's hook (since acme-api has no custom hooks):
+
+```yaml
+---
+name: backend_engineer
+description: Backend feature development - Ruby/Sequel with TDD
+tools: Bash, Read, Write, Edit, Glob, Grep
+model: inherit
+hooks:
+  WorktreeCreate:
+  - hooks:
+    - type: command
+      command: ".claude/scripts/worktree-create.sh"
+      timeout: 120
+# Auto-generated from profile: backend-engineer
+# Do not edit manually - regenerate using 'ruly squash orchestrator'
+---
+```
+
+#### Generated Agent Body (append sections)
+
+After the profile's squashed content, each subagent with `append: true` gets additional sections:
+
+```markdown
+## Profile Content
+
+[squashed content from frontend-engineer profile]
+
+---
+
+## Repository Context
+
+# CLAUDE.md
+
+This file provides guidance for the acme-web frontend application...
+
+## Development
+
+- Use `yarn dev` for development server
+- Use `yarn typecheck` for type checking
+- Use `yarn lint --fix` for linting
+
+---
+
+## Repository Rules
+
+## Command Timeouts
+
+### Rule
+Always use a **5-minute timeout** (300000ms) for:
+- `yarn typecheck`
+- `yarn lint`
+
+---
+*Last generated: 2026-03-06 10:43:25*
+*Source profile: frontend-engineer*
+```
+
+#### With vs Without `append`
+
+| Feature | `append: true` | No `append` |
+|---------|----------------|-------------|
+| Profile content | Included | Included |
+| Repo CLAUDE.md | Baked into agent body | Not visible to subagent |
+| Repo .claude/rules/ | Baked into agent body | Not visible to subagent |
+| Repo hooks (settings.json) | Merged into frontmatter | Not applied |
+| Parent hooks | Always included | Always included |
+| MCP servers | From profile (propagated to parent) | From profile (propagated to parent) |
+
+> **Note:** Claude Code subagents do **not** automatically discover `CLAUDE.md`, `.claude/rules/`, or `.claude/settings.json` from their CWD. The `append` feature exists specifically to bridge this gap by baking repo configuration into the agent file at squash time.
+
+---
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
