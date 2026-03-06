@@ -1131,3 +1131,11 @@ profiles:
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/content/sales-patterns.md
+
+  bounce-investigator:
+    description: "Email bounce investigation and resolution"
+    skills:
+      - /Users/patrick/Projects/ruly/rules/home/skills/bounce-investigator.md
+    mcp_servers:
+      - atlassian
+      - teams
