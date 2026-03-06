@@ -69,12 +69,16 @@ profiles:
         profile: core-debugging
       - name: comms_jira
         profile: comms-jira
+        model: sonnet
       - name: comms_teams
         profile: comms-teams
+        model: sonnet
       - name: comms_mattermost
         profile: comms-mattermost
+        model: sonnet
       - name: comms_github
         profile: comms-github
+        model: sonnet
       - name: merger
         profile: merger
       - name: dashboard
@@ -246,12 +250,16 @@ profiles:
       # Only agents that genuinely need fresh context / isolation
       - name: comms_jira
         profile: comms-jira
+        model: sonnet
       - name: comms_teams
         profile: comms-teams
+        model: sonnet
       - name: comms_mattermost
         profile: comms-mattermost
+        model: sonnet
       - name: comms_github
         profile: comms-github
+        model: sonnet
       - name: merger
         profile: merger
       - name: context_jira
@@ -530,12 +538,16 @@ profiles:
         model: haiku
       - name: comms_jira
         profile: comms-jira
+        model: sonnet
       - name: comms_teams
         profile: comms-teams
+        model: sonnet
       - name: comms_mattermost
         profile: comms-mattermost
+        model: sonnet
       - name: comms_github
         profile: comms-github
+        model: sonnet
       - name: merger
         profile: merger
       - name: dashboard
@@ -991,12 +1003,16 @@ profiles:
         profile: frontend-engineer
       - name: comms_jira
         profile: comms-jira
+        model: sonnet
       - name: comms_teams
         profile: comms-teams
+        model: sonnet
       - name: comms_mattermost
         profile: comms-mattermost
+        model: sonnet
       - name: comms_github
         profile: comms-github
+        model: sonnet
       - name: merger
         profile: merger
       - name: pr_readiness
@@ -1133,9 +1149,65 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/startup/core/content/sales-patterns.md
 
   bounce-investigator:
-    description: "Email bounce investigation and resolution"
+    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    files:
+      # === Branch Lock (main worktree stays on main) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+      # === Reference (high-level codebase understanding) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+      # === Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugging.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - type: command
+              command: .claude/scripts/worktree-create.sh
+              timeout: 120
     skills:
+      # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/home/skills/bounce-investigator.md
+    commands:
+      # === Context Fetching (orchestrator handles context) ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    subagents:
+      - name: core_engineer
+        profile: core-engineer
+      - name: context_jira
+        profile: context-jira
+        model: haiku
+      - name: context_github
+        profile: context-github
+        model: haiku
+      - name: context_teams
+        profile: context-teams
+        model: haiku
+      - name: context_summarizer
+        profile: context-summarizer
+        model: haiku
+      - name: core_debugging
+        profile: core-debugging
+      - name: comms_jira
+        profile: comms-jira
+        model: sonnet
+      - name: comms_teams
+        profile: comms-teams
+        model: sonnet
+      - name: comms_github
+        profile: comms-github
+        model: sonnet
     mcp_servers:
       - atlassian
       - teams
