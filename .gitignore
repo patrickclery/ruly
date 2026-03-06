@@ -47,3 +47,7 @@ node_modules/
 .taskmaster/
 /tmp/
 .worktrees/
+
+# Next.js site build output
+site/out/
+site/.next/
