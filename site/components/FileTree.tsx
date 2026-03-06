@@ -74,7 +74,7 @@ export default function FileTree({ tree, onFileClick, visible }: FileTreeProps) 
       <div className="border-b border-gray-700 px-4 py-2 text-xs text-gray-400">
         EXPLORER
       </div>
-      <div className="h-[400px] overflow-y-auto p-2">
+      <div className="h-[600px] overflow-y-auto p-2">
         <TreeItem node={tree} depth={0} onFileClick={onFileClick} />
       </div>
     </div>

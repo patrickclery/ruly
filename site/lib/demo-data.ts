@@ -11,6 +11,42 @@ export interface MenuOption {
   fileKey: string;
 }
 
+export const PWD_OUTPUT = "/Users/you/agents/orchestrator";
+
+export const LS_OUTPUT = [
+  { text: "total 24", color: "text-gray-400" },
+  { text: "drwxr-xr-x   6 you  staff   192 Mar  6 14:22 ", color: "text-gray-400", suffix: ".", suffixColor: "text-blue-400 font-bold" },
+  { text: "drwxr-xr-x   4 you  staff   128 Mar  6 14:20 ", color: "text-gray-400", suffix: "..", suffixColor: "text-blue-400 font-bold" },
+  { text: "drwxr-xr-x   8 you  staff   256 Mar  6 14:22 ", color: "text-gray-400", suffix: "acme-api/", suffixColor: "text-blue-400 font-bold" },
+  { text: "drwxr-xr-x   6 you  staff   192 Mar  6 14:22 ", color: "text-gray-400", suffix: "acme-web/", suffixColor: "text-blue-400 font-bold" },
+  { text: "-rw-r--r--   1 you  staff   842 Mar  6 14:20 ", color: "text-gray-400", suffix: "profiles.yml", suffixColor: "text-white" },
+  { text: "-rw-r--r--   1 you  staff    47 Mar  6 14:20 ", color: "text-gray-400", suffix: ".gitmodules", suffixColor: "text-white" },
+];
+
+export const TREE_OUTPUT = `~/agents/orchestrator/
+├── CLAUDE.local.md              # Generated orchestrator rules
+├── .mcp.json                    # MCP servers (collected from all subagents)
+├── .claude/
+│   ├── agents/
+│   │   ├── backend_engineer.md  # Has acme-api's CLAUDE.md + hooks baked in
+│   │   ├── frontend_engineer.md # Has acme-web's CLAUDE.md + rules + hooks baked in
+│   │   └── comms.md             # Pure ruly profile (no repo append)
+│   ├── scripts/
+│   │   └── worktree-create.sh   # Propagated to all submodule dirs
+│   └── settings.local.json      # Parent hooks (WorktreeCreate)
+├── acme-api/                    # Backend repo (git submodule)
+│   ├── CLAUDE.md                # 1800-line repo-specific guidance
+│   └── .claude/
+│       └── settings.json        # No custom hooks
+├── acme-web/                    # Frontend repo (git submodule)
+│   ├── CLAUDE.md                # 500-line repo-specific guidance
+│   └── .claude/
+│       ├── rules/
+│       │   └── command-timeouts.md  # Repo-specific rules
+│       ├── hooks/
+│       │   └── eslint-fix.sh        # Repo-specific hook script
+│       └── settings.json            # PostToolUse hook for ESLint`;
+
 export const SQUASH_COMMAND = "ruly squash orchestrator";
 
 export const SQUASH_OUTPUT = `Squashing profile: orchestrator
