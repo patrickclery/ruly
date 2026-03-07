@@ -36,7 +36,7 @@ function TreeItem({
           <span className="text-xs text-gray-500">{expanded ? "\u25BC" : "\u25B6"}</span>
           <span>{node.name}</span>
           {node.comment && (
-            <span className="ml-2 text-xs italic text-gray-600">// {node.comment}</span>
+            <span className="ml-2 shrink-0 text-xs italic text-gray-600 hidden lg:inline">// {node.comment}</span>
           )}
         </button>
         {expanded &&
@@ -74,7 +74,7 @@ function TreeItem({
       <span className="text-gray-600">&middot;</span>
       <span>{node.name}</span>
       {node.comment && (
-        <span className="ml-2 text-xs text-gray-500">// {node.comment}</span>
+        <span className="ml-2 shrink-0 text-xs text-gray-500 hidden lg:inline">// {node.comment}</span>
       )}
     </button>
   );

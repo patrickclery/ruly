@@ -31,11 +31,11 @@ export default function Explorer({ data }: ExplorerProps) {
       {/* Two-panel layout */}
       <div className="flex h-[500px]">
         {/* Left sidebar */}
-        <div className="w-64 shrink-0 border-r border-gray-700 overflow-y-auto">
+        <div className="w-72 shrink-0 border-r border-gray-700 overflow-y-auto overflow-x-hidden">
           <div className="px-4 py-2 text-xs uppercase text-gray-500">
             Explorer
           </div>
-          <div className="px-2 pb-2 text-xs">
+          <div className="px-2 pb-2 text-xs whitespace-nowrap">
             <FileTree
               tree={data.tree}
               onFileClick={setSelectedFileKey}
