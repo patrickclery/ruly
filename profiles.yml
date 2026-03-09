@@ -710,10 +710,11 @@ profiles:
       - Ref # For documentation lookup and external research
 
   local:
-    description: "Local development dispatcher - routes media tasks to media_stack subagent"
+    description: "Local development dispatcher - routes media/sysadmin tasks to subagents"
     files:
       # Dispatch rules
       - /Users/patrick/Projects/ruly/rules/home/use-media-stack.md
+      - /Users/patrick/Projects/ruly/rules/home/use-linux-sysadmin.md
       # Synology infrastructure (shared)
       - /Users/patrick/Projects/ruly/rules/home/network-structure.md
       # Non-media services
@@ -730,6 +731,8 @@ profiles:
     subagents:
       - name: media_stack
         profile: media-stack
+      - name: linux_sysadmin
+        profile: linux-sysadmin
 
   media-stack:
     description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
@@ -740,6 +743,13 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/home/lidarr-music-import.md
       - /Users/patrick/Projects/ruly/rules/home/synology-monitoring-stack.md
       - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+
+  linux-sysadmin:
+    description: "Linux system administration subagent - Arch/CachyOS, RAID, LUKS, btrfs, GRUB, NVIDIA"
+    files:
+      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/linux-sysadmin/skills/raid-luks-install.md
 
   awesomer:
     description: "Local development with Plane and GitHub integration (no Playwright)"
