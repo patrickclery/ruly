@@ -1211,3 +1211,14 @@ profiles:
     mcp_servers:
       - atlassian
       - teams
+
+  # === Corporate Advisor — workplace strategy and communication ===
+  corporate-advisor:
+    description: "Corporate strategy advisor — appeal planning, narrative building, and organizational navigation"
+    skills:
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/appeal-strategy-advisor.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/counter-argument-stress-tester.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/culture-reader.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/narrative-builder.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/outcome-planner.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/relationship-mapper.md
