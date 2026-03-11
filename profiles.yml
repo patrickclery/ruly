@@ -756,6 +756,8 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/home/claude_proxy_context.md
       # Local dev tools
       - /Users/patrick/Projects/ruly/rules/llmux-tools-setup.md
+      # Virtual browser
+      - /Users/patrick/Projects/ruly/rules/neko-virtual-browser.md
     mcp_servers:
       - playwright # Browser automation and UI testing
       - Ref # Documentation reference lookup
