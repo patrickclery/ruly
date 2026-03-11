@@ -109,7 +109,7 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
     commands:
       # === Commands ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/commands/diagnose.md
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
 
   migration:
     description: "WorkAxle database migrations"
