@@ -31,9 +31,9 @@ Before creating anything, collect these from the user (ask if not provided):
 | Capabilities summary | test planning, execution, QA reports | Yes |
 
 **Naming convention:**
-- `subagent_type` in Task tool uses underscores: `core_debugging`, `context_fetcher`
-- `recipe` name uses hyphens: `core-debugging`, `context-fetcher`
-- Dispatch rule filename uses hyphens: `use-core-debugging.md`
+- `subagent_type` in Task tool uses underscores: `core_debugger`, `context_fetcher`
+- `recipe` name uses hyphens: `core-debugger`, `context-fetcher`
+- Dispatch rule filename uses hyphens: `use-core-debugger.md`
 - Simple names are the same everywhere: `bug`, `comms`, `merger`
 
 ## Step 1: Create the Dispatch Rule
