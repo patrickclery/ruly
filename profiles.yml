@@ -478,6 +478,8 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugging.md
+      # === NestJS Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-nestjs-engineer.md
       # === Cross-Cutting Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
@@ -513,6 +515,14 @@ profiles:
       - name: core_debugging
         profile: core-debugging
         cwd: workaxle-core
+        append: true
+      # === NestJS Subagents ===
+      - name: nestjs_engineer
+        profile: nestjs-engineer
+        append: true
+      - name: gateway_engineer
+        profile: gateway
+        cwd: workaxle-gateway
         append: true
       # === Frontend Subagents ===
       - name: frontend_engineer
@@ -583,6 +593,8 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
+      # === Shared NestJS Patterns (TypeORM, gRPC, RabbitMQ, Jest) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
     skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
     commands:
@@ -595,6 +607,25 @@ profiles:
     mcp_servers:
       - playwright # For E2E testing
       - Ref # For documentation lookup
+
+  nestjs-engineer:
+    description: "WorkAxle NestJS microservice development — TypeORM, gRPC, RabbitMQ, Jest"
+    files:
+      # === Superpowers: TDD & Verification ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+      # === WorkAxle Core Context ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      # === NestJS Patterns (TypeORM, gRPC, RabbitMQ, outbox, config, testing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
+      # === Orchestrator Context (docker, service mapping, feature flags) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    mcp_servers:
+      - Ref
 
   playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
