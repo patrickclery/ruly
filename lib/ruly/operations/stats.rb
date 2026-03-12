@@ -381,6 +381,7 @@ module Ruly
       end
 
       # Build a map of recipe name to list of file paths
+      # Includes files:, commands:, skills:, and their transitive requires: dependencies
       def build_recipe_files_map
         return {} unless recipes_file && File.exist?(recipes_file)
 
@@ -390,18 +391,27 @@ module Ruly
         recipe_files_map = {}
 
         recipes.each do |name, recipe|
-          next unless recipe.is_a?(Hash) && recipe['files']
+          next unless recipe.is_a?(Hash)
 
-          files = []
-          recipe['files'].each do |path|
-            if File.directory?(path)
-              Dir.glob(File.join(path, '**', '*.md')).each { |f| files << f }
-            elsif File.exist?(path)
-              files << path
+          files = Set.new
+
+          # Collect from files:, commands:, and skills: arrays
+          %w[files commands skills].each do |key|
+            next unless recipe[key]
+
+            recipe[key].each do |path|
+              if File.directory?(path)
+                Dir.glob(File.join(path, '**', '*.md')).each { |f| files.add(f) }
+              elsif File.exist?(path)
+                files.add(path)
+              end
             end
           end
 
-          recipe_files_map[name] = files unless files.empty?
+          # Expand transitive requires: dependencies
+          expand_requirements(files)
+
+          recipe_files_map[name] = files.to_a unless files.empty?
         end
 
         recipe_files_map
