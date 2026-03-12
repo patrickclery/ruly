@@ -186,7 +186,6 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/materialized-views-and-test-isolation.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
       # === Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
