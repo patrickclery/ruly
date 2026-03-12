@@ -1,12 +1,12 @@
-# Core Profile Slim-Down Implementation Plan
+# Core Recipe Slim-Down Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Reduce the core orchestrator profile from ~104KB squashed output to ~50-55KB by removing code patterns, extracting PR creation into a subagent, slimming transitive requires chains, and merging overlapping dispatch rules.
+**Goal:** Reduce the core orchestrator recipe from ~104KB squashed output to ~50-55KB by removing code patterns, extracting PR creation into a subagent, slimming transitive requires chains, and merging overlapping dispatch rules.
 
-**Architecture:** The core profile is a pure dispatcher. It should contain only dispatch rules, reference docs, and minimal skills. All code knowledge, PR creation commands, and their transitive dependencies belong in subagent profiles.
+**Architecture:** The core recipe is a pure dispatcher. It should contain only dispatch rules, reference docs, and minimal skills. All code knowledge, PR creation commands, and their transitive dependencies belong in subagent recipes.
 
-**Tech Stack:** Ruly (Ruby gem), YAML profiles, Markdown rule files with frontmatter
+**Tech Stack:** Ruly (Ruby gem), YAML recipes, Markdown rule files with frontmatter
 
 ---
 
@@ -84,20 +84,20 @@ Expected: File exists with reasonable size (~1.2KB)
 
 ```bash
 git add rules/workaxle/core/dispatches/use-pr-creator.md
-git commit -m "feat: add use-pr-creator dispatch rule for core profile slim-down"
+git commit -m "feat: add use-pr-creator dispatch rule for core recipe slim-down"
 ```
 
 ---
 
-### Task 2: Create the `pr-creator` profile in profiles.yml
+### Task 2: Create the `pr-creator` recipe in recipes.yml
 
 **Files:**
-- Modify: `profiles.yml` (add new profile after existing profiles)
-- Modify: `~/.config/ruly/profiles.yml` (keep in sync)
+- Modify: `recipes.yml` (add new recipe after existing recipes)
+- Modify: `~/.config/ruly/recipes.yml` (keep in sync)
 
-**Step 1: Add pr-creator profile to profiles.yml**
+**Step 1: Add pr-creator recipe to recipes.yml**
 
-Add this profile block after the `pr-review-loop:` profile (around line 821). Insert it before `context-jira:`:
+Add this recipe block after the `pr-review-loop:` recipe (around line 821). Insert it before `context-jira:`:
 
 ```yaml
   pr-creator:
@@ -113,22 +113,22 @@ Add this profile block after the `pr-review-loop:` profile (around line 821). In
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-branch.md
 ```
 
-Note: `create.md` has `requires:` for `creating-prs.md`, `commands.md`, `context-common.md`, `health-checks-common.md`, `review-feedback-loop.md`, `create-branch.md`, `create-develop.md` — these will be pulled in transitively. The `pr-creator` profile can handle that weight because it's a subagent, not the orchestrator.
+Note: `create.md` has `requires:` for `creating-prs.md`, `commands.md`, `context-common.md`, `health-checks-common.md`, `review-feedback-loop.md`, `create-branch.md`, `create-develop.md` — these will be pulled in transitively. The `pr-creator` recipe can handle that weight because it's a subagent, not the orchestrator.
 
-**Step 2: Copy the same change to ~/.config/ruly/profiles.yml**
+**Step 2: Copy the same change to ~/.config/ruly/recipes.yml**
 
-The user config must be kept in sync. Copy the exact same `pr-creator:` block to `~/.config/ruly/profiles.yml`.
+The user config must be kept in sync. Copy the exact same `pr-creator:` block to `~/.config/ruly/recipes.yml`.
 
 **Step 3: Verify YAML is valid**
 
-Run: `ruby -ryaml -e "YAML.load_file('profiles.yml'); puts 'OK'"`
+Run: `ruby -ryaml -e "YAML.load_file('recipes.yml'); puts 'OK'"`
 Expected: `OK`
 
 **Step 4: Commit**
 
 ```bash
-git add profiles.yml
-git commit -m "feat: add pr-creator profile for PR creation subagent"
+git add recipes.yml
+git commit -m "feat: add pr-creator recipe for PR creation subagent"
 ```
 
 ---
@@ -376,13 +376,13 @@ git commit -m "refactor: remove ralph/pattern.md require from ralph-loop (self-c
 
 ---
 
-### Task 5: Update core profile — remove files, commands, skills, subagent
+### Task 5: Update core recipe — remove files, commands, skills, subagent
 
 **Files:**
-- Modify: `profiles.yml:10-94` (core profile)
-- Modify: `~/.config/ruly/profiles.yml` (keep in sync)
+- Modify: `recipes.yml:10-94` (core recipe)
+- Modify: `~/.config/ruly/recipes.yml` (keep in sync)
 
-**Step 1: Remove code pattern files from core profile**
+**Step 1: Remove code pattern files from core recipe**
 
 Remove these three lines from the `files:` section:
 
@@ -394,7 +394,7 @@ Remove these three lines from the `files:` section:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
 ```
 
-These stay in subagent profiles (core-engineer, core-debugger) which independently include them.
+These stay in subagent recipes (core-engineer, core-debugger) which independently include them.
 
 **Step 2: Remove bug-diagnose.md from files**
 
@@ -421,7 +421,7 @@ Remove this line from `skills:`:
       - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
 ```
 
-The merger profile already has this skill (confirmed at profiles.yml line 735).
+The merger recipe already has this skill (confirmed at recipes.yml line 735).
 
 **Step 5: Remove PR creation commands**
 
@@ -440,19 +440,19 @@ Remove from `subagents:`:
 
 ```yaml
       - name: bug_diagnose
-        profile: bug-diagnose
+        recipe: bug-diagnose
 ```
 
 Add to `subagents:`:
 
 ```yaml
       - name: pr_creator
-        profile: pr-creator
+        recipe: pr-creator
 ```
 
-**Step 7: Verify the final core profile shape**
+**Step 7: Verify the final core recipe shape**
 
-The core profile should now look like:
+The core recipe should now look like:
 
 ```yaml
   core:
@@ -489,64 +489,64 @@ The core profile should now look like:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
-        profile: core-debugger
+        recipe: core-debugger
       - name: core_engineer
-        profile: core-engineer
+        recipe: core-engineer
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
       - name: core_debugging
-        profile: core-debugging
+        recipe: core-debugging
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
       - name: comms_mattermost
-        profile: comms-mattermost
+        recipe: comms-mattermost
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
       - name: merger
-        profile: merger
+        recipe: merger
       - name: dashboard
-        profile: dashboard
+        recipe: dashboard
       - name: pr_readiness
-        profile: pr-readiness
+        recipe: pr-readiness
       - name: core_reviewer
-        profile: core-reviewer
+        recipe: core-reviewer
       - name: pr_review_loop
-        profile: pr-review-loop
+        recipe: pr-review-loop
       - name: qa_tester
-        profile: qa
+        recipe: qa
       - name: pr_creator
-        profile: pr-creator
+        recipe: pr-creator
 ```
 
-**Step 8: Copy all changes to ~/.config/ruly/profiles.yml**
+**Step 8: Copy all changes to ~/.config/ruly/recipes.yml**
 
-Apply the exact same modifications to `~/.config/ruly/profiles.yml`. Both files must be identical.
+Apply the exact same modifications to `~/.config/ruly/recipes.yml`. Both files must be identical.
 
 **Step 9: Verify YAML validity for both files**
 
-Run: `ruby -ryaml -e "YAML.load_file('profiles.yml'); puts 'OK'"`
+Run: `ruby -ryaml -e "YAML.load_file('recipes.yml'); puts 'OK'"`
 Expected: `OK`
 
-Run: `ruby -ryaml -e "YAML.load_file(File.expand_path('~/.config/ruly/profiles.yml')); puts 'OK'"`
+Run: `ruby -ryaml -e "YAML.load_file(File.expand_path('~/.config/ruly/recipes.yml')); puts 'OK'"`
 Expected: `OK`
 
 **Step 10: Commit**
 
 ```bash
-git add profiles.yml
-git commit -m "refactor: slim core profile - remove code patterns, PR commands, bug-diagnose; add pr_creator"
+git add recipes.yml
+git commit -m "refactor: slim core recipe - remove code patterns, PR commands, bug-diagnose; add pr_creator"
 ```
 
 ---
@@ -614,10 +614,10 @@ git commit -m "refactor: update use-core-debugger to cover full bug lifecycle (a
 **Files:**
 - None modified (verification only)
 
-**Step 1: Run squash for core profile**
+**Step 1: Run squash for core recipe**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile core
+cd $(mktemp -d) && ruly squash --recipe core
 ```
 
 Expected: Squash completes without errors.
@@ -658,23 +658,23 @@ grep "bug_diagnose" CLAUDE.local.md  # Should be 0 matches for subagent listing
 **Step 4: Run stats**
 
 ```bash
-ruly stats --profile core
+ruly stats --recipe core
 ```
 
 Review the stats.md output for token counts per section.
 
-**Step 5: Verify pr-creator profile squashes independently**
+**Step 5: Verify pr-creator recipe squashes independently**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile pr-creator
+cd $(mktemp -d) && ruly squash --recipe pr-creator
 ```
 
 Expected: Squash succeeds, includes create commands and their transitive requires.
 
-**Step 6: Verify merger profile still works**
+**Step 6: Verify merger recipe still works**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile merger
+cd $(mktemp -d) && ruly squash --recipe merger
 ```
 
 Expected: Squash succeeds, includes rebase-and-squash skill.
@@ -684,14 +684,14 @@ Expected: Squash succeeds, includes rebase-and-squash skill.
 ### Task 8: Final sync and push
 
 **Files:**
-- Verify: `~/.config/ruly/profiles.yml` matches `profiles.yml`
-- Verify: `/Users/patrick/Projects/chezmoi/config/ruly/profiles.yml` matches too
+- Verify: `~/.config/ruly/recipes.yml` matches `recipes.yml`
+- Verify: `/Users/patrick/Projects/chezmoi/config/ruly/recipes.yml` matches too
 
-**Step 1: Diff the profile files**
+**Step 1: Diff the recipe files**
 
 ```bash
-diff profiles.yml ~/.config/ruly/profiles.yml
-diff profiles.yml /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml
+diff recipes.yml ~/.config/ruly/recipes.yml
+diff recipes.yml /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml
 ```
 
 Expected: No differences (or only expected differences if chezmoi has its own additions).

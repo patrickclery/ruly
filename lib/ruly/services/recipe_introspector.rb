@@ -7,9 +7,9 @@ require 'yaml'
 module Ruly
   module Services
     # Introspection methods for scanning directories and GitHub repos to discover
-    # markdown files and create/update profile definitions. Also provides tree
-    # display helpers used by both introspect and list-profiles commands.
-    module ProfileIntrospector # rubocop:disable Metrics/ModuleLength
+    # markdown files and create/update recipe definitions. Also provides tree
+    # display helpers used by both introspect and list-recipes commands.
+    module RecipeIntrospector # rubocop:disable Metrics/ModuleLength
       module_function
 
       # Scan a GitHub URL for markdown files and add them to the collection.
@@ -74,21 +74,21 @@ module Ruly
         puts "     Found #{found_count} markdown files"
       end
 
-      # Build a profile data hash from introspected local and GitHub sources.
+      # Build a recipe data hash from introspected local and GitHub sources.
       # @param local_files [Array<String>] Discovered local file paths
       # @param github_sources [Array<Hash>] Discovered GitHub source entries
       # @param original_sources [Array<String>] Original source arguments from user
       # @param description [String, nil] User-provided description, or nil for auto-generated
-      # @return [Hash] Profile data suitable for YAML serialization
-      def build_introspected_profile(local_files, github_sources, original_sources, description)
-        profile = {}
+      # @return [Hash] Recipe data suitable for YAML serialization
+      def build_introspected_recipe(local_files, github_sources, original_sources, description)
+        recipe = {}
 
         if description
-          profile['description'] = description
+          recipe['description'] = description
         else
           source_count = original_sources.length
           if source_count == 1
-            profile['description'] = "Auto-generated from #{original_sources.first}"
+            recipe['description'] = "Auto-generated from #{original_sources.first}"
           else
             local_count = original_sources.count { |s| !s.start_with?('http') }
             github_count = source_count - local_count
@@ -96,14 +96,14 @@ module Ruly
             parts = []
             parts << "#{local_count} local" if local_count > 0
             parts << "#{github_count} GitHub" if github_count > 0
-            profile['description'] = "Auto-generated from #{parts.join(' and ')} source#{'s' if source_count > 1}"
+            recipe['description'] = "Auto-generated from #{parts.join(' and ')} source#{'s' if source_count > 1}"
           end
         end
 
-        profile['files'] = local_files.sort if local_files.any?
+        recipe['files'] = local_files.sort if local_files.any?
 
         if github_sources.any?
-          profile['sources'] = github_sources.map do |source|
+          recipe['sources'] = github_sources.map do |source|
             {
               'branch' => source[:branch],
               'github' => source[:github],
@@ -112,23 +112,23 @@ module Ruly
           end
         end
 
-        profile
+        recipe
       end
 
-      # Save an introspected profile to a profiles YAML file.
-      # @param profile_name [String] Name of the profile
-      # @param profile_data [Hash] Profile data hash
-      # @param output_file [String] Path to the profiles YAML file
-      def save_introspected_profile(profile_name, profile_data, output_file)
+      # Save an introspected recipe to a recipes YAML file.
+      # @param recipe_name [String] Name of the recipe
+      # @param recipe_data [Hash] Recipe data hash
+      # @param output_file [String] Path to the recipes YAML file
+      def save_introspected_recipe(recipe_name, recipe_data, output_file)
         existing_config = if File.exist?(output_file)
                             YAML.safe_load_file(output_file, aliases: true) || {}
                           else
                             {}
                           end
 
-        existing_config['profiles'] ||= {}
+        existing_config['recipes'] ||= {}
 
-        existing_config['profiles'][profile_name] = profile_data
+        existing_config['recipes'][recipe_name] = recipe_data
 
         FileUtils.mkdir_p(File.dirname(output_file))
 
@@ -153,10 +153,10 @@ module Ruly
       end
 
       # Build a tree structure from a list of file paths for display.
-      # Used by both introspect and list-profiles commands.
+      # Used by both introspect and list-recipes commands.
       # @param files [Array<String>] List of file paths (local or remote URLs)
       # @return [Hash] Nested hash representing the file tree
-      def build_profile_file_tree(files)
+      def build_recipe_file_tree(files)
         tree = {}
         files.each do |file|
           if file.start_with?('http')
@@ -187,10 +187,10 @@ module Ruly
       end
 
       # Render a file tree with box-drawing characters for display.
-      # Used by both introspect and list-profiles commands.
-      # @param tree [Hash] Nested hash from build_profile_file_tree
+      # Used by both introspect and list-recipes commands.
+      # @param tree [Hash] Nested hash from build_recipe_file_tree
       # @param prefix [String] Indentation prefix for the current level
-      def display_profile_tree(tree, prefix = '')
+      def display_recipe_tree(tree, prefix = '')
         items = tree.to_a
         items.each_with_index do |(key, value), index|
           is_last = index == items.length - 1
@@ -217,7 +217,7 @@ module Ruly
             puts "#{prefix}#{connector}#{icon} #{key}"
           elsif value.is_a?(Hash)
             puts "#{prefix}#{connector}\u{1F4C1} #{key}/"
-            display_profile_tree(value, "#{prefix}#{extension}")
+            display_recipe_tree(value, "#{prefix}#{extension}")
           end
         end
       end

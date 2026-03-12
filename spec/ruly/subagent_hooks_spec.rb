@@ -21,8 +21,8 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'hooks in frontmatter' do
         model: 'inherit',
         skill_names: [],
         mcp_servers: [],
-        profile_name: 'test',
-        parent_profile_name: 'parent',
+        recipe_name: 'test',
+        parent_recipe_name: 'parent',
         hooks: {
           'WorktreeCreate' => [
             { 'hooks' => [{ 'type' => 'command', 'command' => '.claude/scripts/worktree-create.sh', 'timeout' => 120 }] }
@@ -52,8 +52,8 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'hooks in frontmatter' do
         model: 'inherit',
         skill_names: [],
         mcp_servers: [],
-        profile_name: 'test',
-        parent_profile_name: 'parent',
+        recipe_name: 'test',
+        parent_recipe_name: 'parent',
         hooks: {}
       }
 
@@ -69,8 +69,8 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'hooks in frontmatter' do
         model: 'inherit',
         skill_names: [],
         mcp_servers: [],
-        profile_name: 'test',
-        parent_profile_name: 'parent',
+        recipe_name: 'test',
+        parent_recipe_name: 'parent',
         hooks: nil
       }
 
@@ -86,8 +86,8 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'hooks in frontmatter' do
         model: 'opus',
         skill_names: ['debugging'],
         mcp_servers: ['Ref'],
-        profile_name: 'test',
-        parent_profile_name: 'parent',
+        recipe_name: 'test',
+        parent_recipe_name: 'parent',
         hooks: { 'WorktreeCreate' => [{ 'hooks' => [{ 'type' => 'command', 'command' => 'test.sh' }] }] }
       }
 

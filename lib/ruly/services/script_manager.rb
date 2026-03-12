@@ -249,15 +249,15 @@ module Ruly
 
       # Write command files to .claude/commands/.
       # @param command_files [Array] either Hashes with :path/:content or String paths
-      # @param profile_config [Hash, nil] profile configuration (for omit_command_prefix)
+      # @param recipe_config [Hash, nil] recipe configuration (for omit_command_prefix)
       # @param gem_root [String, nil] root path of the gem (needed for import mode paths)
-      def save_command_files(command_files, profile_config = nil, gem_root: nil) # rubocop:disable Metrics/MethodLength
+      def save_command_files(command_files, recipe_config = nil, gem_root: nil) # rubocop:disable Metrics/MethodLength
         return if command_files.empty?
 
         commands_dir = '.claude/commands'
         FileUtils.mkdir_p(commands_dir)
 
-        omit_prefix = profile_config && profile_config['omit_command_prefix'] ? profile_config['omit_command_prefix'] : nil
+        omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
         debug_warning_shown = false
 
         command_files.each do |file| # rubocop:disable Metrics/BlockLength
@@ -383,7 +383,7 @@ module Ruly
       # @param find_rule_file [Proc] callable to resolve rule paths
       # @param parse_frontmatter [Proc] callable for frontmatter parsing
       # @param strip_metadata [Proc] callable for stripping metadata from frontmatter
-      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, profile_paths: Set.new)
+      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, recipe_paths: Set.new)
         return if skill_files.empty?
 
         skill_files.each do |file|
@@ -392,18 +392,18 @@ module Ruly
           FileUtils.mkdir_p(skill_dir)
 
           content = compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
-                                                profile_paths:)
+                                                recipe_paths:)
           File.write(File.join(skill_dir, 'SKILL.md'), content)
         end
       end
 
       # Return skill content as-is. The `requires:` frontmatter is a dependency
-      # declaration — required content is provided by the profile's top-level
-      # profile or agent file. Skills reference it via section anchors.
+      # declaration — required content is provided by the recipe's top-level
+      # recipe or agent file. Skills reference it via section anchors.
       # @param file [Hash] skill file hash with :path, :content, :original_content
       # @return [String] skill content (never inlines requires)
       def compile_skill_with_requires(file, find_rule_file: nil, parse_frontmatter: nil, strip_metadata: nil,
-                                      profile_paths: Set.new)
+                                      recipe_paths: Set.new)
         file[:content]
       end
     end

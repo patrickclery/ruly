@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Create a `create-sandbox.sh` script for the ruly project that clones any git repo into a sandbox directory and squashes a specified ruly profile into it, producing a ready-to-use Claude Code environment for TDD of squashed rules.
+**Goal:** Create a `create-sandbox.sh` script for the ruly project that clones any git repo into a sandbox directory and squashes a specified ruly recipe into it, producing a ready-to-use Claude Code environment for TDD of squashed rules.
 
-**Architecture:** A bash script at `bin/create-sandbox.sh` accepts a repo URL and profile name, clones the repo into `tmp/sandbox/<name>/`, runs `ruly squash <profile>` inside it, and reports the result. The `tmp/` directory is already gitignored. Repeated runs with the same repo skip the clone and just re-squash (useful after rule changes).
+**Architecture:** A bash script at `bin/create-sandbox.sh` accepts a repo URL and recipe name, clones the repo into `tmp/sandbox/<name>/`, runs `ruly squash <recipe>` inside it, and reports the result. The `tmp/` directory is already gitignored. Repeated runs with the same repo skip the clone and just re-squash (useful after rule changes).
 
 **Tech Stack:** Bash, Git, Ruly CLI
 
@@ -21,17 +21,17 @@ Create `/Users/patrick/Projects/ruly/bin/create-sandbox.sh`:
 
 ```bash
 #!/usr/bin/env bash
-# Creates a sandbox environment for testing ruly profiles against a real codebase.
+# Creates a sandbox environment for testing ruly recipes against a real codebase.
 #
 # Clones a git repo into tmp/sandbox/<name>/, then squashes the specified
-# profile into it. If the repo is already cloned, pulls latest and re-squashes.
+# recipe into it. If the repo is already cloned, pulls latest and re-squashes.
 #
 # Usage:
-#   create-sandbox.sh <repo_url> <profile> [--name <dir_name>]
+#   create-sandbox.sh <repo_url> <recipe> [--name <dir_name>]
 #
 # Arguments:
 #   <repo_url>   Git repository URL (SSH or HTTPS)
-#   <profile>     Ruly profile to squash
+#   <recipe>     Ruly recipe to squash
 #   --name       Optional directory name (default: derived from repo URL)
 #
 # Examples:
@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$REPO_URL" ] || [ -z "$RECIPE" ]; then
-  echo "Usage: create-sandbox.sh <repo_url> <profile> [--name <dir_name>]"
+  echo "Usage: create-sandbox.sh <repo_url> <recipe> [--name <dir_name>]"
   echo "  Run 'create-sandbox.sh --help' for details"
   exit 1
 fi
@@ -96,7 +96,7 @@ fi
 
 echo "=== Ruly Sandbox ==="
 echo "  Repo:    $REPO_URL"
-echo "  Profile:  $RECIPE"
+echo "  Recipe:  $RECIPE"
 echo "  Target:  $TARGET_DIR"
 echo ""
 
@@ -111,13 +111,13 @@ else
 fi
 
 echo ""
-echo "Squashing profile '$RECIPE'..."
+echo "Squashing recipe '$RECIPE'..."
 cd "$TARGET_DIR" && ruly squash "$RECIPE"
 
 echo ""
 echo "=== Sandbox Ready ==="
 echo "  Directory: $TARGET_DIR"
-echo "  Profile:    $RECIPE"
+echo "  Recipe:    $RECIPE"
 echo ""
 echo "To use:"
 echo "  cd $TARGET_DIR"
@@ -140,14 +140,14 @@ Expected: No output (silent success).
 **Step 4: Commit**
 
 ```bash
-cd /Users/patrick/Projects/ruly && git add bin/create-sandbox.sh && git commit -m "feat: add create-sandbox script for profile TDD"
+cd /Users/patrick/Projects/ruly && git add bin/create-sandbox.sh && git commit -m "feat: add create-sandbox script for recipe TDD"
 ```
 
 ---
 
 ### Task 2: Test the script end-to-end
 
-**Step 1: Run create-sandbox.sh with any repo and profile**
+**Step 1: Run create-sandbox.sh with any repo and recipe**
 
 Run:
 ```bash
@@ -156,7 +156,7 @@ Run:
 
 Expected:
 - Clones repo to `tmp/sandbox/core/`
-- Squashes profile
+- Squashes recipe
 - Reports success with CLAUDE.local.md size, token count, commands, skills, subagents
 
 **Step 2: Verify generated files exist**
@@ -166,7 +166,7 @@ Run:
 ls tmp/sandbox/core/CLAUDE.local.md && find tmp/sandbox/core/.claude -name '*.md' | head -10
 ```
 
-Expected: CLAUDE.local.md exists, `.claude/` contains generated `.md` files (commands, skills, agents — varies by profile).
+Expected: CLAUDE.local.md exists, `.claude/` contains generated `.md` files (commands, skills, agents — varies by recipe).
 
 **Step 3: Verify sandbox is gitignored**
 
@@ -181,7 +181,7 @@ Expected: Clean — no sandbox files showing.
 
 ### Task 3: Test re-squash (already cloned)
 
-**Step 1: Re-run with a different profile (same repo)**
+**Step 1: Re-run with a different recipe (same repo)**
 
 Run:
 ```bash
@@ -190,17 +190,17 @@ Run:
 
 Expected:
 - Detects repo already cloned, pulls latest
-- Squashes the new profile
+- Squashes the new recipe
 - Reports success
 
-**Step 2: Verify the profile switched**
+**Step 2: Verify the recipe switched**
 
 Run:
 ```bash
 find tmp/sandbox/core/.claude -name '*.md' | head -10
 ```
 
-Expected: Different files than the previous profile — confirms the squash replaced the prior output.
+Expected: Different files than the previous recipe — confirms the squash replaced the prior output.
 
 ---
 
@@ -213,8 +213,8 @@ Lives at `bin/create-sandbox.sh` alongside `bin/ruly` — it's a ruly developmen
 ### Sandbox Lifecycle
 
 ```
-create-sandbox.sh <repo> <profile>    # First run: clone + squash
-create-sandbox.sh <repo> <profile>    # Subsequent: pull + re-squash
+create-sandbox.sh <repo> <recipe>    # First run: clone + squash
+create-sandbox.sh <repo> <recipe>    # Subsequent: pull + re-squash
 cd tmp/sandbox/<name> && claude -p "your test prompt"  # Run headless
 rm -rf tmp/sandbox/<name>          # Clean up
 ```
@@ -222,7 +222,7 @@ rm -rf tmp/sandbox/<name>          # Clean up
 ### TDD Workflow for Rules
 
 1. Edit rules in `rules/`
-2. Re-squash: `cd tmp/sandbox/<name> && ruly squash <profile>`
+2. Re-squash: `cd tmp/sandbox/<name> && ruly squash <recipe>`
 3. Start a Claude session: `claude`
 4. Test the squashed behavior
 5. Iterate

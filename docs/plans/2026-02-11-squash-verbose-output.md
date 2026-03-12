@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Make `ruly squash` output concise by default, showing only profile/subagent/error/summary info; move per-file details behind `-v`/`--verbose`.
+**Goal:** Make `ruly squash` output concise by default, showing only recipe/subagent/error/summary info; move per-file details behind `-v`/`--verbose`.
 
 **Architecture:** Add a `--verbose` flag to the squash CLI option, thread a `verbose?` helper through the output methods, and gate per-file lines behind it. No structural changes to processing logic — only output gating.
 
@@ -33,7 +33,7 @@
   → architect (21 sources)
 ✅ Generated 9 subagent(s)
 
-✅ Successfully generated CLAUDE.local.md using squash mode with 'core' profile
+✅ Successfully generated CLAUDE.local.md using squash mode with 'core' recipe
 📊 Combined 27 files
 📏 Output size: 53065 bytes
 🧮 Token count: 12,769 / 200,000 (6.4%) 🟢
@@ -263,19 +263,19 @@ git commit -m "feat: gate requires discovery output behind --verbose"
 
 In `process_subagents`, the current verbose per-agent line is:
 ```
-  → Generating bug.md from 'bug' profile
+  → Generating bug.md from 'bug' recipe
 ```
 
 In non-verbose mode, show just the agent name and source count instead. The source count is available after `load_agent_sources` runs in `generate_agent_file`. To avoid restructuring, pass verbose through and show a compact line.
 
 Replace lines 2784 in `process_subagents`:
 ```ruby
-puts "  → Generating #{agent_name}.md from '#{profile_name}' profile"
+puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
 ```
 with:
 ```ruby
 if verbose?
-  puts "  → Generating #{agent_name}.md from '#{profile_name}' profile"
+  puts "  → Generating #{agent_name}.md from '#{recipe_name}' recipe"
 else
   print "  → #{agent_name}"
 end
@@ -294,7 +294,7 @@ puts "    📁 Saved #{command_files.size} command file(s) to .claude/commands/#
 
 **Step 3: Add newline after compact subagent list**
 
-After the `profile_config['subagents'].each` block ends (before the "Generated N subagent(s)" line), add:
+After the `recipe_config['subagents'].each` block ends (before the "Generated N subagent(s)" line), add:
 ```ruby
 puts unless verbose? # newline after compact agent list
 ```
@@ -347,9 +347,9 @@ describe '#squash verbose output' do
     FileUtils.mkdir_p('rules')
     File.write('rules/test.md', "# Test Rule\nSome content here.")
 
-    # Create a minimal profile
-    File.write('profiles.yml', {
-      'profiles' => {
+    # Create a minimal recipe
+    File.write('recipes.yml', {
+      'recipes' => {
         'test-verbose' => {
           'files' => ["#{test_dir}/rules/test.md"]
         }

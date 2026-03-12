@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Three related changes to align ruly with Claude Code's native agent frontmatter: (1) add `mcpServers:` to agent frontmatter, collected from both profiles.yml and rule-file frontmatter, (2) add `skills:` to agent frontmatter with validation, treating `skills:` in rule frontmatter like a validated `requires:`, and (3) error if a subagent profile itself has subagents — forcing conversion to skills instead.
+**Goal:** Three related changes to align ruly with Claude Code's native agent frontmatter: (1) add `mcpServers:` to agent frontmatter, collected from both recipes.yml and rule-file frontmatter, (2) add `skills:` to agent frontmatter with validation, treating `skills:` in rule frontmatter like a validated `requires:`, and (3) error if a subagent recipe itself has subagents — forcing conversion to skills instead.
 
-**Architecture:** Rule files gain two new frontmatter fields: `mcp_servers:` (MCP server requirements) and `skills:` (relative paths to skill files, resolved like `requires:`). During squash, these are collected, validated (skills error on invalid references, unlike the silent skip of `requires:`), and emitted in agent frontmatter as `mcpServers:` and `skills:`. Nested subagent profiles are refactored: sub-subagent `.md` files move from `/agents/` to `/skills/` directories, parent rules reference them via `skills:`, and `subagents:` are removed from parent profiles.
+**Architecture:** Rule files gain two new frontmatter fields: `mcp_servers:` (MCP server requirements) and `skills:` (relative paths to skill files, resolved like `requires:`). During squash, these are collected, validated (skills error on invalid references, unlike the silent skip of `requires:`), and emitted in agent frontmatter as `mcpServers:` and `skills:`. Nested subagent recipes are refactored: sub-subagent `.md` files move from `/agents/` to `/skills/` directories, parent rules reference them via `skills:`, and `subagents:` are removed from parent recipes.
 
-**Tech Stack:** Ruby (Ruly gem), YAML (profiles.yml), RSpec (tests)
+**Tech Stack:** Ruby (Ruly gem), YAML (recipes.yml), RSpec (tests)
 
 ---
 
@@ -36,7 +36,7 @@ permissionMode: bypassPermissions
 ---
 ```
 
-### Current vs Target Subagent Tree (core profile)
+### Current vs Target Subagent Tree (core recipe)
 ```
 CURRENT (23 flat agent files):                 TARGET (12 agents + skills):
 .claude/agents/                                .claude/agents/
@@ -92,7 +92,7 @@ RSpec.describe Ruly::CLI, 'rule-level mcp_servers', type: :cli do
     FileUtils.mkdir_p(File.join(test_dir, 'rules'))
     allow(cli).to receive_messages(
       gem_root: test_dir,
-      profiles_file: File.join(test_dir, 'profiles.yml'),
+      recipes_file: File.join(test_dir, 'recipes.yml'),
       rules_dir: File.join(test_dir, 'rules')
     )
   end
@@ -111,25 +111,25 @@ RSpec.describe Ruly::CLI, 'rule-level mcp_servers', type: :cli do
 
       File.write(File.join(test_dir, 'rules', 'basic-rule.md'), '# Basic Rule')
 
-      profiles_content = {
+      recipes_content = {
         'test' => {
-          'description' => 'Test profile',
+          'description' => 'Test recipe',
           'files' => [
             "#{test_dir}/rules/teams-rule.md",
             "#{test_dir}/rules/basic-rule.md"
           ],
           'subagents' => [
-            { 'name' => 'worker', 'profile' => 'worker-profile' }
+            { 'name' => 'worker', 'recipe' => 'worker-recipe' }
           ]
         },
-        'worker-profile' => {
+        'worker-recipe' => {
           'description' => 'Worker',
           'files' => ["#{test_dir}/rules/basic-rule.md"]
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
@@ -187,13 +187,13 @@ def collect_mcp_servers_from_sources(local_sources)
 end
 ```
 
-**3c. Merge rule-level MCP servers with profile-level ones:**
+**3c. Merge rule-level MCP servers with recipe-level ones:**
 
-In the main squash flow (around line 280), after collecting profile-level MCP servers, also collect from sources:
+In the main squash flow (around line 280), after collecting recipe-level MCP servers, also collect from sources:
 ```ruby
 source_mcp_servers = collect_mcp_servers_from_sources(local_sources)
 if source_mcp_servers.any?
-  profile_config['mcp_servers'] = (Array(profile_config['mcp_servers']) + source_mcp_servers).uniq
+  recipe_config['mcp_servers'] = (Array(recipe_config['mcp_servers']) + source_mcp_servers).uniq
   puts "🔌 Collected MCP servers from rules: #{source_mcp_servers.join(', ')}"
 end
 ```
@@ -213,7 +213,7 @@ Rules can now declare MCP server requirements in frontmatter:
   mcp_servers:
     - teams
 These are automatically collected during squash, merged with
-profile-level servers, and added to .mcp.json."
+recipe-level servers, and added to .mcp.json."
 ```
 
 ---
@@ -239,16 +239,16 @@ describe 'mcpServers in agent frontmatter' do
       # Agent Rule
     MD
 
-    profiles_content = {
+    recipes_content = {
       'parent' => {
-        'description' => 'Parent profile',
+        'description' => 'Parent recipe',
         'files' => ["#{test_dir}/rules/basic-rule.md"],
         'mcp_servers' => ['teams'],
         'subagents' => [
-          { 'name' => 'worker', 'profile' => 'worker-profile' }
+          { 'name' => 'worker', 'recipe' => 'worker-recipe' }
         ]
       },
-      'worker-profile' => {
+      'worker-recipe' => {
         'description' => 'Worker',
         'files' => ["#{test_dir}/rules/agent-rule.md"],
         'mcp_servers' => ['playwright']
@@ -256,11 +256,11 @@ describe 'mcpServers in agent frontmatter' do
     }
 
     # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+    allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
     # rubocop:enable RSpec/AnyInstance
   end
 
-  it 'includes mcpServers in agent frontmatter from profile' do
+  it 'includes mcpServers in agent frontmatter from recipe' do
     cli.invoke(:squash, ['parent'])
 
     content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
@@ -288,17 +288,17 @@ Expected: FAIL — no `mcpServers:` in agent frontmatter
 
 In `generate_agent_file` (line ~2850), after loading agent sources, collect rule-level MCPs:
 ```ruby
-def generate_agent_file(agent_name, profile_name, profile_config, parent_profile_name,
-                        subagent_config: {}, parent_profile_config: {})
+def generate_agent_file(agent_name, recipe_name, recipe_config, parent_recipe_name,
+                        subagent_config: {}, parent_recipe_config: {})
   agent_file = ".claude/agents/#{agent_name}.md"
-  local_sources, command_files = load_agent_sources(profile_name, profile_config)
+  local_sources, command_files = load_agent_sources(recipe_name, recipe_config)
 
-  # Collect MCP servers from profile config + rule frontmatter
+  # Collect MCP servers from recipe config + rule frontmatter
   source_mcp = collect_mcp_servers_from_sources(local_sources)
-  all_mcp = (Array(profile_config['mcp_servers']) + source_mcp).uniq
+  all_mcp = (Array(recipe_config['mcp_servers']) + source_mcp).uniq
 
-  context = build_agent_context(agent_name, profile_name, profile_config, parent_profile_name, local_sources,
-                                subagent_config:, parent_profile_config:, mcp_servers: all_mcp)
+  context = build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
+                                subagent_config:, parent_recipe_config:, mcp_servers: all_mcp)
   # ...
 end
 ```
@@ -306,8 +306,8 @@ end
 **3b. Update `build_agent_context` to include mcp_servers:**
 
 ```ruby
-def build_agent_context(agent_name, profile_name, profile_config, parent_profile_name, local_sources,
-                        subagent_config: {}, parent_profile_config: {}, mcp_servers: [])
+def build_agent_context(agent_name, recipe_name, recipe_config, parent_recipe_name, local_sources,
+                        subagent_config: {}, parent_recipe_config: {}, mcp_servers: [])
   {
     # ... existing fields ...
     mcp_servers:,
@@ -329,8 +329,8 @@ def write_agent_frontmatter(output, context)
     output.puts "mcpServers: [#{context[:mcp_servers].join(', ')}]"
   end
   output.puts 'permissionMode: bypassPermissions'
-  output.puts "# Auto-generated from profile: #{context[:profile_name]}"
-  output.puts "# Do not edit manually - regenerate using 'ruly squash #{context[:parent_profile_name]}'"
+  output.puts "# Auto-generated from recipe: #{context[:recipe_name]}"
+  output.puts "# Do not edit manually - regenerate using 'ruly squash #{context[:parent_recipe_name]}'"
   output.puts '---'
   output.puts
 end
@@ -345,7 +345,7 @@ def write_agent_file(agent_file, context)
     write_agent_frontmatter(output, context)
     write_agent_content(output, context)
     # REMOVED: write_agent_mcp_servers — now in frontmatter
-    write_agent_footer(output, context[:timestamp], context[:profile_name])
+    write_agent_footer(output, context[:timestamp], context[:recipe_name])
   end
 end
 ```
@@ -362,7 +362,7 @@ git add spec/ruly/cli_rule_mcp_spec.rb lib/ruly/cli.rb
 git commit -m "feat: add mcpServers to agent frontmatter
 
 Uses the native Claude Code mcpServers field instead of listing
-MCP servers in the markdown body. Merges servers from profile config
+MCP servers in the markdown body. Merges servers from recipe config
 and rule-file frontmatter."
 ```
 
@@ -405,7 +405,7 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
     FileUtils.mkdir_p(File.join(test_dir, 'rules', 'skills'))
     allow(cli).to receive_messages(
       gem_root: test_dir,
-      profiles_file: File.join(test_dir, 'profiles.yml'),
+      recipes_file: File.join(test_dir, 'recipes.yml'),
       rules_dir: File.join(test_dir, 'rules')
     )
   end
@@ -432,22 +432,22 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
         You orchestrate things.
       MD
 
-      profiles_content = {
+      recipes_content = {
         'test' => {
-          'description' => 'Test profile',
+          'description' => 'Test recipe',
           'files' => ["#{test_dir}/rules/orchestrator.md"],
           'subagents' => [
-            { 'name' => 'worker', 'profile' => 'worker-profile' }
+            { 'name' => 'worker', 'recipe' => 'worker-recipe' }
           ]
         },
-        'worker-profile' => {
+        'worker-recipe' => {
           'description' => 'Worker',
           'files' => ["#{test_dir}/rules/orchestrator.md"]
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
@@ -483,7 +483,7 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
         # Bad Rule
       MD
 
-      profiles_content = {
+      recipes_content = {
         'test' => {
           'description' => 'Test',
           'files' => ["#{test_dir}/rules/bad-ref.md"]
@@ -491,7 +491,7 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
 
       expect { cli.invoke(:squash, ['test']) }.to raise_error(/skill.*nonexistent/i)
@@ -507,7 +507,7 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
         # Bad Path Rule
       MD
 
-      profiles_content = {
+      recipes_content = {
         'test' => {
           'description' => 'Test',
           'files' => ["#{test_dir}/rules/bad-path.md"]
@@ -515,7 +515,7 @@ RSpec.describe Ruly::CLI, 'skills frontmatter', type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
 
       expect { cli.invoke(:squash, ['test']) }.to raise_error(/skill.*must be in.*skills/i)
@@ -635,22 +635,22 @@ describe 'skills: in agent frontmatter' do
       You orchestrate fetching.
     MD
 
-    profiles_content = {
+    recipes_content = {
       'parent' => {
         'description' => 'Parent',
         'files' => ["#{test_dir}/rules/agent-rule.md"],
         'subagents' => [
-          { 'name' => 'my_agent', 'profile' => 'agent-profile' }
+          { 'name' => 'my_agent', 'recipe' => 'agent-recipe' }
         ]
       },
-      'agent-profile' => {
+      'agent-recipe' => {
         'description' => 'Agent with skills',
         'files' => ["#{test_dir}/rules/agent-rule.md"]
       }
     }
 
     # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+    allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
     # rubocop:enable RSpec/AnyInstance
   end
 
@@ -681,9 +681,9 @@ Expected: FAIL — no `skills:` in agent frontmatter
 
 In `load_agent_sources`, also return the list of skill files (which have the skill names):
 ```ruby
-def load_agent_sources(profile_name, profile_config)
-  sources, = load_profile_sources(profile_name)
-  local_sources, command_files, _bin_files, skill_files = process_sources_for_squash(sources, 'claude', profile_config, {})
+def load_agent_sources(recipe_name, recipe_config)
+  sources, = load_recipe_sources(recipe_name)
+  local_sources, command_files, _bin_files, skill_files = process_sources_for_squash(sources, 'claude', recipe_config, {})
   [local_sources, command_files, skill_files]
 end
 ```
@@ -703,7 +703,7 @@ end
 
 In `generate_agent_file`:
 ```ruby
-local_sources, command_files, skill_files = load_agent_sources(profile_name, profile_config)
+local_sources, command_files, skill_files = load_agent_sources(recipe_name, recipe_config)
 skill_names = extract_skill_names(skill_files)
 
 # Save skill files for the agent
@@ -732,13 +732,13 @@ git add spec/ruly/cli_skills_frontmatter_spec.rb lib/ruly/cli.rb
 git commit -m "feat: add skills: to agent frontmatter
 
 Agent files now include skills: [name1, name2] in frontmatter,
-collected from skill files referenced by the agent's profile.
+collected from skill files referenced by the agent's recipe.
 Claude Code natively injects skill content into agent context."
 ```
 
 ---
 
-### Task 5: Error if subagent profile has subagents
+### Task 5: Error if subagent recipe has subagents
 
 **Files:**
 - Create: `spec/ruly/cli_nested_subagent_validation_spec.rb`
@@ -776,36 +776,36 @@ RSpec.describe Ruly::CLI, 'nested subagent validation', type: :cli do
 
     allow(cli).to receive_messages(
       gem_root: test_dir,
-      profiles_file: File.join(test_dir, 'profiles.yml'),
+      recipes_file: File.join(test_dir, 'recipes.yml'),
       rules_dir: File.join(test_dir, 'rules')
     )
   end
 
-  describe 'rejects subagent profiles with their own subagents' do
+  describe 'rejects subagent recipes with their own subagents' do
     before do
-      profiles_content = {
+      recipes_content = {
         'parent' => {
           'description' => 'Parent',
           'files' => ["#{test_dir}/rules/rule.md"],
           'subagents' => [
-            { 'name' => 'nested_one', 'profile' => 'child-with-subagents' }
+            { 'name' => 'nested_one', 'recipe' => 'child-with-subagents' }
           ]
         },
         'child-with-subagents' => {
           'description' => 'Child that itself has subagents',
           'files' => ["#{test_dir}/rules/rule.md"],
           'subagents' => [
-            { 'name' => 'grandchild', 'profile' => 'grandchild-profile' }
+            { 'name' => 'grandchild', 'recipe' => 'grandchild-recipe' }
           ]
         },
-        'grandchild-profile' => {
+        'grandchild-recipe' => {
           'description' => 'Grandchild',
           'files' => ["#{test_dir}/rules/rule.md"]
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
@@ -816,24 +816,24 @@ RSpec.describe Ruly::CLI, 'nested subagent validation', type: :cli do
     end
   end
 
-  describe 'allows subagent profiles without subagents' do
+  describe 'allows subagent recipes without subagents' do
     before do
-      profiles_content = {
+      recipes_content = {
         'parent' => {
           'description' => 'Parent',
           'files' => ["#{test_dir}/rules/rule.md"],
           'subagents' => [
-            { 'name' => 'leaf', 'profile' => 'leaf-profile' }
+            { 'name' => 'leaf', 'recipe' => 'leaf-recipe' }
           ]
         },
-        'leaf-profile' => {
+        'leaf-recipe' => {
           'description' => 'Leaf subagent (no own subagents)',
           'files' => ["#{test_dir}/rules/rule.md"]
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
@@ -852,14 +852,14 @@ Expected: FAIL — no error raised (currently generates nested agents silently)
 
 **Step 3: Implement the validation**
 
-In `process_subagents` (line ~2829), after loading the subagent profile and before generating:
+In `process_subagents` (line ~2829), after loading the subagent recipe and before generating:
 
 ```ruby
-# Validate: subagent profiles must NOT have their own subagents
-if subagent_profile.is_a?(Hash) && subagent_profile['subagents'].is_a?(Array) && subagent_profile['subagents'].any?
-  sub_names = subagent_profile['subagents'].map { |s| s['name'] }.join(', ')
+# Validate: subagent recipes must NOT have their own subagents
+if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents'].is_a?(Array) && subagent_recipe['subagents'].any?
+  sub_names = subagent_recipe['subagents'].map { |s| s['name'] }.join(', ')
   raise Ruly::Error,
-        "Profile '#{profile_name}' (subagent '#{agent_name}') has its own subagents (#{sub_names}). " \
+        "Recipe '#{recipe_name}' (subagent '#{agent_name}') has its own subagents (#{sub_names}). " \
         "Claude Code subagents cannot spawn other subagents. " \
         "Convert them to skills and reference via 'skills:' in the rule frontmatter instead."
 end
@@ -870,8 +870,8 @@ Also **remove the recursive `process_subagents` call** (lines 2839-2842) — it'
 ```ruby
 # REMOVED: Recursive processing of nested subagents
 # Nested subagents are no longer supported — use skills instead.
-# if subagent_profile.is_a?(Hash) && subagent_profile['subagents']
-#   process_subagents(subagent_profile, parent_profile_name, visited:, top_level: false)
+# if subagent_recipe.is_a?(Hash) && subagent_recipe['subagents']
+#   process_subagents(subagent_recipe, parent_recipe_name, visited:, top_level: false)
 # end
 ```
 
@@ -884,22 +884,22 @@ Expected: PASS
 
 Run: `bundle exec rspec spec/ruly/ -v`
 
-Note: If existing tests rely on nested subagent generation (via recursive process_subagents), they'll need updating. The `cli_agent_profiles_spec.rb` tests don't test nesting, so should pass.
+Note: If existing tests rely on nested subagent generation (via recursive process_subagents), they'll need updating. The `cli_agent_recipes_spec.rb` tests don't test nesting, so should pass.
 
 **Step 6: Commit**
 
 ```bash
 git add spec/ruly/cli_nested_subagent_validation_spec.rb lib/ruly/cli.rb
-git commit -m "feat: error if subagent profile has its own subagents
+git commit -m "feat: error if subagent recipe has its own subagents
 
 Claude Code subagents cannot spawn other subagents, so nested
-subagent profiles are now rejected with a clear error message
+subagent recipes are now rejected with a clear error message
 directing users to convert to skills instead."
 ```
 
 ---
 
-## Phase 2: Profile Refactoring
+## Phase 2: Recipe Refactoring
 
 ### Task 6: Convert context-grabber sub-subagents to skills
 
@@ -909,7 +909,7 @@ directing users to convert to skills instead."
 - Move: `rules/comms/context/agents/context-downloader-teams.md` → `rules/comms/context/skills/context-downloader-teams.md`
 - Move: `rules/comms/context/agents/context-summarizer.md` → `rules/comms/context/skills/context-summarizer.md`
 - Modify: `rules/comms/context/agents/context-grabber.md` (add `skills:` frontmatter)
-- Modify: `profiles.yml` (remove subagents from context-grabber, remove sub-subagent profiles)
+- Modify: `recipes.yml` (remove subagents from context-grabber, remove sub-subagent recipes)
 
 **Step 1: Move agent files to skills directory**
 
@@ -975,7 +975,7 @@ skills:
 
 Also update the body text: change "Dispatch downloaders in parallel" to "Execute the downloader skills directly" (since the agent now has the skill knowledge inline via Claude Code's `skills:` injection).
 
-**Step 4: Update profiles.yml — remove subagents from context-grabber**
+**Step 4: Update recipes.yml — remove subagents from context-grabber**
 
 ```yaml
 context-grabber:
@@ -986,25 +986,25 @@ context-grabber:
   # subagents: REMOVED — converted to skills via frontmatter
 ```
 
-**Step 5: Remove standalone sub-subagent profiles from profiles.yml**
+**Step 5: Remove standalone sub-subagent recipes from recipes.yml**
 
-Delete these profile entries (they're now skill files, not profiles):
+Delete these recipe entries (they're now skill files, not recipes):
 - `context-downloader-jira`
 - `context-downloader-github`
 - `context-downloader-teams`
 - `context-summarizer`
 
-**Step 6: Update `~/.config/ruly/profiles.yml` to match**
+**Step 6: Update `~/.config/ruly/recipes.yml` to match**
 
 **Step 7: Commit**
 
 ```bash
 git add -A rules/comms/context/
-git add profiles.yml
+git add recipes.yml
 git commit -m "refactor: convert context-grabber sub-subagents to skills
 
 context-downloader-jira/github/teams and context-summarizer are
-now skills referenced via frontmatter, not subagent profiles."
+now skills referenced via frontmatter, not subagent recipes."
 ```
 
 ---
@@ -1028,64 +1028,64 @@ Same pattern as Task 6. Key MCP requirements:
 - `mattermost-dm.md` → `mcp_servers: [mattermost]`
 - Jira agents → no MCP (uses `jira` CLI, not MCP)
 
-**Step 2: Create a shared comms skill reference file or update comms profile files**
+**Step 2: Create a shared comms skill reference file or update comms recipe files**
 
-The comms profile's rule files need `skills:` frontmatter referencing all the moved skills. The exact approach depends on which rule file in the comms profile is the "orchestrator" — likely needs a new file or additions to existing ones.
+The comms recipe's rule files need `skills:` frontmatter referencing all the moved skills. The exact approach depends on which rule file in the comms recipe is the "orchestrator" — likely needs a new file or additions to existing ones.
 
-**Step 3: Update profiles.yml — remove subagents from comms, jira, full, agile profiles**
+**Step 3: Update recipes.yml — remove subagents from comms, jira, full, agile recipes**
 
-All profiles that referenced these as subagents need updating:
-- `comms` profile
-- `jira` profile
-- `full` profile
-- `agile` profile
+All recipes that referenced these as subagents need updating:
+- `comms` recipe
+- `jira` recipe
+- `full` recipe
+- `agile` recipe
 
-**Step 4: Remove standalone sub-subagent profiles from profiles.yml**
+**Step 4: Remove standalone sub-subagent recipes from recipes.yml**
 
 Delete: `ms-teams-dm`, `mattermost-dm`, `jira-comment`, `jira-bug-report`, `jira-ready-for-qa`, `jira-epic`, `jira-initiative`, `jira-story`
 
-**Step 5: Update both profile config files + commit**
+**Step 5: Update both recipe config files + commit**
 
 ---
 
 ### Task 8: Convert core-debugger/engineer sub-subagents to skills
 
 **Files:**
-- The `core-debugging` profile is special — it's BOTH a direct subagent of `core` AND a sub-subagent of `core-debugger`/`core-engineer`/`bug-diagnose`/`bug-fix`.
+- The `core-debugging` recipe is special — it's BOTH a direct subagent of `core` AND a sub-subagent of `core-debugger`/`core-engineer`/`bug-diagnose`/`bug-fix`.
 
-**Decision:** `core-debugging` stays as a standalone profile (it's used as a direct subagent). The parent profiles (`core-debugger`, `core-engineer`, `bug-diagnose`, `bug-fix`) add it as a `skills:` reference instead of a subagent.
+**Decision:** `core-debugging` stays as a standalone recipe (it's used as a direct subagent). The parent recipes (`core-debugger`, `core-engineer`, `bug-diagnose`, `bug-fix`) add it as a `skills:` reference instead of a subagent.
 
-The skill file already exists at `rules/bug/skills/debugging.md`. The profiles just need to reference it.
+The skill file already exists at `rules/bug/skills/debugging.md`. The recipes just need to reference it.
 
-**Step 1: Update core-debugger profile rule files**
+**Step 1: Update core-debugger recipe rule files**
 
 Add `skills:` to the core-debugger orchestrator file referencing `bug/skills/debugging.md`.
 
-**Step 2: Remove `subagents:` from core-debugger, core-engineer, bug-diagnose, bug-fix profiles in profiles.yml**
+**Step 2: Remove `subagents:` from core-debugger, core-engineer, bug-diagnose, bug-fix recipes in recipes.yml**
 
-These profiles lose their `subagents:` field entirely. The capabilities previously provided by sub-subagents are now available via skills.
+These recipes lose their `subagents:` field entirely. The capabilities previously provided by sub-subagents are now available via skills.
 
 **Step 3: Verify `core-debugging` still works as direct subagent of core**
 
-`core-debugging` profile has NO subagents of its own, so the validation in Task 5 passes.
+`core-debugging` recipe has NO subagents of its own, so the validation in Task 5 passes.
 
 **Step 4: Commit**
 
 ---
 
-### Task 9: Update both profile config files
+### Task 9: Update both recipe config files
 
-**Step 1: Ensure profiles.yml and ~/.config/ruly/profiles.yml match**
+**Step 1: Ensure recipes.yml and ~/.config/ruly/recipes.yml match**
 
 ```bash
-cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/.config/ruly/profiles.yml
-cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml
+cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/.config/ruly/recipes.yml
+cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml
 ```
 
-**Step 2: Search for any remaining references to deleted profiles**
+**Step 2: Search for any remaining references to deleted recipes**
 
 ```bash
-grep -r "context-downloader\|ms-teams-dm\|mattermost-dm\|jira-comment\|jira-bug-report\|jira-ready-for-qa\|jira-epic\|jira-initiative\|jira-story" rules/ profiles.yml
+grep -r "context-downloader\|ms-teams-dm\|mattermost-dm\|jira-comment\|jira-bug-report\|jira-ready-for-qa\|jira-epic\|jira-initiative\|jira-story" rules/ recipes.yml
 ```
 
 Fix any stale references.
@@ -1100,7 +1100,7 @@ Fix any stale references.
 bundle exec rspec -v
 ```
 
-**Step 2: E2E test with core profile**
+**Step 2: E2E test with core recipe**
 
 ```bash
 cd $(mktemp -d) && /Users/patrick/Projects/ruly/bin/ruly squash --deepclean core
@@ -1110,7 +1110,7 @@ Expected:
 - 12 agent files in `.claude/agents/` (NO sub-subagent agent files)
 - Skill files in `.claude/skills/` for each converted sub-subagent
 - Agent frontmatter includes `skills:` and `mcpServers:`
-- `.mcp.json` includes all MCP servers (from profiles + rule frontmatter)
+- `.mcp.json` includes all MCP servers (from recipes + rule frontmatter)
 - NO validation errors about nested subagents
 
 **Step 3: Verify agent frontmatter**
@@ -1167,8 +1167,8 @@ git commit -m "docs: document skills/mcpServers frontmatter and nested subagent 
 | `rules/comms/ms-teams/agents/*.md` → `rules/comms/ms-teams/skills/*.md` | Move Teams DM |
 | `rules/comms/mattermost/agents/*.md` → `rules/comms/mattermost/skills/*.md` | Move Mattermost DM |
 | `rules/comms/jira/agents/*.md` → `rules/comms/jira/skills/*.md` | Move 5+ Jira agents |
-| `profiles.yml` | Remove `subagents:` from 6+ profiles, delete 12+ sub-subagent profile entries |
-| `~/.config/ruly/profiles.yml` | Mirror changes |
+| `recipes.yml` | Remove `subagents:` from 6+ recipes, delete 12+ sub-subagent recipe entries |
+| `~/.config/ruly/recipes.yml` | Mirror changes |
 | `README.md` | Document new frontmatter fields and migration |
 
 ## New Rule Frontmatter Fields

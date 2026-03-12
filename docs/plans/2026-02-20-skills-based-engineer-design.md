@@ -4,17 +4,17 @@
 
 The `core` orchestrator dispatches work to subagents (`core_engineer`, `core_reviewer`, `core_debugger`, etc.) to manage context lifecycle. Each subagent gets a fresh context window, and the orchestrator recovers context when the subagent returns.
 
-This works well but creates duplication. The engineer, reviewer, and debugger all need the same coding standards and framework rules. Each profile lists the same files independently. When standards change, multiple profiles need updating.
+This works well but creates duplication. The engineer, reviewer, and debugger all need the same coding standards and framework rules. Each recipe lists the same files independently. When standards change, multiple recipes need updating.
 
-We want to test whether a single engineer profile with on-demand skills can replace the orchestrator pattern for some workflows — loading capabilities only when needed via the Skill tool.
+We want to test whether a single engineer recipe with on-demand skills can replace the orchestrator pattern for some workflows — loading capabilities only when needed via the Skill tool.
 
 ## Approach
 
-Build two profiles and compare them in real work:
+Build two recipes and compare them in real work:
 
-- **Profile A (new): `core-engineer-skilled`** — A single engineer with reviewing, debugging, and diagnosis compiled as skills. Standards load on demand when Claude invokes a skill. No subagents for those capabilities.
+- **Recipe A (new): `core-engineer-skilled`** — A single engineer with reviewing, debugging, and diagnosis compiled as skills. Standards load on demand when Claude invokes a skill. No subagents for those capabilities.
 
-- **Profile B (existing): `core`** — The current orchestrator that dispatches to `core_engineer`, `core_reviewer`, `core_debugger` as separate agents with fresh context.
+- **Recipe B (existing): `core`** — The current orchestrator that dispatches to `core_engineer`, `core_reviewer`, `core_debugger` as separate agents with fresh context.
 
 ## Design
 
@@ -90,7 +90,7 @@ requires:
 ---
 ```
 
-### The Test Profile
+### The Test Recipe
 
 ```yaml
 core-engineer-skilled:
@@ -131,20 +131,20 @@ core-engineer-skilled:
   subagents:
     # Only agents that genuinely need fresh context / isolation
     - name: comms
-      profile: comms
+      recipe: comms
     - name: merger
-      profile: merger
+      recipe: merger
     - name: context_jira
-      profile: context-jira
+      recipe: context-jira
       model: haiku
     - name: context_github
-      profile: context-github
+      recipe: context-github
       model: haiku
     - name: context_teams
-      profile: context-teams
+      recipe: context-teams
       model: haiku
     - name: context_summarizer
-      profile: context-summarizer
+      recipe: context-summarizer
       model: haiku
 ```
 
@@ -186,6 +186,6 @@ Everything in this design uses existing ruly capabilities:
 - `requires:` frontmatter for composing compiled skills
 - `/skills/` directory convention for auto-detection
 - `skills:` frontmatter in rule files for referencing skills
-- Standard profile YAML with `files:` and `subagents:`
+- Standard recipe YAML with `files:` and `subagents:`
 
-The only new artifacts are the compiled skill files and the test profile entry in profiles.yml.
+The only new artifacts are the compiled skill files and the test recipe entry in recipes.yml.

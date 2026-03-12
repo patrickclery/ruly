@@ -19,7 +19,7 @@ This will:
 
 - Install Ruly to `~/ruly`
 - Add `ruly` command to your PATH
-- Set up initial configuration at `~/.config/ruly/profiles.yml`
+- Set up initial configuration at `~/.config/ruly/recipes.yml`
 
 ### Manual Installation
 
@@ -64,14 +64,14 @@ $ ruly help
 # Combine all rules into one file
 $ ruly squash
 
-# Use a specific profile
+# Use a specific recipe
 $ ruly squash starter
 
 # Clean up generated files
 $ ruly clean
 
-# List available profiles
-$ ruly list-profiles
+# List available recipes
+$ ruly list-recipes
 
 # Show version
 $ ruly version
@@ -85,8 +85,8 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 
 1. **Simple Installation**: One-line install with curl
 2. **Self-Contained**: Everything runs from `~/ruly`
-3. **Profile System**: Use pre-configured profiles or create your own
-4. **Smart Caching**: Cache compiled profiles for performance
+3. **Recipe System**: Use pre-configured recipes or create your own
+4. **Smart Caching**: Cache compiled recipes for performance
 5. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
 
 **Benefits:**
@@ -102,9 +102,9 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 **The `ruly` command provides:**
 
 - ✅ Combine multiple rule files into one document
-- ✅ Use profile collections for different contexts
+- ✅ Use recipe collections for different contexts
 - ✅ Fetch and include remote GitHub files
-- ✅ Cache compiled profiles for performance
+- ✅ Cache compiled recipes for performance
 - ✅ Support for Claude, Cursor, and other AI assistants
 - ✅ Clean up all agent-related files automatically
 
@@ -143,7 +143,7 @@ Ruly is a powerful CLI tool that manages AI assistant rules and configurations f
 This repository **does not include rule files**. You need to:
 
 1. Create your own rules repository (private or public)
-2. Configure profiles to point to your rule sources
+2. Configure recipes to point to your rule sources
 3. Use the `ruly init` command to get started with a template
 
 ## 🎯 Setting Up Your Rules
@@ -198,18 +198,18 @@ This repository **does not include rule files**. You need to:
    ```
 
    **Directory conventions:**
-   - `commands/` - User-invocable slash commands (e.g., `/ms-teams:dm`). Must be listed under the `commands:` profile key to be output as `.claude/commands/` files.
-   - `skills/` - Skill files that become `SKILL.md` in `.claude/skills/`. Must be listed under the `skills:` profile key.
+   - `commands/` - User-invocable slash commands (e.g., `/ms-teams:dm`). Must be listed under the `commands:` recipe key to be output as `.claude/commands/` files.
+   - `skills/` - Skill files that become `SKILL.md` in `.claude/skills/`. Must be listed under the `skills:` recipe key.
    - `agents/` - Subagent instruction files (dispatched by orchestrator, not user-invocable)
-   - `bin/` - Shell scripts and executables. Must be listed under the `scripts:` profile key to be copied to `.claude/scripts/`.
+   - `bin/` - Shell scripts and executables. Must be listed under the `scripts:` recipe key to be copied to `.claude/scripts/`.
    - Root files - Common patterns and shared configuration
 
 ### Option 2: Use Multiple Rule Sources
 
-Create `~/.config/ruly/profiles.yml` to combine rules from different repositories:
+Create `~/.config/ruly/recipes.yml` to combine rules from different repositories:
 
 ```yaml
-profiles:
+recipes:
   my-complete-rules:
     description: "Combines personal and company rules"
     sources:
@@ -240,7 +240,7 @@ After installing Ruly, you can quickly get started with a basic configuration:
 # Initialize Ruly with a starter configuration
 ruly init
 
-# This creates ~/.config/ruly/profiles.yml with example profiles
+# This creates ~/.config/ruly/recipes.yml with example recipes
 # Edit this file to add your own rule sources
 ```
 
@@ -249,7 +249,7 @@ ruly init
 If you don't want to maintain your own rules repository, you can use rules directly from GitHub:
 
 ```yaml
-profiles:
+recipes:
   remote-only:
     description: "Rules from various GitHub sources"
     sources:
@@ -277,8 +277,8 @@ Here's how the maintainer set up their private rules repository:
 3. **Updated your Ruly configuration:**
 
    ```yaml
-   # ~/.config/ruly/profiles.yml
-   profiles:
+   # ~/.config/ruly/recipes.yml
+   recipes:
      complete:
        description: "Personal + FakeCorp rules"
        sources:
@@ -308,10 +308,10 @@ Ruly provides a powerful CLI for managing and compiling your AI assistant rules.
 ruly squash
 ```
 
-**Use a specific profile:**
+**Use a specific recipe:**
 
 ```bash
-# Profile name as positional parameter
+# Recipe name as positional parameter
 ruly squash rails
 ruly squash api
 ```
@@ -324,18 +324,18 @@ ruly squash --output-file=combined-rules.md
 # or using short option
 ruly squash -o docs/my-rules.md
 
-# Combine with profile
+# Combine with recipe
 ruly squash rails -o RAILS.md
 ```
 
 **Analyze token usage:**
 
 ```bash
-# Analyze a specific profile
+# Analyze a specific recipe
 ruly analyze rails
 ruly analyze api
 
-# Analyze all profiles
+# Analyze all recipes
 ruly analyze --all
 ruly analyze -a
 ```
@@ -346,7 +346,7 @@ ruly analyze -a
 # Clean all agent-related files for current agent
 ruly clean
 
-# Clean files from specific profile
+# Clean files from specific recipe
 ruly clean rails
 
 # Clean files for specific agent
@@ -372,18 +372,18 @@ ruly squash rails --deepclean
 # Create .mcp.json with specific servers (must exist in ~/.config/ruly/mcp.json)
 ruly mcp atlassian teams playwright
 
-# Use MCP servers from a profile
+# Use MCP servers from a recipe
 ruly mcp -r workaxle-spike
-ruly mcp --profile workaxle-bug
+ruly mcp --recipe workaxle-bug
 
 # Append to existing .mcp.json instead of overwriting
 ruly mcp playwright -a
 ruly mcp --append task-master-ai
 
-# Combine profile servers with additional servers
+# Combine recipe servers with additional servers
 ruly mcp -r workaxle-bug playwright
 
-# Append profile servers to existing config
+# Append recipe servers to existing config
 ruly mcp -r workaxle-spike -a
 ```
 
@@ -391,26 +391,26 @@ ruly mcp -r workaxle-spike -a
 
 Subagents allow you to generate specialized agent files that Claude can dispatch to for specific tasks. Each subagent is a self-contained agent with its own rules, commands, and MCP server access.
 
-#### Defining Subagents in Profiles
+#### Defining Subagents in Recipes
 
-Add a `subagents` array to any profile. Each subagent references another profile:
+Add a `subagents` array to any recipe. Each subagent references another recipe:
 
 ```yaml
-profiles:
-  # Main profile that spawns subagents
+recipes:
+  # Main recipe that spawns subagents
   full:
     description: "Complete development environment"
     files:
       - /path/to/rules/core.md
     subagents:
       - name: bug_investigator
-        profile: bug
+        recipe: bug
       - name: test_runner
-        profile: testing
+        recipe: testing
       - name: pr_manager
-        profile: pr
+        recipe: pr
 
-  # Profiles used by subagents
+  # Recipes used by subagents
   bug:
     description: "Bug investigation and debugging"
     files:
@@ -436,23 +436,23 @@ profiles:
 
 When you run `ruly squash -r full`:
 
-1. **MCP servers collected**: Recursively collects `mcp_servers` from all subagent profiles
+1. **MCP servers collected**: Recursively collects `mcp_servers` from all subagent recipes
 2. **`.mcp.json` written**: Parent's `.mcp.json` includes all collected servers (deduplicated)
-3. **Main rules generated**: `CLAUDE.local.md` with the main profile content
+3. **Main rules generated**: `CLAUDE.local.md` with the main recipe content
 4. **Agent files created**: `.claude/agents/{name}.md` for each subagent
 5. **Commands organized**: `.claude/commands/{agent_name}/` for agent-specific commands
 
 ```
 your-project/
-├── CLAUDE.local.md              # Main rules (from 'full' profile)
+├── CLAUDE.local.md              # Main rules (from 'full' recipe)
 ├── .mcp.json                    # MCP servers (parent + all subagent servers)
 ├── .ruly/
 │   └── bin/                     # Bin files (from scripts: key)
 └── .claude/
     ├── agents/
-    │   ├── bug_investigator.md  # Squashed 'bug' profile
-    │   ├── test_runner.md       # Squashed 'testing' profile
-    │   └── pr_manager.md        # Squashed 'pr' profile
+    │   ├── bug_investigator.md  # Squashed 'bug' recipe
+    │   ├── test_runner.md       # Squashed 'testing' recipe
+    │   └── pr_manager.md        # Squashed 'pr' recipe
     ├── commands/
     │   ├── bug_investigator/    # Commands for bug agent
     │   ├── test_runner/         # Commands for testing agent
@@ -464,12 +464,12 @@ your-project/
 
 #### MCP Server Propagation
 
-Claude Code subagents inherit the parent session's MCP configuration — they cannot have independent MCP servers. Ruly handles this automatically: during `ruly squash`, MCP servers from all subagent profiles (recursively, including nested subagents) are collected and merged into the parent's `.mcp.json`.
+Claude Code subagents inherit the parent session's MCP configuration — they cannot have independent MCP servers. Ruly handles this automatically: during `ruly squash`, MCP servers from all subagent recipes (recursively, including nested subagents) are collected and merged into the parent's `.mcp.json`.
 
-For example, given this profile configuration:
+For example, given this recipe configuration:
 
 ```yaml
-profiles:
+recipes:
   core:
     description: "Main orchestrator"
     files:
@@ -477,9 +477,9 @@ profiles:
     # Note: no mcp_servers defined here
     subagents:
       - name: comms
-        profile: comms
+        recipe: comms
       - name: feature
-        profile: feature
+        recipe: feature
 
   comms:
     description: "Communication agent"
@@ -497,7 +497,7 @@ profiles:
       - Ref
 ```
 
-Running `ruly squash core` produces a `.mcp.json` containing `teams`, `mattermost`, and `Ref` — all propagated from the subagent profiles — even though `core` itself defines no MCP servers. The console output shows which servers were propagated:
+Running `ruly squash core` produces a `.mcp.json` containing `teams`, `mattermost`, and `Ref` — all propagated from the subagent recipes — even though `core` itself defines no MCP servers. The console output shows which servers were propagated:
 
 ```
 🔌 Propagated MCP servers from subagents: teams, mattermost, Ref
@@ -515,8 +515,8 @@ Generated agent files have YAML frontmatter that Claude understands:
 name: bug_investigator
 description: Bug investigation and debugging
 tools: inherit
-model: haiku                # Set via subagent or profile config (default: inherit)
-# Auto-generated from profile: bug
+model: haiku                # Set via subagent or recipe config (default: inherit)
+# Auto-generated from recipe: bug
 # Do not edit manually - regenerate using 'ruly squash full'
 ---
 
@@ -524,9 +524,9 @@ model: haiku                # Set via subagent or profile config (default: inher
 
 Bug investigation and debugging
 
-## Profile Content
+## Recipe Content
 
-[squashed content from bug profile]
+[squashed content from bug recipe]
 
 ## MCP Servers
 
@@ -535,7 +535,7 @@ This subagent has access to the following MCP servers:
 
 ---
 *Last generated: 2026-02-04 12:30:00*
-*Source profile: bug*
+*Source recipe: bug*
 ```
 
 #### Model Specification
@@ -549,21 +549,21 @@ Specify `model` directly on a subagent entry:
 ```yaml
 subagents:
   - name: context_grabber
-    profile: context-grabber
+    recipe: context-grabber
     model: haiku          # Fast, cheap — just fetching data
   - name: core_engineer
-    profile: core-engineer
+    recipe: core-engineer
     model: opus           # Most capable — complex implementation
   - name: comms
-    profile: comms         # No model — inherits from profile or defaults to 'inherit'
+    recipe: comms         # No model — inherits from recipe or defaults to 'inherit'
 ```
 
-##### Profile-Level Default Model
+##### Recipe-Level Default Model
 
-Set a default model for all subagents in a profile:
+Set a default model for all subagents in a recipe:
 
 ```yaml
-profiles:
+recipes:
   core:
     description: "Main orchestrator"
     model: sonnet         # Default for all subagents
@@ -571,11 +571,11 @@ profiles:
       - /path/to/rules/core.md
     subagents:
       - name: fast_agent
-        profile: fast-tasks
-        model: haiku      # Overrides profile default
+        recipe: fast-tasks
+        model: haiku      # Overrides recipe default
       - name: smart_agent
-        profile: complex-tasks
-                           # Uses profile default (sonnet)
+        recipe: complex-tasks
+                           # Uses recipe default (sonnet)
 ```
 
 ##### Inheritance Chain
@@ -583,7 +583,7 @@ profiles:
 Model is resolved in this order:
 
 1. **Subagent `model`** — if specified on the subagent entry
-2. **Parent profile `model`** — if set on the profile containing the subagents
+2. **Parent recipe `model`** — if set on the recipe containing the subagents
 3. **`inherit`** — the default (inherits from the calling session)
 
 Valid values: `haiku`, `sonnet`, `opus`, or `inherit`.
@@ -627,18 +627,18 @@ rules/
 #### Example: Development Workflow
 
 ```yaml
-profiles:
+recipes:
   workaxle:
     description: "Main WorkAxle development"
     files:
       - /path/to/rules/core.md
     subagents:
       - name: comms
-        profile: comms        # Jira, Teams, GitHub communications
+        recipe: comms        # Jira, Teams, GitHub communications
       - name: merger
-        profile: merger       # PR merging operations
+        recipe: merger       # PR merging operations
       - name: dashboard
-        profile: dashboard    # PR status dashboard
+        recipe: dashboard    # PR status dashboard
 
   comms:
     description: "Communication via Jira, Teams, GitHub"
@@ -674,44 +674,44 @@ User: "Show me my open PRs"
 Claude: [Dispatches to dashboard agent]
 ```
 
-### Profile System
+### Recipe System
 
-Profiles allow you to define collections of rules to combine, rather than always including all files.
+Recipes allow you to define collections of rules to combine, rather than always including all files.
 
-**List available profiles:**
+**List available recipes:**
 
 ```bash
-ruly list-profiles
+ruly list-recipes
 ```
 
-**Use a specific profile:**
+**Use a specific recipe:**
 
 ```bash
-# Use the 'core' profile
-ruly squash --profile core
+# Use the 'core' recipe
+ruly squash --recipe core
 
-# Use 'testing' profile with custom output
-ruly squash --profile testing -o testing-rules.md
+# Use 'testing' recipe with custom output
+ruly squash --recipe testing -o testing-rules.md
 
 # Short form
 ruly squash -r minimal
 ```
 
-#### Available Profiles
+#### Available Recipes
 
-Profiles depend on having access to rule files. If you cloned with the default rules submodule, you'll have access to the profiles defined in `profiles.yml`. Otherwise, create your own profiles in `~/.config/ruly/profiles.yml` pointing to your rule sources.
+Recipes depend on having access to rule files. If you cloned with the default rules submodule, you'll have access to the recipes defined in `recipes.yml`. Otherwise, create your own recipes in `~/.config/ruly/recipes.yml` pointing to your rule sources.
 
 - **qa** — WorkAxle QA acceptance testing. Write and run Playwright specs in the automation-test-qa repo against dev.workaxle.com. Includes skills for running acceptance tests and syncing the QA repo.
 
-#### Custom Profiles
+#### Custom Recipes
 
-Create a `~/.config/ruly/profiles.yml` file to define your own profiles or override existing ones:
+Create a `~/.config/ruly/recipes.yml` file to define your own recipes or override existing ones:
 
 ```yaml
-# ~/.config/ruly/profiles.yml
+# ~/.config/ruly/recipes.yml
 ---
 tier: claude_max
-profiles:
+recipes:
   # Complete development environment combining multiple sources
   my_company_core:
     description: Complete development environment with Ruby, testing, and workflow rules
@@ -756,7 +756,7 @@ profiles:
       - /Users/john/Projects/my_app/rules/commands/pr/create.md
     tier: claude_max
 
-  # Simple profile for specific context
+  # Simple recipe for specific context
   testing_only:
     description: Testing and QA rules
     tier: claude_max
@@ -765,13 +765,13 @@ profiles:
       - /Users/john/Projects/my_app/rules/commands/testing/*.md
 ```
 
-#### Profile Keys: Skills, Commands, and Bins
+#### Recipe Keys: Skills, Commands, and Bins
 
-Profiles support explicit keys for files that need special treatment. Files listed under `files:` are always squashed into the main output (`CLAUDE.local.md`) regardless of their path. To output files as skills, commands, or bins, use the dedicated keys:
+Recipes support explicit keys for files that need special treatment. Files listed under `files:` are always squashed into the main output (`CLAUDE.local.md`) regardless of their path. To output files as skills, commands, or bins, use the dedicated keys:
 
 ```yaml
-profiles:
-  my-profile:
+recipes:
+  my-recipe:
     description: "Example with explicit keys"
     files:
       # Regular rule files — squashed into CLAUDE.local.md
@@ -792,7 +792,7 @@ profiles:
 
 **Key behavior:**
 
-| Profile key | Output location | What it does |
+| Recipe key | Output location | What it does |
 |------------|----------------|--------------|
 | `files:` | `CLAUDE.local.md` | Squashed into main output (always, regardless of path) |
 | `skills:` | `.claude/skills/{name}/SKILL.md` | Creates individual skill files |
@@ -803,7 +803,7 @@ All four keys support both individual file paths and directory paths. Directorie
 - `skills:` and `commands:` directories expand to all `*.md` files
 - `scripts:` directories expand to all `*.sh` files
 
-**Frontmatter `skills:` references** in individual rule files still work independently. If a rule file declares `skills:` in its frontmatter, those referenced files are automatically resolved and output as SKILL.md files during squash, regardless of which profile key they appear under.
+**Frontmatter `skills:` references** in individual rule files still work independently. If a rule file declares `skills:` in its frontmatter, those referenced files are automatically resolved and output as SKILL.md files during squash, regardless of which recipe key they appear under.
 
 **Remote Sources:**
 
@@ -822,37 +822,37 @@ All four keys support both individual file paths and directory paths. Directorie
 
 **Command File Handling:**
 
-- When `--agent claude` (default), files listed under the `commands:` profile key are saved to `.claude/commands/`
+- When `--agent claude` (default), files listed under the `commands:` recipe key are saved to `.claude/commands/`
 - For other agents, command files are included in the main output file
 - Files in `/commands/` paths under `files:` are treated as regular content (squashed into main output)
 
 **Caching:**
 
-- Use `--cache` flag to enable caching for any profile
+- Use `--cache` flag to enable caching for any recipe
 - Cached files are stored in `cache/<agent>/` directory
 - Remote files are cached separately in `cache/remote/` (7-day expiration)
 - Cache is disabled by default
 - Use `ruly clean` to remove cache files
 
-User profiles:
+User recipes:
 
-- Are automatically loaded from `~/.config/ruly/profiles.yml`
-- Override base profiles with the same name
+- Are automatically loaded from `~/.config/ruly/recipes.yml`
+- Override base recipes with the same name
 - Are stored in your home directory configuration
 - Allow user-specific or team-specific customizations
 
-#### Profile Inheritance (`extends:`)
+#### Recipe Inheritance (`extends:`)
 
-Profiles can extend other profiles using the `extends:` key. The child profile inherits all keys from the parent, with:
+Recipes can extend other recipes using the `extends:` key. The child recipe inherits all keys from the parent, with:
 
 - **Array keys** (`files`, `skills`, `commands`, `scripts`, `sources`, `mcp_servers`, `omit_command_prefix`): Merged via union — parent entries first, then child entries, deduplicated
 - **Scalar keys** (`description`, `model`, `tier`): Child wins — parent value only used if child doesn't define it
 - **Subagents**: Merged by `name` — child entry overrides parent entry with same name
 
 ```yaml
-profiles:
+recipes:
   base:
-    description: "Base development profile"
+    description: "Base development recipe"
     files:
       - rules/core.md
       - rules/common.md
@@ -861,7 +861,7 @@ profiles:
 
   extended:
     extends: base
-    description: "Extended profile with extra tools"
+    description: "Extended recipe with extra tools"
     files:
       - rules/extra.md
     mcp_servers:
@@ -871,31 +871,31 @@ profiles:
 After resolution, `extended` will have:
 - `files`: `[rules/core.md, rules/common.md, rules/extra.md]`
 - `mcp_servers`: `[task-master-ai, playwright]`
-- `description`: `"Extended profile with extra tools"`
+- `description`: `"Extended recipe with extra tools"`
 
 Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.
 
 ### Commands
 
-- **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Profile is
+- **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
   optional positional parameter. Supports fetching remote GitHub files and caching for performance.
   Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
   Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
-  Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only profile, subagents, errors, and summary.
+  Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
 
-- **Analyze** (`analyze [RECIPE]`): Analyzes token usage for profiles without generating files. Shows
-  detailed file breakdown and total token count. Use `--all` to analyze all profiles at once.
+- **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
+  detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.
 
-- **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Profile is
+- **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Recipe is
   optional. Removes main output file and command files directory.
-  Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of profile.
+  Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
 
 - **Introspect** (`introspect [FILE_PATH]`): Analyzes a markdown file to extract its frontmatter
   metadata and identify any `requires:` dependencies. Shows the YAML frontmatter, lists required
   files, and displays their resolved paths. Useful for understanding file dependencies and debugging
   the requires system. If no file path is provided, it will look for a file in the current directory.
 
-- **List Profiles** (`list-profiles`): Shows all available profiles with file counts and cache
+- **List Recipes** (`list-recipes`): Shows all available recipes with file counts and cache
   indicators.
 
 - **Version** (`version`): Shows the current Ruly version.
@@ -932,7 +932,7 @@ ruly squash --dry-run
 ruly squash -d
 
 # Generate core rules only
-ruly squash --profile core
+ruly squash --recipe core
 ruly squash -r core
 
 # Generate squashed testing rules to a custom file
@@ -945,7 +945,7 @@ ruly squash -r rails -a cursor -o CURSOR.md
 # Generate with remote sources (command files go to .claude/commands/)
 ruly squash -r example_mixed
 
-# Use cached version (if profile has cache: true)
+# Use cached version (if recipe has cache: true)
 ruly squash rails
 
 # Bypass cache for one run
@@ -970,8 +970,8 @@ ruly introspect rules/ruby/ruby-practices.md
 # Introspect a file in the current directory
 ruly introspect README.md
 
-# List what profiles are available
-ruly list-profiles
+# List what recipes are available
+ruly list-recipes
 
 # Show version
 ruly version
@@ -985,11 +985,11 @@ ruly help introspect
 
 Ruly will automatically:
 
-- Load profiles from both `profiles.yml` and `~/.config/ruly/profiles.yml`
-- Support glob patterns in profile definitions
+- Load recipes from both `recipes.yml` and `~/.config/ruly/recipes.yml`
+- Support glob patterns in recipe definitions
 - Create parent directories if using custom output paths
 - Display file count and output size
-- Show which profile was used in the output
+- Show which recipe was used in the output
 
 ## Example Recipes
 
@@ -1007,7 +1007,7 @@ An orchestrator that manages multiple repositories, each with their own `CLAUDE.
 │   ├── agents/
 │   │   ├── backend_engineer.md  # Has acme-api's CLAUDE.md + hooks baked in
 │   │   ├── frontend_engineer.md # Has acme-web's CLAUDE.md + rules + hooks baked in
-│   │   └── comms.md             # Pure ruly profile (no repo append)
+│   │   └── comms.md             # Pure ruly recipe (no repo append)
 │   ├── scripts/
 │   │   └── worktree-create.sh   # Propagated to all submodule dirs
 │   └── settings.local.json      # Parent hooks (WorktreeCreate)
@@ -1025,10 +1025,10 @@ An orchestrator that manages multiple repositories, each with their own `CLAUDE.
 │       └── settings.json            # PostToolUse hook for ESLint
 ```
 
-#### Profile Configuration
+#### Recipe Configuration
 
 ```yaml
-profiles:
+recipes:
   orchestrator:
     description: "Multi-repo dispatcher"
     hooks:
@@ -1044,17 +1044,17 @@ profiles:
     subagents:
       # Backend — reads acme-api's CLAUDE.md and hooks
       - name: backend_engineer
-        profile: backend-engineer
+        recipe: backend-engineer
         cwd: acme-api
         append: true
       # Frontend — reads acme-web's CLAUDE.md, rules, and hooks
       - name: frontend_engineer
-        profile: frontend-engineer
+        recipe: frontend-engineer
         cwd: acme-web
         append: true
-      # Comms — pure ruly profile, no repo to append
+      # Comms — pure ruly recipe, no repo to append
       - name: comms
-        profile: comms
+        recipe: comms
 ```
 
 #### What `append: true` Does
@@ -1092,7 +1092,7 @@ hooks:
     hooks:
     - type: command
       command: ".claude/hooks/eslint-fix.sh"
-# Auto-generated from profile: frontend-engineer
+# Auto-generated from recipe: frontend-engineer
 # Do not edit manually - regenerate using 'ruly squash orchestrator'
 ---
 ```
@@ -1111,19 +1111,19 @@ hooks:
     - type: command
       command: ".claude/scripts/worktree-create.sh"
       timeout: 120
-# Auto-generated from profile: backend-engineer
+# Auto-generated from recipe: backend-engineer
 # Do not edit manually - regenerate using 'ruly squash orchestrator'
 ---
 ```
 
 #### Generated Agent Body (append sections)
 
-After the profile's squashed content, each subagent with `append: true` gets additional sections:
+After the recipe's squashed content, each subagent with `append: true` gets additional sections:
 
 ```markdown
-## Profile Content
+## Recipe Content
 
-[squashed content from frontend-engineer profile]
+[squashed content from frontend-engineer recipe]
 
 ---
 
@@ -1152,19 +1152,19 @@ Always use a **5-minute timeout** (300000ms) for:
 
 ---
 *Last generated: 2026-03-06 10:43:25*
-*Source profile: frontend-engineer*
+*Source recipe: frontend-engineer*
 ```
 
 #### With vs Without `append`
 
 | Feature | `append: true` | No `append` |
 |---------|----------------|-------------|
-| Profile content | Included | Included |
+| Recipe content | Included | Included |
 | Repo CLAUDE.md | Baked into agent body | Not visible to subagent |
 | Repo .claude/rules/ | Baked into agent body | Not visible to subagent |
 | Repo hooks (settings.json) | Merged into frontmatter | Not applied |
 | Parent hooks | Always included | Always included |
-| MCP servers | From profile (propagated to parent) | From profile (propagated to parent) |
+| MCP servers | From recipe (propagated to parent) | From recipe (propagated to parent) |
 
 > **Note:** Claude Code subagents do **not** automatically discover `CLAUDE.md`, `.claude/rules/`, or `.claude/settings.json` from their CWD. The `append` feature exists specifically to bridge this gap by baking repo configuration into the agent file at squash time.
 
@@ -1179,14 +1179,14 @@ Always use a **5-minute timeout** (300000ms) for:
 - Ensure you have write access to your project directory
 - Check that Ruby gems can be installed globally
 
-**Profile not found:**
+**Recipe not found:**
 
-- Run `ruly list-profiles` to see available profiles
-- Check `~/.config/ruly/profiles.yml` for user-defined profiles
-- Ensure profile names match exactly (case-sensitive)
+- Run `ruly list-recipes` to see available recipes
+- Check `~/.config/ruly/recipes.yml` for user-defined recipes
+- Ensure recipe names match exactly (case-sensitive)
 
 **Files not being cleaned:**
 
 - Use `ruly clean --dry-run` to preview what will be deleted
 - Specify agent with `--agent` option if not using Claude
-- Ensure you're using the correct profile name if specified
+- Ensure you're using the correct recipe name if specified

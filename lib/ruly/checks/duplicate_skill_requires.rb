@@ -2,13 +2,13 @@
 
 module Ruly
   module Checks
-    # Warns when a file is required by multiple skills but not in the profile.
-    # Suggests promoting the file to the profile's files: list to avoid duplication.
+    # Warns when a file is required by multiple skills but not in the recipe.
+    # Suggests promoting the file to the recipe's files: list to avoid duplication.
     class DuplicateSkillRequires < Base
       class << self
-        def call(skill_files, find_rule_file:, parse_frontmatter:, profile_paths: Set.new)
+        def call(skill_files, find_rule_file:, parse_frontmatter:, recipe_paths: Set.new)
           require_map = build_require_map(skill_files, find_rule_file:, parse_frontmatter:)
-          warnings = detect_duplicates(require_map, profile_paths)
+          warnings = detect_duplicates(require_map, recipe_paths)
 
           result = build_result(warnings:)
           report(warnings) if warnings.any?
@@ -49,10 +49,10 @@ module Ruly
           require_map
         end
 
-        def detect_duplicates(require_map, profile_paths)
+        def detect_duplicates(require_map, recipe_paths)
           require_map.filter_map do |file_path, skills|
             next if skills.size < 2
-            next if profile_paths.include?(file_path)
+            next if recipe_paths.include?(file_path)
 
             {
               file: file_path,
@@ -63,15 +63,15 @@ module Ruly
 
         def report(warnings)
           puts "\n\u{1F4A1} Skill requires optimization suggestion:"
-          puts '   These files are required by multiple skills but not in the profile.'
-          puts "   Adding them to the profile's files: list would make the dependency explicit.\n\n"
+          puts '   These files are required by multiple skills but not in the recipe.'
+          puts "   Adding them to the recipe's files: list would make the dependency explicit.\n\n"
 
           warnings.each do |warning|
             puts "   \u{1F4C4} #{warning[:file]}"
             puts "      \u{2514}\u{2500} required by #{warning[:skills].size} skills: #{warning[:skills].join(', ')}"
           end
 
-          puts "\n   Add these files to the profile's `files:` list."
+          puts "\n   Add these files to the recipe's `files:` list."
           puts ''
         end
       end

@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'A Ruby gem for managing AI assistant configuration rules'
   spec.description   = 'Ruly provides a centralized system for managing and distributing AI coding assistant ' \
-                       'rules and configurations across projects, with profile-based compilation and easy integration.'
+                       'rules and configurations across projects, with recipe-based compilation and easy integration.'
   spec.homepage      = 'https://github.com/patrickclery/ruly'
   spec.license       = 'MIT'
   spec.required_ruby_version = '>= 3.3.0'
@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob(%w[
     lib/**/*
     rules/**/*.md
-    profiles.yml
+    recipes.yml
     bin/*
     LICENSE.txt
     README.md

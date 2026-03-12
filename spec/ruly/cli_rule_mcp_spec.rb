@@ -52,7 +52,7 @@ RSpec.describe Ruly::CLI, type: :cli do
         This rule has no MCP server requirements.
       MD
 
-      # Create a rule file with mcp_servers that overlap with profile-level
+      # Create a rule file with mcp_servers that overlap with recipe-level
       File.write(File.join(test_dir, 'rules', 'overlap_mcp.md'), <<~MD)
         ---
         description: Rule with overlapping MCP servers
@@ -62,7 +62,7 @@ RSpec.describe Ruly::CLI, type: :cli do
         ---
         # Rule With Overlapping MCP Servers
 
-        This rule shares some MCP servers with the profile.
+        This rule shares some MCP servers with the recipe.
       MD
 
       # Create MCP config file
@@ -79,7 +79,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       }))
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
@@ -88,23 +88,23 @@ RSpec.describe Ruly::CLI, type: :cli do
       File.write(mcp_config_file, mcp_config_backup) if mcp_config_backup
     end
 
-    context 'when squashing a profile with rule-file mcp_servers' do
+    context 'when squashing a recipe with rule-file mcp_servers' do
       before do
-        profiles_content = {
-          'test_profile' => {
-            'description' => 'Test profile with rule-level MCP',
+        recipes_content = {
+          'test_recipe' => {
+            'description' => 'Test recipe with rule-level MCP',
             'files' => ['rules/with_mcp.md', 'rules/without_mcp.md'],
             'mcp_servers' => ['Ref']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'strips mcp_servers from squashed rule content in CLAUDE.local.md' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
         # mcp_servers should be stripped from the output
@@ -117,30 +117,30 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'collects MCP servers from rule frontmatter into .mcp.json' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         expect(File.exist?('.mcp.json')).to be(true)
         mcp_json = JSON.parse(File.read('.mcp.json'))
 
-        # Should include servers from both profile-level AND rule-file frontmatter
+        # Should include servers from both recipe-level AND rule-file frontmatter
         expect(mcp_json['mcpServers']).to have_key('Ref')
         expect(mcp_json['mcpServers']).to have_key('playwright')
         expect(mcp_json['mcpServers']).to have_key('teams')
       end
     end
 
-    context 'when rule-file mcp_servers overlap with profile-level servers' do
+    context 'when rule-file mcp_servers overlap with recipe-level servers' do
       before do
-        profiles_content = {
+        recipes_content = {
           'test_overlap' => {
-            'description' => 'Test profile with overlapping MCP',
+            'description' => 'Test recipe with overlapping MCP',
             'files' => ['rules/with_mcp.md', 'rules/overlap_mcp.md'],
             'mcp_servers' => ['teams']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -150,29 +150,29 @@ RSpec.describe Ruly::CLI, type: :cli do
         mcp_json = JSON.parse(File.read('.mcp.json'))
         server_names = mcp_json['mcpServers'].keys
 
-        # 'teams' appears in both profile and rule frontmatter — should only appear once
+        # 'teams' appears in both recipe and rule frontmatter — should only appear once
         expect(server_names.count('teams')).to eq(1)
         # All unique servers should be present
         expect(server_names).to include('teams', 'playwright', 'atlassian')
       end
     end
 
-    context 'when rule has mcp_servers but no profile-level mcp_servers' do
+    context 'when rule has mcp_servers but no recipe-level mcp_servers' do
       before do
-        profiles_content = {
-          'test_no_profile_mcp' => {
-            'description' => 'Test profile without profile-level MCP',
+        recipes_content = {
+          'test_no_recipe_mcp' => {
+            'description' => 'Test recipe without recipe-level MCP',
             'files' => ['rules/with_mcp.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'creates .mcp.json with only rule-level MCP servers' do
-        cli.invoke(:squash, ['test_no_profile_mcp'])
+        cli.invoke(:squash, ['test_no_recipe_mcp'])
 
         mcp_json = JSON.parse(File.read('.mcp.json'))
         expect(mcp_json['mcpServers']).to have_key('playwright')
@@ -182,7 +182,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     context 'with keep_frontmatter option' do
       before do
-        profiles_content = {
+        recipes_content = {
           'test_keep_fm' => {
             'description' => 'Test with keep_frontmatter',
             'files' => ['rules/with_mcp.md']
@@ -190,7 +190,7 @@ RSpec.describe Ruly::CLI, type: :cli do
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -249,7 +249,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       }))
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
@@ -258,30 +258,30 @@ RSpec.describe Ruly::CLI, type: :cli do
       File.write(mcp_config_file, mcp_config_backup) if mcp_config_backup
     end
 
-    context 'when subagent profile has mcp_servers and rule files also have mcp_servers' do
+    context 'when subagent recipe has mcp_servers and rule files also have mcp_servers' do
       before do
-        profiles_content = {
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+        recipes_content = {
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              {'name' => 'worker', 'profile' => 'worker-profile'}
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
-          'worker-profile' => {
-            'description' => 'Worker profile with MCP',
+          'worker-recipe' => {
+            'description' => 'Worker recipe with MCP',
             'files' => ['rules/agent_rule_with_mcp.md', 'rules/agent_rule_plain.md'],
             'mcp_servers' => ['playwright']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'includes mcpServers in agent frontmatter from both profile and rule-file sources' do
-        cli.invoke(:squash, ['parent_profile'])
+      it 'includes mcpServers in agent frontmatter from both recipe and rule-file sources' do
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
         # Extract frontmatter
@@ -295,7 +295,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'does not include MCP servers section in the agent body' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
         # The old markdown body section should not be present
@@ -304,29 +304,29 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when subagent profile has no mcp_servers and rule files have none' do
+    context 'when subagent recipe has no mcp_servers and rule files have none' do
       before do
-        profiles_content = {
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+        recipes_content = {
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              {'name' => 'worker', 'profile' => 'worker-profile'}
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
-          'worker-profile' => {
-            'description' => 'Worker profile without MCP',
+          'worker-recipe' => {
+            'description' => 'Worker recipe without MCP',
             'files' => ['rules/agent_rule_plain.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'omits mcpServers from agent frontmatter when there are no servers' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -337,30 +337,30 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when only profile-level mcp_servers are configured' do
+    context 'when only recipe-level mcp_servers are configured' do
       before do
-        profiles_content = {
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+        recipes_content = {
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              {'name' => 'worker', 'profile' => 'worker-profile'}
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
-          'worker-profile' => {
-            'description' => 'Worker profile with MCP',
+          'worker-recipe' => {
+            'description' => 'Worker recipe with MCP',
             'files' => ['rules/agent_rule_plain.md'],
             'mcp_servers' => ['teams']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
-      it 'includes only profile-level mcpServers in agent frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+      it 'includes only recipe-level mcpServers in agent frontmatter' do
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -369,9 +369,9 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when mcp_servers overlap between profile and rule files' do
+    context 'when mcp_servers overlap between recipe and rule files' do
       before do
-        # Create a rule file that also declares playwright (overlapping with profile)
+        # Create a rule file that also declares playwright (overlapping with recipe)
         File.write(File.join(test_dir, 'rules', 'agent_rule_overlap.md'), <<~MD)
           ---
           description: Agent rule with overlapping MCP
@@ -382,28 +382,28 @@ RSpec.describe Ruly::CLI, type: :cli do
           # Overlapping MCP Rule
         MD
 
-        profiles_content = {
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+        recipes_content = {
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/agent_rule_plain.md'],
             'subagents' => [
-              {'name' => 'worker', 'profile' => 'worker-profile'}
+              {'name' => 'worker', 'recipe' => 'worker-recipe'}
             ]
           },
-          'worker-profile' => {
-            'description' => 'Worker profile with MCP',
+          'worker-recipe' => {
+            'description' => 'Worker recipe with MCP',
             'files' => ['rules/agent_rule_overlap.md'],
             'mcp_servers' => ['playwright']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'deduplicates mcpServers in agent frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/worker.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)

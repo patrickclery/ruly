@@ -1,8 +1,8 @@
-# Frontend Orchestrator Profile
+# Frontend Orchestrator Recipe
 
 ## Summary
 
-Create a `frontend` top-level orchestrator profile for WorkAxle's `workaxle-desktop` React/TypeScript application, at the same level as the existing `core` orchestrator. Extract conventions from the repo's CLAUDE.md and `.claude/` rules into `rules/workaxle/frontend/`, wire up a `frontend-engineer` subagent with superpowers skills, and reuse existing shared subagents.
+Create a `frontend` top-level orchestrator recipe for WorkAxle's `workaxle-desktop` React/TypeScript application, at the same level as the existing `core` orchestrator. Extract conventions from the repo's CLAUDE.md and `.claude/` rules into `rules/workaxle/frontend/`, wire up a `frontend-engineer` subagent with superpowers skills, and reuse existing shared subagents.
 
 ## Source Material
 
@@ -35,7 +35,7 @@ Create a `frontend` top-level orchestrator profile for WorkAxle's `workaxle-desk
 |---|------|---------|
 | 10 | `use-frontend-engineer.md` | Dispatch rule: when the orchestrator should route to `frontend_engineer` subagent (feature implementation, bug fixing, architecture questions, component design) |
 
-### Profiles (in `profiles.yml` and `~/.config/ruly/profiles.yml`)
+### Recipes (in `recipes.yml` and `~/.config/ruly/recipes.yml`)
 
 #### 11. `frontend` (orchestrator)
 
@@ -61,17 +61,17 @@ frontend:
     - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
   subagents:
     - name: frontend_engineer
-      profile: frontend-engineer
+      recipe: frontend-engineer
     - name: context_fetcher
-      profile: context-fetcher
+      recipe: context-fetcher
     - name: comms
-      profile: comms
+      recipe: comms
     - name: merger
-      profile: merger
+      recipe: merger
     - name: pr_readiness
-      profile: pr-readiness
+      recipe: pr-readiness
     - name: reviewer
-      profile: frontend-reviewer
+      recipe: frontend-reviewer
 ```
 
 #### 12. `frontend-engineer` (subagent)
@@ -133,7 +133,7 @@ frontend-reviewer:
     - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
   subagents:
     - name: context_fetcher
-      profile: context-fetcher
+      recipe: context-fetcher
 ```
 
 ## Implementation Order
@@ -142,16 +142,16 @@ frontend-reviewer:
 2. **Clone workaxle-desktop** to `/tmp/workaxle-desktop` (if not already there) to extract content
 3. **Extract rule files** (1-9): Read workaxle-desktop's CLAUDE.md and .claude/ files, write each rule file
 4. **Create dispatch rule** (10): `use-frontend-engineer.md`
-5. **Update profiles.yml** with all 3 profiles (frontend, frontend-engineer, frontend-reviewer)
-6. **Copy profiles.yml** to `~/.config/ruly/profiles.yml`
-7. **Test**: Run `ruly squash --profile frontend` from a temp directory to verify
-8. **Test**: Run `ruly squash --profile frontend-engineer` from a temp directory to verify
-9. **Test**: Run `ruly squash --profile frontend-reviewer` from a temp directory to verify
+5. **Update recipes.yml** with all 3 recipes (frontend, frontend-engineer, frontend-reviewer)
+6. **Copy recipes.yml** to `~/.config/ruly/recipes.yml`
+7. **Test**: Run `ruly squash --recipe frontend` from a temp directory to verify
+8. **Test**: Run `ruly squash --recipe frontend-engineer` from a temp directory to verify
+9. **Test**: Run `ruly squash --recipe frontend-reviewer` from a temp directory to verify
 
 ## Notes
 
 - The 9 frontend rule files are extracted from workaxle-desktop's existing conventions — they become the ruly source of truth
-- Shared subagents (comms, merger, pr_readiness, context_fetcher) are reused from existing profiles without modification
-- The `frontend` orchestrator uses `frontend-reviewer` instead of the generic `reviewer` profile so reviews apply frontend-specific standards
+- Shared subagents (comms, merger, pr_readiness, context_fetcher) are reused from existing recipes without modification
+- The `frontend` orchestrator uses `frontend-reviewer` instead of the generic `reviewer` recipe so reviews apply frontend-specific standards
 - Playwright rules are included in `frontend-engineer` via the existing `orchestrator/playwright.md` file
 - Refinement of individual rule files happens after initial extraction

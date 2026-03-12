@@ -1,8 +1,8 @@
-# Core Profile Slim-Down
+# Core Recipe Slim-Down
 
 ## Problem
 
-The core orchestrator profile squashes to ~104KB (3,151 lines). The orchestrator is a pure dispatcher — it never writes code — yet it loads Sequel ORM patterns, testing rules, and deep `requires:` chains from PR creation commands and skills. The `create.md` command alone pulls in 7 transitive dependencies including merge verification, conflict resolution, and health checks.
+The core orchestrator recipe squashes to ~104KB (3,151 lines). The orchestrator is a pure dispatcher — it never writes code — yet it loads Sequel ORM patterns, testing rules, and deep `requires:` chains from PR creation commands and skills. The `create.md` command alone pulls in 7 transitive dependencies including merge verification, conflict resolution, and health checks.
 
 **Root causes:**
 1. Code patterns (`core.md`, `common.md`, `development-commands.md`) loaded for a non-coding orchestrator
@@ -12,14 +12,14 @@ The core orchestrator profile squashes to ~104KB (3,151 lines). The orchestrator
 
 ## Changes
 
-### 1. Remove code patterns from core profile
+### 1. Remove code patterns from core recipe
 
 Remove from `files:`:
 - `core.md` (452 tokens) — Sequel ORM basics, testing rules, error returns
 - `common.md` (573 tokens) — Extended patterns (gRPC, soft-delete, persistence checks)
 - `development-commands.md` (402 tokens) — `just` commands reference
 
-These stay in subagent profiles (`core-engineer`, `core-debugger`, etc.) which independently include them.
+These stay in subagent recipes (`core-engineer`, `core-debugger`, etc.) which independently include them.
 
 **Savings: ~1,427 tokens**
 
@@ -27,7 +27,7 @@ These stay in subagent profiles (`core-engineer`, `core-debugger`, etc.) which i
 
 Move PR creation commands and their full `requires:` chains to a new subagent:
 
-**New profile: `pr-creator`**
+**New recipe: `pr-creator`**
 - Commands: `create.md`, `create-develop.md`, `create-dual.md`, `create-branch.md`
 - Inherits all transitive requires: `creating-prs.md`, `commands.md`, `context-common.md`, `health-checks-common.md`, `verifying-merge-compatibility.md`, `conflict-resolution.md`, `verify-develop-mergability.md`, `review-feedback-loop.md`
 
@@ -69,7 +69,7 @@ Task tool:
 - Monitoring PR reviews → use pr-review-loop skill
 ```
 
-**Core profile changes:**
+**Core recipe changes:**
 ```yaml
 # REMOVE from commands:
 - create.md
@@ -81,17 +81,17 @@ Task tool:
 
 # ADD to subagents:
 - name: pr_creator
-  profile: pr-creator
+  recipe: pr-creator
 ```
 
 **Savings: ~6,500+ tokens of transitive requires**
 
 ### 3. Move rebase-and-squash to merger
 
-Remove from core profile `skills:`:
+Remove from core recipe `skills:`:
 - `rebase-and-squash.md` (+ transitive `resolving-merge-conflicts.md`)
 
-Add to merger profile `skills:`:
+Add to merger recipe `skills:`:
 - `rebase-and-squash.md`
 
 No new dispatch rule needed — `use-merger.md` already routes squash/merge/rebase work.
@@ -100,7 +100,7 @@ No new dispatch rule needed — `use-merger.md` already routes squash/merge/reba
 
 ### 4. Slim pr-review-loop skill
 
-Remove transitive dependencies that bloat the core profile:
+Remove transitive dependencies that bloat the core recipe:
 
 **Changes to `pr-review-loop.md`:**
 ```yaml
@@ -124,7 +124,7 @@ The adapted `ralph-loop.md` already contains everything the review loop needs. T
 
 ### 5. Merge bug dispatch rules
 
-Remove `bug-diagnose.md` from the core profile's dispatch rules. The triggers overlap almost entirely with `use-core-debugger.md`:
+Remove `bug-diagnose.md` from the core recipe's dispatch rules. The triggers overlap almost entirely with `use-core-debugger.md`:
 
 | Rule | Trigger |
 |---|---|
@@ -139,9 +139,9 @@ Update `use-core-debugger.md` to mention that it covers both investigation and f
 
 **Savings: ~395 tokens**
 
-Remove `bug_diagnose` from core profile's subagent list (it's a sub-subagent of `core_debugger`, not directly dispatched by the orchestrator).
+Remove `bug_diagnose` from core recipe's subagent list (it's a sub-subagent of `core_debugger`, not directly dispatched by the orchestrator).
 
-## Final Core Profile Shape
+## Final Core Recipe Shape
 
 ```yaml
 core:
@@ -172,45 +172,45 @@ core:
     - refresh-context.md           # Context refresh (pulls in context-fetching.md)
   subagents:
     - name: core_debugger
-      profile: core-debugger
+      recipe: core-debugger
     - name: core_engineer
-      profile: core-engineer
+      recipe: core-engineer
     - name: context_jira
-      profile: context-jira
+      recipe: context-jira
       model: haiku
     - name: context_github
-      profile: context-github
+      recipe: context-github
       model: haiku
     - name: context_teams
-      profile: context-teams
+      recipe: context-teams
       model: haiku
     - name: context_summarizer
-      profile: context-summarizer
+      recipe: context-summarizer
       model: haiku
     - name: core_debugging
-      profile: core-debugging
+      recipe: core-debugging
     - name: comms_jira
-      profile: comms-jira
+      recipe: comms-jira
     - name: comms_teams
-      profile: comms-teams
+      recipe: comms-teams
     - name: comms_mattermost
-      profile: comms-mattermost
+      recipe: comms-mattermost
     - name: comms_github
-      profile: comms-github
+      recipe: comms-github
     - name: merger
-      profile: merger
+      recipe: merger
     - name: dashboard
-      profile: dashboard
+      recipe: dashboard
     - name: pr_readiness
-      profile: pr-readiness
+      recipe: pr-readiness
     - name: core_reviewer
-      profile: core-reviewer
+      recipe: core-reviewer
     - name: pr_review_loop
-      profile: pr-review-loop
+      recipe: pr-review-loop
     - name: qa_tester
-      profile: qa
+      recipe: qa
     - name: pr_creator             # NEW
-      profile: pr-creator
+      recipe: pr-creator
 ```
 
 ## Estimated Impact
@@ -225,13 +225,13 @@ core:
 ## Implementation Steps
 
 1. Create `use-pr-creator.md` dispatch rule
-2. Create `pr-creator` profile in `profiles.yml`
+2. Create `pr-creator` recipe in `recipes.yml`
 3. Inline comment resolution GraphQL into `pr-review-loop.md`
 4. Remove `requires:` for `common.md`, `pr-comment-resolution.md` from `pr-review-loop.md`
 5. Remove `requires: ralph/pattern.md` from `ralph-loop.md`
-6. Add `rebase-and-squash` skill to merger profile
-7. Update core profile: remove files, commands, skills; add dispatch rule + subagent
+6. Add `rebase-and-squash` skill to merger recipe
+7. Update core recipe: remove files, commands, skills; add dispatch rule + subagent
 8. Remove `bug-diagnose.md` dispatch rule; update `use-core-debugger.md` to cover all bug triggers
-9. Update both `profiles.yml` files (project + user config)
-10. Test squash in temp directory: `cd $(mktemp -d) && ruly squash --profile core`
-11. Verify subagent profiles still work independently
+9. Update both `recipes.yml` files (project + user config)
+10. Test squash in temp directory: `cd $(mktemp -d) && ruly squash --recipe core`
+11. Verify subagent recipes still work independently

@@ -296,7 +296,7 @@ Run: `rm -rf ~/tmp/context/TEST-FATHOM`
 
 Run:
 ```bash
-cd $(mktemp -d) && ruly squash --profile comms
+cd $(mktemp -d) && ruly squash --recipe comms
 ```
 
 Expected: Clean squash with no errors

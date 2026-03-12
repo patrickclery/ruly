@@ -5,9 +5,9 @@ require 'yaml'
 
 module Ruly
   module Operations
-    # Analyze token usage for profiles
+    # Analyze token usage for recipes
     class Analyzer < Base
-      attr_reader :profile_name, :profiles_file, :gem_root, :tier_override, :contexts
+      attr_reader :recipe_name, :recipes_file, :gem_root, :tier_override, :contexts
 
       # Format and display stats result from Operations::Stats
       # @param result [Hash] Result hash from Operations::Stats#call
@@ -18,7 +18,7 @@ module Ruly
           puts "✅ Generated #{data[:output_file]}"
           puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
           if data[:orphaned_count].positive?
-            puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any profile)"
+            puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
           end
         else
           puts "❌ Error: #{result[:error]}"
@@ -33,15 +33,15 @@ module Ruly
         num.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
       end
 
-      # @param profile_name [String, nil] Name of profile to analyze (nil for all)
-      # @param profiles_file [String] Path to profiles.yml
+      # @param recipe_name [String, nil] Name of recipe to analyze (nil for all)
+      # @param recipes_file [String] Path to recipes.yml
       # @param gem_root [String] Root path of the gem
       # @param tier_override [String, nil] Override pricing tier (from CLI --tier option)
-      # @param analyze_all [Boolean] Whether to analyze all profiles
-      def initialize(gem_root:, profiles_file:, analyze_all: false, tier_override: nil, profile_name: nil)
+      # @param analyze_all [Boolean] Whether to analyze all recipes
+      def initialize(gem_root:, recipes_file:, analyze_all: false, tier_override: nil, recipe_name: nil)
         super()
-        @profile_name = profile_name
-        @profiles_file = profiles_file
+        @recipe_name = recipe_name
+        @recipes_file = recipes_file
         @gem_root = gem_root
         @tier_override = tier_override
         @analyze_all = analyze_all
@@ -50,11 +50,11 @@ module Ruly
 
       def call
         if @analyze_all
-          analyze_all_profiles
-        elsif profile_name
-          analyze_single_profile(profile_name)
+          analyze_all_recipes
+        elsif recipe_name
+          analyze_single_recipe(recipe_name)
         else
-          build_result(error: 'Profile required', success: false)
+          build_result(error: 'Recipe required', success: false)
         end
       rescue StandardError => e
         build_result(error: e.message, success: false)
@@ -71,14 +71,14 @@ module Ruly
         end
       end
 
-      def analyze_all_profiles
-        profiles = Services::ProfileLoader.load_all_profiles(base_profiles_file: profiles_file, gem_root:)
+      def analyze_all_recipes
+        recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
 
-        puts '📊 Token Analysis for All Profiles'
+        puts '📊 Token Analysis for All Recipes'
         puts '=' * 60
 
-        profiles.each_key do |name|
-          sources, = load_profile_sources_for(name, profiles)
+        recipes.each_key do |name|
+          sources, = load_recipe_sources_for(name, recipes)
 
           # Calculate content size
           total_content = ''
@@ -86,7 +86,7 @@ module Ruly
 
           sources.each do |source|
             if source[:type] == 'local'
-              file_path = Services::ProfileLoader.find_rule_file(source[:path], gem_root:)
+              file_path = Services::RecipeLoader.find_rule_file(source[:path], gem_root:)
               if file_path
                 content = File.read(file_path, encoding: 'UTF-8')
                 total_content += content
@@ -99,27 +99,27 @@ module Ruly
           end
 
           token_count = count_tokens(total_content)
-          tier = get_tier_for_profile(name)
+          tier = get_tier_for_recipe(name)
           context_limit = get_context_limit_for_tier(tier)
 
-          display_profile_analysis(name, file_count, token_count, tier, context_limit, compact: true)
+          display_recipe_analysis(name, file_count, token_count, tier, context_limit, compact: true)
         rescue StandardError => e
           puts "  ❌ #{name}: Error - #{e.message}"
         end
 
-        build_result(data: {profile_count: profiles.size}, success: true)
+        build_result(data: {recipe_count: recipes.size}, success: true)
       end
 
-      def load_profile_sources_for(name, profiles = nil)
-        profiles ||= Services::ProfileLoader.load_all_profiles(base_profiles_file: profiles_file, gem_root:)
-        profile = Services::ProfileLoader.validate_profile!(name, profiles)
+      def load_recipe_sources_for(name, recipes = nil)
+        recipes ||= Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+        recipe = Services::RecipeLoader.validate_recipe!(name, recipes)
 
         sources = []
-        Services::ProfileLoader.process_profile_files(profile, sources, gem_root:)
-        Services::ProfileLoader.process_profile_sources(profile, sources, gem_root:)
-        Services::ProfileLoader.process_legacy_remote_sources(profile, sources)
+        Services::RecipeLoader.process_recipe_files(recipe, sources, gem_root:)
+        Services::RecipeLoader.process_recipe_sources(recipe, sources, gem_root:)
+        Services::RecipeLoader.process_legacy_remote_sources(recipe, sources)
 
-        [sources, profile]
+        [sources, recipe]
       end
 
       def count_tokens(text)
@@ -128,25 +128,25 @@ module Ruly
         encoder.encode(utf8_text).length
       end
 
-      def get_tier_for_profile(name)
-        # Priority: CLI option > profile-level > user config > global default
+      def get_tier_for_recipe(name)
+        # Priority: CLI option > recipe-level > user config > global default
         return tier_override if tier_override
 
-        # Load profile config
-        profiles = Services::ProfileLoader.load_all_profiles(base_profiles_file: profiles_file, gem_root:)
-        profile = profiles[name]
-        return profile['tier'] if profile.is_a?(Hash) && profile['tier']
+        # Load recipe config
+        recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+        recipe = recipes[name]
+        return recipe['tier'] if recipe.is_a?(Hash) && recipe['tier']
 
         # Check user config
-        user_config_file = File.expand_path('~/.config/ruly/profiles.yml')
+        user_config_file = File.expand_path('~/.config/ruly/recipes.yml')
         if File.exist?(user_config_file)
           user_config = YAML.safe_load_file(user_config_file, aliases: true) || {}
           return user_config['tier'] if user_config['tier']
         end
 
-        # Check global default in profiles.yml
-        profiles_config = YAML.safe_load_file(profiles_file, aliases: true) || {}
-        return profiles_config['tier'] if profiles_config['tier']
+        # Check global default in recipes.yml
+        recipes_config = YAML.safe_load_file(recipes_file, aliases: true) || {}
+        return recipes_config['tier'] if recipes_config['tier']
 
         # Default fallback
         'claude_pro'
@@ -175,7 +175,7 @@ module Ruly
         context_info ? context_info['context'] : 100_000 # Default fallback
       end
 
-      def display_profile_analysis(name, file_count, token_count, tier, context_limit, compact: false)
+      def display_recipe_analysis(name, file_count, token_count, tier, context_limit, compact: false)
         percentage = ((token_count.to_f / context_limit) * 100).round(1)
 
         # Format numbers
@@ -187,15 +187,15 @@ module Ruly
 
         if compact
           context_label = formatted_limit
-          puts format('  %-20<profile>s %6<tokens>s tokens / %-7<context>s (%5.1<percent>f%%) %<status>s [%<tier>s]',
+          puts format('  %-20<recipe>s %6<tokens>s tokens / %-7<context>s (%5.1<percent>f%%) %<status>s [%<tier>s]',
                       context: context_label,
                       percent: percentage,
-                      profile: name,
+                      recipe: name,
                       status:,
                       tier:,
                       tokens: formatted_tokens)
         else
-          puts "\n📦 Profile: #{name}"
+          puts "\n📦 Recipe: #{name}"
           puts "📄 Files: #{file_count}"
           puts "🎯 Tier: #{tier}"
           puts "🧮 Tokens: #{formatted_tokens} / #{formatted_limit} (#{percentage}%) #{status}"
@@ -218,15 +218,15 @@ module Ruly
 
       def display_context_warning(percentage, indent: '')
         if percentage > 80
-          puts "#{indent}⚠️  Warning: This profile is approaching the context limit!" if percentage < 95
-          puts "#{indent}❌ Error: This profile exceeds the context limit!" if percentage >= 100
+          puts "#{indent}⚠️  Warning: This recipe is approaching the context limit!" if percentage < 95
+          puts "#{indent}❌ Error: This recipe exceeds the context limit!" if percentage >= 100
         else
-          puts "#{indent}✅ This profile fits comfortably within your tier's context window"
+          puts "#{indent}✅ This recipe fits comfortably within your tier's context window"
         end
       end
 
-      def analyze_single_profile(name)
-        sources, = load_profile_sources_for(name)
+      def analyze_single_recipe(name)
+        sources, = load_recipe_sources_for(name)
 
         # Calculate content and tokens for each file
         file_details = []
@@ -241,7 +241,7 @@ module Ruly
         token_count = count_tokens(total_content)
 
         # Get tier and context limit
-        tier = get_tier_for_profile(name)
+        tier = get_tier_for_recipe(name)
         context_limit = get_context_limit_for_tier(tier)
 
         # Display detailed analysis
@@ -253,7 +253,7 @@ module Ruly
             file_count:,
             file_details:,
             tier:,
-            profile_name: name,
+            recipe_name: name,
             token_count:
           },
           success: true
@@ -262,7 +262,7 @@ module Ruly
 
       def process_source_for_analysis(source, file_details, total_content, file_count)
         if source[:type] == 'local'
-          file_path = Services::ProfileLoader.find_rule_file(source[:path], gem_root:)
+          file_path = Services::RecipeLoader.find_rule_file(source[:path], gem_root:)
           if file_path
             content = File.read(file_path, encoding: 'UTF-8')
             tokens = count_tokens(content)
@@ -299,7 +299,7 @@ module Ruly
         # Status indicator
         status = status_indicator(percentage)
 
-        puts "\n📦 Profile: #{name}"
+        puts "\n📦 Recipe: #{name}"
         puts "🎯 Tier: #{tier}"
         puts
 

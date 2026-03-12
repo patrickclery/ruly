@@ -14,8 +14,8 @@ RSpec.describe Ruly::CLI do
     begin
       Dir.chdir(temp_dir)
 
-      # Create a test profile file
-      File.write('profiles.yml', profile_content)
+      # Create a test recipe file
+      File.write('recipes.yml', recipe_content)
 
       # Create test markdown files
       FileUtils.mkdir_p('rules')
@@ -37,11 +37,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#squash with bin files' do
-    let(:profile_content) do
+    let(:recipe_content) do
       <<~YAML
-        profiles:
+        recipes:
           test_with_bin:
-            description: "Test profile with bin files"
+            description: "Test recipe with bin files"
             files:
               - rules/test.md
             bins:
@@ -51,18 +51,18 @@ RSpec.describe Ruly::CLI do
 
     before do
       allow(cli).to receive_messages(gem_root: temp_dir,
-                                     profiles_file: File.join(temp_dir, 'profiles.yml'))
+                                     recipes_file: File.join(temp_dir, 'recipes.yml'))
 
-      profiles_content = {
+      recipes_content = {
         'test_with_bin' => {
           'scripts' => ['rules/bin/'],
-          'description' => 'Test profile with bin files',
+          'description' => 'Test recipe with bin files',
           'files' => ['rules/test.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
@@ -116,11 +116,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#clean with --deepclean' do
-    let(:profile_content) do
+    let(:recipe_content) do
       <<~YAML
-        profiles:
+        recipes:
           dummy:
-            description: "Dummy profile for clean tests"
+            description: "Dummy recipe for clean tests"
             files:
               - rules/test.md
       YAML
@@ -149,11 +149,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe 'processing GitHub sources with bin files' do
-    let(:profile_content) do
+    let(:recipe_content) do
       <<~YAML
-        profiles:
+        recipes:
           github_bin:
-            description: "GitHub profile with bin files"
+            description: "GitHub recipe with bin files"
             sources:
               - github: someuser/somerepo
                 branch: main
@@ -170,11 +170,11 @@ RSpec.describe Ruly::CLI do
   end
 
   describe 'bin file detection without bins: key' do
-    let(:profile_content) do
+    let(:recipe_content) do
       <<~YAML
-        profiles:
+        recipes:
           dummy:
-            description: "Dummy profile for detection tests"
+            description: "Dummy recipe for detection tests"
             files:
               - rules/test.md
       YAML
@@ -182,7 +182,7 @@ RSpec.describe Ruly::CLI do
 
     it 'does not auto-detect bin files from path' do
       sources = []
-      Ruly::Services::ProfileLoader.process_local_directory('rules', sources, gem_root: temp_dir)
+      Ruly::Services::RecipeLoader.process_local_directory('rules', sources, gem_root: temp_dir)
 
       # bin/*.sh files are still collected by process_local_directory
       # but they are NOT categorized as bins (no :category marker)

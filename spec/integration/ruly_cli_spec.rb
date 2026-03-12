@@ -18,7 +18,7 @@ RSpec.describe Ruly::CLI do
     File.write(File.join(test_dir, 'rules', 'commands', 'test-command.md'), "# Test Command\nCommand content")
 
     # Mock gem_root - this needs to happen in before block, not around
-    allow(cli).to receive_messages(gem_root: test_dir, profiles_file: File.join(test_dir, 'profiles.yml'))
+    allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'))
   end
 
   around do |example|
@@ -41,10 +41,10 @@ RSpec.describe Ruly::CLI do
     end
   end
 
-  describe 'Profile with local files only' do
+  describe 'Recipe with local files only' do
     before do
-      profiles = {
-        'profiles' => {
+      recipes = {
+        'recipes' => {
           'local_only' => {
             'files' => [
               'rules/core/test.md',
@@ -53,11 +53,11 @@ RSpec.describe Ruly::CLI do
           }
         }
       }
-      File.write('profiles.yml', profiles.to_yaml)
+      File.write('recipes.yml', recipes.to_yaml)
     end
 
     it 'loads all local files correctly' do
-      sources, = cli.send(:load_profile_sources, 'local_only')
+      sources, = cli.send(:load_recipe_sources, 'local_only')
 
       expect(sources.size).to eq(2)
       expect(sources.all? { |s| s[:type] == 'local' }).to be(true)
@@ -68,10 +68,10 @@ RSpec.describe Ruly::CLI do
     end
   end
 
-  describe 'Profile with GitHub URLs' do
+  describe 'Recipe with GitHub URLs' do
     before do
-      profiles = {
-        'profiles' => {
+      recipes = {
+        'recipes' => {
           'github_sources' => {
             'sources' => [
               'rules/core/test.md',
@@ -81,11 +81,11 @@ RSpec.describe Ruly::CLI do
           }
         }
       }
-      File.write('profiles.yml', profiles.to_yaml)
+      File.write('recipes.yml', recipes.to_yaml)
     end
 
     it 'correctly identifies local and remote sources' do
-      sources, = cli.send(:load_profile_sources, 'github_sources')
+      sources, = cli.send(:load_recipe_sources, 'github_sources')
 
       expect(sources.size).to eq(3)
 
@@ -105,10 +105,10 @@ RSpec.describe Ruly::CLI do
     end
   end
 
-  describe 'Profile with mixed sources array' do
+  describe 'Recipe with mixed sources array' do
     before do
-      profiles = {
-        'profiles' => {
+      recipes = {
+        'recipes' => {
           'mixed' => {
             'sources' => [
               'rules/core/test.md',
@@ -119,11 +119,11 @@ RSpec.describe Ruly::CLI do
           }
         }
       }
-      File.write('profiles.yml', profiles.to_yaml)
+      File.write('recipes.yml', recipes.to_yaml)
     end
 
     it 'handles mixed local and remote sources in order' do
-      sources, = cli.send(:load_profile_sources, 'mixed')
+      sources, = cli.send(:load_recipe_sources, 'mixed')
 
       expect(sources.size).to eq(4)
 
@@ -137,8 +137,8 @@ RSpec.describe Ruly::CLI do
 
   describe 'Legacy format compatibility' do
     before do
-      profiles = {
-        'profiles' => {
+      recipes = {
+        'recipes' => {
           'legacy' => {
             'files' => ['rules/core/test.md'],
             'remote_sources' => [
@@ -147,11 +147,11 @@ RSpec.describe Ruly::CLI do
           }
         }
       }
-      File.write('profiles.yml', profiles.to_yaml)
+      File.write('recipes.yml', recipes.to_yaml)
     end
 
     it 'still supports separate files and remote_sources arrays' do
-      sources, = cli.send(:load_profile_sources, 'legacy')
+      sources, = cli.send(:load_recipe_sources, 'legacy')
 
       expect(sources.size).to eq(2)
 
@@ -163,10 +163,10 @@ RSpec.describe Ruly::CLI do
     end
   end
 
-  describe 'Profile with all formats combined' do
+  describe 'Recipe with all formats combined' do
     before do
-      profiles = {
-        'profiles' => {
+      recipes = {
+        'recipes' => {
           'everything' => {
             'files' => ['rules/core/test.md'],
             'remote_sources' => ['https://legacy.com/old.md'],
@@ -177,11 +177,11 @@ RSpec.describe Ruly::CLI do
           }
         }
       }
-      File.write('profiles.yml', profiles.to_yaml)
+      File.write('recipes.yml', recipes.to_yaml)
     end
 
     it 'combines all three formats correctly' do
-      sources, = cli.send(:load_profile_sources, 'everything')
+      sources, = cli.send(:load_recipe_sources, 'everything')
 
       expect(sources.size).to eq(4)
 

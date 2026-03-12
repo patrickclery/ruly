@@ -3,7 +3,7 @@
 module Ruly
   module Services
     # Display and output formatting for CLI commands.
-    # Contains all dry-run output, summary display, and profile listing logic
+    # Contains all dry-run output, summary display, and recipe listing logic
     # extracted from CLI command bodies.
     module Display # rubocop:disable Metrics/ModuleLength
       module_function
@@ -11,17 +11,17 @@ module Ruly
       # --- Squash dry-run display ---
 
       def squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files, # rubocop:disable Metrics/ParameterLists
-                         output_file, agent, profile_name, profile_config, options)
+                         output_file, agent, recipe_name, recipe_config, options)
         puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
         dry_run_clean_info(options)
         puts "Would create: #{output_file}"
         puts "  → #{local_sources.size} rule files combined"
         puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
-        dry_run_commands(command_files, profile_config) if agent == 'claude' && !command_files.empty?
+        dry_run_commands(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
         dry_run_bins(bin_files) unless bin_files.empty?
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?
         dry_run_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
-        puts "\nWould cache output for profile '#{profile_name}'" if profile_name && options[:cache]
+        puts "\nWould cache output for recipe '#{recipe_name}'" if recipe_name && options[:cache]
         dry_run_git_info(options)
         Services::SquashHelpers.copy_taskmaster_config(dry_run: true) if options[:taskmaster_config]
       end
@@ -39,9 +39,9 @@ module Ruly
         end
       end
 
-      def dry_run_commands(command_files, profile_config)
+      def dry_run_commands(command_files, recipe_config)
         puts "\nWould create command files in .claude/commands/:"
-        omit_prefix = profile_config&.dig('omit_command_prefix')
+        omit_prefix = recipe_config&.dig('omit_command_prefix')
         command_files.each do |file|
           puts "  → #{Services::ScriptManager.get_command_relative_path(file[:path], omit_prefix)}"
         end
@@ -73,7 +73,7 @@ module Ruly
 
       # --- Import dry-run display ---
 
-      def import_dry_run(script_files, profile_name)
+      def import_dry_run(script_files, recipe_name)
         puts "\n🔍 Dry run mode - no files will be copied\n\n"
         if script_files[:local].any? || script_files[:remote].any?
           total = script_files[:local].size + script_files[:remote].size
@@ -81,15 +81,15 @@ module Ruly
           script_files[:local].each { |s| puts "  → #{s[:relative_path]} (local)" }
           script_files[:remote].each { |s| puts "  → #{s[:filename]} (remote from GitHub)" }
         else
-          puts "No scripts found in profile '#{profile_name}'"
+          puts "No scripts found in recipe '#{recipe_name}'"
         end
       end
 
       # --- Squash summary ---
 
-      def squash_summary(agent, profile_name, profile_config, output_file, cache_used, # rubocop:disable Metrics/ParameterLists
+      def squash_summary(agent, recipe_name, recipe_config, output_file, cache_used, # rubocop:disable Metrics/ParameterLists
                          local_sources, command_files, skill_files)
-        mode_desc = build_mode_description(agent, profile_name, profile_config, cache_used)
+        mode_desc = build_mode_description(agent, recipe_name, recipe_config, cache_used)
         total_files = if cache_used
                         Services::SquashHelpers.cached_file_count(output_file)
                       else
@@ -103,31 +103,31 @@ module Ruly
         puts "🎯 Saved #{skill_files.size} skill files to .claude/skills/" if agent == 'claude' && skill_files&.any?
       end
 
-      def build_mode_description(agent, profile_name, profile_config, cache_used)
+      def build_mode_description(agent, recipe_name, recipe_config, cache_used)
         if agent == 'shell_gpt' then 'shell_gpt role JSON'
-        elsif cache_used then "cached squash mode with '#{profile_name}' profile"
-        elsif profile_name
-          mode = profile_config.is_a?(Array) ? 'agent generation' : 'squash'
-          "#{mode} mode with '#{profile_name}' profile"
+        elsif cache_used then "cached squash mode with '#{recipe_name}' recipe"
+        elsif recipe_name
+          mode = recipe_config.is_a?(Array) ? 'agent generation' : 'squash'
+          "#{mode} mode with '#{recipe_name}' recipe"
         else
           'squash mode (combined content)'
         end
       end
 
-      # --- Profile listing ---
+      # --- Recipe listing ---
 
-      def profile_listing(name, config)
+      def recipe_listing(name, config)
         puts "\n📦 #{name}"
         puts "   #{config['description']}" if config['description']
         puts
 
-        all_files = collect_profile_display_files(config)
+        all_files = collect_recipe_display_files(config)
 
         if all_files.empty?
           puts '   (no files configured)'
         else
-          tree = Services::ProfileIntrospector.build_profile_file_tree(all_files)
-          Services::ProfileIntrospector.display_profile_tree(tree, '   ')
+          tree = Services::RecipeIntrospector.build_recipe_file_tree(all_files)
+          Services::RecipeIntrospector.display_recipe_tree(tree, '   ')
         end
 
         file_count = all_files.count { |f| !f.start_with?('http') }
@@ -138,7 +138,7 @@ module Ruly
         puts "   🎯 Tier: #{config['tier'] || 'default'}" if config['tier']
       end
 
-      def collect_profile_display_files(config)
+      def collect_recipe_display_files(config)
         all_files = Array(config['files']).dup
         all_files.concat(Array(config['skills']))
         all_files.concat(Array(config['commands']))
@@ -160,12 +160,12 @@ module Ruly
 
       # --- Introspect summary ---
 
-      def introspect_summary(profile_name, output_file, all_local_files, all_github_sources)
+      def introspect_summary(recipe_name, output_file, all_local_files, all_github_sources)
         total_files = all_local_files.length
         all_github_sources.each { |s| total_files += s[:rules].length }
 
-        puts "\n✅ Profile '#{profile_name}' updated in #{output_file}"
-        puts "   #{total_files} total files added to profile:"
+        puts "\n✅ Recipe '#{recipe_name}' updated in #{output_file}"
+        puts "   #{total_files} total files added to recipe:"
         puts "   - #{all_local_files.length} local files" if all_local_files.any?
         return unless all_github_sources.any?
 
@@ -189,11 +189,11 @@ module Ruly
       def starter_config_yaml
         <<~YAML
           # Ruly Configuration
-          # Add your own profiles and rule sources here
+          # Add your own recipes and rule sources here
 
-          profiles:
+          recipes:
             starter:
-              description: "Basic starter profile - uncomment and customize the sources below"
+              description: "Basic starter recipe - uncomment and customize the sources below"
           #{'    '}
               # Example: Add rules from GitHub repositories
               # sources:

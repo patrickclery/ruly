@@ -1,4 +1,4 @@
-- always update the ~/.config/ruly/profiles.yml and /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml when you change things it references (they should be identical)
+- always update the ~/.config/ruly/recipes.yml and /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml when you change things it references (they should be identical)
 - Every time the slash commands are updated, make sure to update the slash command section of README.md
 - When changing `ruly` CLI commands (squash, clean, analyze, mcp, etc.), always update README.md to reflect the changes
 - NEVER edit `CLAUDE.local.md` — it is generated output from `ruly squash` and will be overwritten. Fix the source rules in ./rules/ instead.
@@ -8,7 +8,7 @@
 - Always use `git mv` to move/rename files instead of deleting and re-creating them (preserves git history)
 - When deleting/moving/renaming files in rules/, always search for references to update:
   - `requires:` frontmatter in other rule files
-  - Profile files (profiles.yml, ~/.config/ruly/profiles.yml)
+  - Recipe files (recipes.yml, ~/.config/ruly/recipes.yml)
   - Section anchor links that may have changed
 - When I say "commit" or "commit all", commit and push ALL modified files in BOTH repos (don't assume any changes are unrelated):
   1. The rules submodule (./rules) → https://github.com/patrickclery/rules
@@ -17,16 +17,16 @@
 
 # Claude Code Instructions
 
-## Ruly Profile and MCP Configuration Patterns
+## Ruly Recipe and MCP Configuration Patterns
 
-**Import Ruly profile configuration patterns and MCP server guidelines.**
-@./.claude/ruly-profiles-mcp-patterns.md
+**Import Ruly recipe configuration patterns and MCP server guidelines.**
+@./.claude/ruly-recipes-mcp-patterns.md
 
 
 - When testing out `ruly squash ...`, always run it from a `mktmpdir` and not the main project directory
 - always update ruly after any changes. for instance, /Users/patrick/.local/share/mise/installs/ruby/3.3.3/bin/ruly is out of sync right now
-- Whenever you want token counts for profiles, run `ruly stats` and read the results from `stats.md`
-- After any changes to the `core` profile (either `profiles.yml` or any file it references), run: `cd ~/agents/core && ruly squash --deepclean core`. **Do this before ending the session — check whether any file you modified is referenced by the core profile.**
+- Whenever you want token counts for recipes, run `ruly stats` and read the results from `stats.md`
+- After any changes to the `core` recipe (either `recipes.yml` or any file it references), run: `cd ~/agents/core && ruly squash --deepclean core`. **Do this before ending the session — check whether any file you modified is referenced by the core recipe.**
 
 ## CRITICAL: Never Reference Filenames in Rules
 

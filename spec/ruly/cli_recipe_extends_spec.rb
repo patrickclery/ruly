@@ -5,192 +5,192 @@ require 'tmpdir'
 require 'fileutils'
 require 'yaml'
 
-RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
+RSpec.describe Ruly::Services::RecipeLoader, '.resolve_extends!' do
   describe 'basic extends' do
     it 'merges parent files into child' do
-      profiles = {
+      recipes = {
         'base' => {
-          'description' => 'Base profile',
+          'description' => 'Base recipe',
           'files' => ['rules/base.md']
         },
         'child' => {
-          'description' => 'Child profile',
+          'description' => 'Child recipe',
           'extends' => 'base',
           'files' => ['rules/child.md']
         }
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
-      expect(profiles['child']['description']).to eq('Child profile')
-      expect(profiles['child']).not_to have_key('extends')
+      expect(recipes['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
+      expect(recipes['child']['description']).to eq('Child recipe')
+      expect(recipes['child']).not_to have_key('extends')
     end
   end
 
-  describe 'integration with load_all_profiles' do
+  describe 'integration with load_all_recipes' do
     let(:test_dir) { Dir.mktmpdir }
 
     after { FileUtils.rm_rf(test_dir) }
 
-    it 'resolves extends when loading profiles from YAML' do
-      profiles_yml = <<~YAML
-        profiles:
+    it 'resolves extends when loading recipes from YAML' do
+      recipes_yml = <<~YAML
+        recipes:
           base:
-            description: "Base profile"
+            description: "Base recipe"
             files:
               - rules/base.md
             mcp_servers:
               - task-master-ai
           child:
             extends: base
-            description: "Child profile"
+            description: "Child recipe"
             files:
               - rules/child.md
             mcp_servers:
               - playwright
       YAML
 
-      File.write(File.join(test_dir, 'profiles.yml'), profiles_yml)
+      File.write(File.join(test_dir, 'recipes.yml'), recipes_yml)
 
-      profiles = described_class.load_all_profiles(
-        base_profiles_file: File.join(test_dir, 'profiles.yml'),
+      recipes = described_class.load_all_recipes(
+        base_recipes_file: File.join(test_dir, 'recipes.yml'),
         gem_root: test_dir
       )
 
-      expect(profiles['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
-      expect(profiles['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
-      expect(profiles['child']).not_to have_key('extends')
+      expect(recipes['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
+      expect(recipes['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
+      expect(recipes['child']).not_to have_key('extends')
       # Parent should be unchanged
-      expect(profiles['base']['files']).to eq(['rules/base.md'])
+      expect(recipes['base']['files']).to eq(['rules/base.md'])
     end
   end
 
   describe 'scalar override (child wins)' do
     it 'child description overrides parent' do
-      profiles = {
+      recipes = {
         'base' => {'description' => 'Base', 'model' => 'sonnet'},
         'child' => {'description' => 'Child', 'extends' => 'base', 'model' => 'opus'}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['description']).to eq('Child')
-      expect(profiles['child']['model']).to eq('opus')
+      expect(recipes['child']['description']).to eq('Child')
+      expect(recipes['child']['model']).to eq('opus')
     end
 
     it 'child inherits scalars it does not define' do
-      profiles = {
+      recipes = {
         'base' => {'description' => 'Base', 'model' => 'sonnet', 'tier' => 'claude_pro'},
         'child' => {'description' => 'Child', 'extends' => 'base'}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['model']).to eq('sonnet')
-      expect(profiles['child']['tier']).to eq('claude_pro')
+      expect(recipes['child']['model']).to eq('sonnet')
+      expect(recipes['child']['tier']).to eq('claude_pro')
     end
   end
 
   describe 'array union (deduped, parent first)' do
     it 'unions files without duplicates' do
-      profiles = {
+      recipes = {
         'base' => {'files' => ['a.md', 'b.md']},
         'child' => {'extends' => 'base', 'files' => ['b.md', 'c.md']}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['files']).to eq(['a.md', 'b.md', 'c.md'])
+      expect(recipes['child']['files']).to eq(['a.md', 'b.md', 'c.md'])
     end
 
     it 'unions mcp_servers' do
-      profiles = {
+      recipes = {
         'base' => {'mcp_servers' => ['task-master-ai']},
         'child' => {'extends' => 'base', 'mcp_servers' => ['playwright']}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
+      expect(recipes['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
     end
 
     it 'handles child with no array key (inherits parent array)' do
-      profiles = {
+      recipes = {
         'base' => {'files' => ['a.md']},
         'child' => {'extends' => 'base'}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['files']).to eq(['a.md'])
+      expect(recipes['child']['files']).to eq(['a.md'])
     end
   end
 
   describe 'subagent merging' do
     it 'unions subagents by name, child wins on conflict' do
-      profiles = {
+      recipes = {
         'base' => {
           'subagents' => [
-            {'name' => 'agent_a', 'profile' => 'prof-a'},
-            {'model' => 'sonnet', 'name' => 'agent_b', 'profile' => 'prof-b'}
+            {'name' => 'agent_a', 'recipe' => 'prof-a'},
+            {'model' => 'sonnet', 'name' => 'agent_b', 'recipe' => 'prof-b'}
           ]
         },
         'child' => {
           'extends' => 'base',
           'subagents' => [
-            {'model' => 'haiku', 'name' => 'agent_b', 'profile' => 'prof-b'},
-            {'name' => 'agent_c', 'profile' => 'prof-c'}
+            {'model' => 'haiku', 'name' => 'agent_b', 'recipe' => 'prof-b'},
+            {'name' => 'agent_c', 'recipe' => 'prof-c'}
           ]
         }
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      names = profiles['child']['subagents'].map { |s| s['name'] }
+      names = recipes['child']['subagents'].map { |s| s['name'] }
       expect(names).to contain_exactly('agent_a', 'agent_b', 'agent_c')
 
-      agent_b = profiles['child']['subagents'].find { |s| s['name'] == 'agent_b' }
+      agent_b = recipes['child']['subagents'].find { |s| s['name'] == 'agent_b' }
       expect(agent_b['model']).to eq('haiku')
     end
   end
 
   describe 'transitive extends (A extends B extends C)' do
     it 'resolves multi-level inheritance' do
-      profiles = {
+      recipes = {
         'child' => {'extends' => 'parent', 'files' => ['c.md']},
         'grandparent' => {'files' => ['gp.md'], 'mcp_servers' => ['server-a']},
         'parent' => {'extends' => 'grandparent', 'files' => ['p.md']}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['child']['files']).to eq(['gp.md', 'p.md', 'c.md'])
-      expect(profiles['child']['mcp_servers']).to eq(['server-a'])
-      expect(profiles['parent']['files']).to eq(['gp.md', 'p.md'])
+      expect(recipes['child']['files']).to eq(['gp.md', 'p.md', 'c.md'])
+      expect(recipes['child']['mcp_servers']).to eq(['server-a'])
+      expect(recipes['parent']['files']).to eq(['gp.md', 'p.md'])
     end
   end
 
   describe 'circular extends detection' do
     it 'raises error on direct circular reference' do
-      profiles = {
+      recipes = {
         'a' => {'extends' => 'b'},
         'b' => {'extends' => 'a'}
       }
 
-      expect { described_class.resolve_extends!(profiles) }.to raise_error(
+      expect { described_class.resolve_extends!(recipes) }.to raise_error(
         Ruly::Error, /Circular extends detected/
       )
     end
 
     it 'raises error on indirect circular reference' do
-      profiles = {
+      recipes = {
         'a' => {'extends' => 'b'},
         'b' => {'extends' => 'c'},
         'c' => {'extends' => 'a'}
       }
 
-      expect { described_class.resolve_extends!(profiles) }.to raise_error(
+      expect { described_class.resolve_extends!(recipes) }.to raise_error(
         Ruly::Error, /Circular extends detected/
       )
     end
@@ -198,37 +198,37 @@ RSpec.describe Ruly::Services::ProfileLoader, '.resolve_extends!' do
 
   describe 'missing parent detection' do
     it 'raises error when parent does not exist' do
-      profiles = {
+      recipes = {
         'child' => {'extends' => 'nonexistent'}
       }
 
-      expect { described_class.resolve_extends!(profiles) }.to raise_error(
+      expect { described_class.resolve_extends!(recipes) }.to raise_error(
         Ruly::Error, /does not exist/
       )
     end
   end
 
-  describe 'profiles without extends are unchanged' do
-    it 'does not modify profiles that have no extends key' do
-      profiles = {
+  describe 'recipes without extends are unchanged' do
+    it 'does not modify recipes that have no extends key' do
+      recipes = {
         'standalone' => {'description' => 'Solo', 'files' => ['a.md']}
       }
 
-      described_class.resolve_extends!(profiles)
+      described_class.resolve_extends!(recipes)
 
-      expect(profiles['standalone']).to eq({'description' => 'Solo', 'files' => ['a.md']})
+      expect(recipes['standalone']).to eq({'description' => 'Solo', 'files' => ['a.md']})
     end
   end
 
-  describe 'array profiles are skipped' do
-    it 'does not attempt to resolve extends on array profiles' do
-      profiles = {
+  describe 'array recipes are skipped' do
+    it 'does not attempt to resolve extends on array recipes' do
+      recipes = {
         'agent' => ['file1.md', 'file2.md'],
         'base' => {'files' => ['a.md']}
       }
 
-      expect { described_class.resolve_extends!(profiles) }.not_to raise_error
-      expect(profiles['agent']).to eq(['file1.md', 'file2.md'])
+      expect { described_class.resolve_extends!(recipes) }.not_to raise_error
+      expect(recipes['agent']).to eq(['file1.md', 'file2.md'])
     end
   end
 end
@@ -253,31 +253,31 @@ RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
     File.write(File.join(test_dir, 'rules', 'base.md'), '# Base Rule')
     File.write(File.join(test_dir, 'rules', 'child.md'), '# Child Rule')
 
-    profiles_yml = {
-      'profiles' => {
+    recipes_yml = {
+      'recipes' => {
         'base' => {
-          'description' => 'Base profile',
+          'description' => 'Base recipe',
           'files' => ['rules/base.md']
         },
         'child' => {
-          'description' => 'Child profile',
+          'description' => 'Child recipe',
           'extends' => 'base',
           'files' => ['rules/child.md']
         }
       }
     }
-    File.write(File.join(test_dir, 'profiles.yml'), profiles_yml.to_yaml)
+    File.write(File.join(test_dir, 'recipes.yml'), recipes_yml.to_yaml)
 
     allow(cli).to receive_messages(
       gem_root: test_dir,
-      profiles_file: File.join(test_dir, 'profiles.yml'),
+      recipes_file: File.join(test_dir, 'recipes.yml'),
       rules_dir: File.join(test_dir, 'rules')
     )
 
     # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(
-      Ruly::Services::ProfileLoader.load_all_profiles(
-        base_profiles_file: File.join(test_dir, 'profiles.yml'),
+    allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(
+      Ruly::Services::RecipeLoader.load_all_recipes(
+        base_recipes_file: File.join(test_dir, 'recipes.yml'),
         gem_root: test_dir
       )
     )
@@ -292,7 +292,7 @@ RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
     expect(content).to include('Child Rule')
   end
 
-  it 'parent profile squash is unaffected' do
+  it 'parent recipe squash is unaffected' do
     cli.invoke(:squash, ['base'])
 
     content = File.read('CLAUDE.local.md', encoding: 'UTF-8')

@@ -129,7 +129,7 @@ module Ruly
           content_for_requires = result[:data][:original_content] || result[:data][:content]
 
           # Resolve requires for this source (including skills — requires declares
-          # a dependency that must be in the profile, not inlined into the skill)
+          # a dependency that must be in the recipe, not inlined into the skill)
           required_sources = Services::DependencyResolver.resolve_requires_for_source(
             source, content_for_requires, processed_files, sources_to_process,
             find_rule_file:, gem_root:

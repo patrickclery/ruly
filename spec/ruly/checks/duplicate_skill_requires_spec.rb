@@ -36,8 +36,8 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
       MD
     end
 
-    context 'when a file is required by 2+ skills and not in profile' do
-      it 'returns a warning suggesting promotion to profile' do
+    context 'when a file is required by 2+ skills and not in recipe' do
+      it 'returns a warning suggesting promotion to recipe' do
         skill_files = [
           {
             path: 'rules/comms/skills/send-dm.md',
@@ -54,7 +54,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new)
+                                      recipe_paths: Set.new)
 
         expect(result[:passed]).to be(true) # Warnings don't fail the build
         expect(result[:warnings]).not_to be_empty
@@ -63,7 +63,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
       end
     end
 
-    context 'when a file is required by 2+ skills but IS in profile' do
+    context 'when a file is required by 2+ skills but IS in recipe' do
       it 'returns no warnings' do
         accounts_path = File.realpath(File.join(test_dir, 'rules', 'shared', 'accounts.md'))
 
@@ -83,7 +83,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new([accounts_path]))
+                                      recipe_paths: Set.new([accounts_path]))
 
         expect(result[:warnings]).to be_empty
       end
@@ -102,7 +102,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new)
+                                      recipe_paths: Set.new)
 
         expect(result[:warnings]).to be_empty
       end

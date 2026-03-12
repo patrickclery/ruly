@@ -6,37 +6,37 @@ the # PR Review Loop: Convert from Subagent to Orchestrator Skill
 
 **Architecture:** Remove the `pr_review_loop` subagent entirely. The pr-review-loop becomes a skill that runs on the orchestrator, dispatching `core_debugger` for diagnosis and `core_engineer` for parallel fixes in isolated git worktrees. The dispatch rule changes from "dispatch subagent" to "invoke skill directly." This gives the user full visibility into the review-fix cycle.
 
-**Tech Stack:** Ruly rules (Markdown), profile YAML, ruly squash verification
+**Tech Stack:** Ruly rules (Markdown), recipe YAML, ruly squash verification
 
 ---
 
-### Task 1: Remove `pr_review_loop` subagent from all profiles
+### Task 1: Remove `pr_review_loop` subagent from all recipes
 
-The `pr_review_loop` subagent and its profile definition are no longer needed. The skill will run directly on the orchestrator.
+The `pr_review_loop` subagent and its recipe definition are no longer needed. The skill will run directly on the orchestrator.
 
 **Files:**
-- Modify: `profiles.yml:83-84` (remove from `core` subagents)
-- Modify: `profiles.yml:518-519` (remove from `orchestrator` subagents)
-- Modify: `profiles.yml:783-788` (remove `pr-review-loop` profile definition)
-- Sync: `~/.config/ruly/profiles.yml` (must match)
+- Modify: `recipes.yml:83-84` (remove from `core` subagents)
+- Modify: `recipes.yml:518-519` (remove from `orchestrator` subagents)
+- Modify: `recipes.yml:783-788` (remove `pr-review-loop` recipe definition)
+- Sync: `~/.config/ruly/recipes.yml` (must match)
 
-**Step 1: Remove `pr_review_loop` from `core` profile subagents (line 83-84)**
-
-Delete these two lines:
-```yaml
-      - name: pr_review_loop
-        profile: pr-review-loop
-```
-
-**Step 2: Remove `pr_review_loop` from `orchestrator` profile subagents (line 518-519)**
+**Step 1: Remove `pr_review_loop` from `core` recipe subagents (line 83-84)**
 
 Delete these two lines:
 ```yaml
       - name: pr_review_loop
-        profile: pr-review-loop
+        recipe: pr-review-loop
 ```
 
-**Step 3: Remove `pr-review-loop` profile definition (lines 783-788)**
+**Step 2: Remove `pr_review_loop` from `orchestrator` recipe subagents (line 518-519)**
+
+Delete these two lines:
+```yaml
+      - name: pr_review_loop
+        recipe: pr-review-loop
+```
+
+**Step 3: Remove `pr-review-loop` recipe definition (lines 783-788)**
 
 Delete this entire block:
 ```yaml
@@ -47,26 +47,26 @@ Delete this entire block:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
 ```
 
-**Step 4: Sync profiles**
+**Step 4: Sync recipes**
 
 ```bash
-cp /Users/patrick/Projects/ruly/profiles.yml ~/.config/ruly/profiles.yml
-cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml
+cp /Users/patrick/Projects/ruly/recipes.yml ~/.config/ruly/recipes.yml
+cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml
 ```
 
 **Step 5: Verify no dangling references**
 
 ```bash
-grep -rn 'pr-review-loop' /Users/patrick/Projects/ruly/profiles.yml
-grep -rn 'pr_review_loop' /Users/patrick/Projects/ruly/profiles.yml
+grep -rn 'pr-review-loop' /Users/patrick/Projects/ruly/recipes.yml
+grep -rn 'pr_review_loop' /Users/patrick/Projects/ruly/recipes.yml
 ```
 
-Expected: Only `skills:` references to `pr-review-loop.md` remain (these are correct — the skill stays). No `profile: pr-review-loop` or `name: pr_review_loop` entries.
+Expected: Only `skills:` references to `pr-review-loop.md` remain (these are correct — the skill stays). No `recipe: pr-review-loop` or `name: pr_review_loop` entries.
 
 **Step 6: Commit**
 
 ```bash
-git add profiles.yml
+git add recipes.yml
 git commit -m "refactor: remove pr_review_loop subagent — skill runs on orchestrator now"
 ```
 
@@ -503,7 +503,7 @@ git commit -m "refactor: rewrite pr-review-loop as orchestrator skill dispatchin
 
 ### Task 4: Verify with ruly squash
 
-**Step 1: Squash core profile in tmpdir**
+**Step 1: Squash core recipe in tmpdir**
 
 ```bash
 cd $(mktemp -d) && ~/Projects/ruly/bin/ruly squash core
@@ -513,7 +513,7 @@ Expected:
 - No `pr_review_loop` in the subagents list
 - Skill `pr-review-loop` still generated in `.claude/skills/`
 - No agent file `.claude/agents/pr_review_loop.md` generated
-- No errors about missing `pr-review-loop` profile
+- No errors about missing `pr-review-loop` recipe
 
 **Step 2: Verify no agent file for pr_review_loop**
 
@@ -539,7 +539,7 @@ grep -A5 "PR Review Loop" CLAUDE.local.md | head -10
 
 Expected: Contains "Invoke the `pr-review-loop` skill" (not "dispatch the `pr_review_loop` subagent").
 
-**Step 5: Squash orchestrator profile**
+**Step 5: Squash orchestrator recipe**
 
 ```bash
 cd $(mktemp -d) && ~/Projects/ruly/bin/ruly squash orchestrator

@@ -81,33 +81,33 @@ RSpec.describe Ruly::CLI, type: :cli do
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when a rule file has skills: frontmatter' do
       before do
-        profiles_content = {
-          'test_profile' => {
-            'description' => 'Test profile with skill references',
+        recipes_content = {
+          'test_recipe' => {
+            'description' => 'Test recipe with skill references',
             'files' => ['rules/core/deployment.md', 'rules/core/basics.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'generates skill files to .claude/skills/' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         expect(File.exist?('.claude/skills/deploy/SKILL.md')).to be(true)
         expect(File.exist?('.claude/skills/rollback/SKILL.md')).to be(true)
       end
 
       it 'preserves skill file content' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         deploy_content = File.read('.claude/skills/deploy/SKILL.md', encoding: 'UTF-8')
         expect(deploy_content).to include('Deploy to Production')
@@ -119,7 +119,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'strips skills: from squashed output' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
         expect(content).not_to include('skills:')
@@ -130,7 +130,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'does not include skill content in the main squashed output' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
         # Skill content should be in .claude/skills/, not in CLAUDE.local.md
@@ -153,15 +153,15 @@ RSpec.describe Ruly::CLI, type: :cli do
           This references a skill that does not exist.
         MD
 
-        profiles_content = {
+        recipes_content = {
           'test_bad_ref' => {
-            'description' => 'Test profile with bad skill reference',
+            'description' => 'Test recipe with bad skill reference',
             'files' => ['rules/core/bad_skill_ref.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -185,15 +185,15 @@ RSpec.describe Ruly::CLI, type: :cli do
           This references a file that is not in a skills directory.
         MD
 
-        profiles_content = {
+        recipes_content = {
           'test_bad_path' => {
-            'description' => 'Test profile with non-skill path',
+            'description' => 'Test recipe with non-skill path',
             'files' => ['rules/core/bad_skill_path.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -209,7 +209,7 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     context 'with keep_frontmatter option' do
       before do
-        profiles_content = {
+        recipes_content = {
           'test_keep_fm' => {
             'description' => 'Test with keep_frontmatter',
             'files' => ['rules/core/deployment.md']
@@ -217,7 +217,7 @@ RSpec.describe Ruly::CLI, type: :cli do
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -283,41 +283,41 @@ RSpec.describe Ruly::CLI, type: :cli do
       # Create a parent rule file
       File.write(File.join(test_dir, 'rules', 'parent', 'main.md'), <<~MD)
         ---
-        description: Parent profile rules
+        description: Parent recipe rules
         ---
         # Parent Rules
 
-        Parent profile content.
+        Parent recipe content.
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
     context 'when subagent rule files have skills: frontmatter' do
       before do
-        profiles_content = {
-          'grabber-profile' => {
+        recipes_content = {
+          'grabber-recipe' => {
             'description' => 'Orchestrates context fetching',
             'files' => ['rules/agent/fetcher.md', 'rules/agent/basics.md']
           },
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              {'name' => 'context_grabber', 'profile' => 'grabber-profile'}
+              {'name' => 'context_grabber', 'recipe' => 'grabber-recipe'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'includes skills: in agent frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/context_grabber.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -330,7 +330,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'generates .claude/skills/ files alongside the agent' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         expect(File.exist?('.claude/skills/context-downloader-jira/SKILL.md')).to be(true)
         expect(File.exist?('.claude/skills/context-downloader-github/SKILL.md')).to be(true)
@@ -340,7 +340,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'places skills: before mcpServers: in frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/context_grabber.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -356,27 +356,27 @@ RSpec.describe Ruly::CLI, type: :cli do
 
     context 'when subagent rule files have no skills: frontmatter' do
       before do
-        profiles_content = {
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+        recipes_content = {
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              {'name' => 'plain_worker', 'profile' => 'plain-profile'}
+              {'name' => 'plain_worker', 'recipe' => 'plain-recipe'}
             ]
           },
-          'plain-profile' => {
-            'description' => 'Plain worker profile',
+          'plain-recipe' => {
+            'description' => 'Plain worker recipe',
             'files' => ['rules/agent/basics.md']
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'omits skills: from agent frontmatter when there are no skills' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/plain_worker.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -416,22 +416,22 @@ RSpec.describe Ruly::CLI, type: :cli do
           'teams' => {'command' => 'teams-mcp', 'type' => 'stdio'}
         }))
 
-        profiles_content = {
-          'full-profile' => {
-            'description' => 'Full profile with skills and MCP',
+        recipes_content = {
+          'full-recipe' => {
+            'description' => 'Full recipe with skills and MCP',
             'files' => ['rules/agent/full.md']
           },
-          'parent_profile' => {
-            'description' => 'Parent profile with subagent',
+          'parent_recipe' => {
+            'description' => 'Parent recipe with subagent',
             'files' => ['rules/parent/main.md'],
             'subagents' => [
-              {'name' => 'full_agent', 'profile' => 'full-profile'}
+              {'name' => 'full_agent', 'recipe' => 'full-recipe'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -440,7 +440,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'includes both skills: and mcpServers: in agent frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/full_agent.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)
@@ -451,7 +451,7 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
 
       it 'places skills: before mcpServers: in frontmatter' do
-        cli.invoke(:squash, ['parent_profile'])
+        cli.invoke(:squash, ['parent_recipe'])
 
         agent_content = File.read('.claude/agents/full_agent.md', encoding: 'UTF-8')
         frontmatter_match = agent_content.match(/\A---\n(.*?)\n---/m)

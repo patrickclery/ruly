@@ -5,18 +5,18 @@ require 'fileutils'
 
 module Ruly
   module Services
-    # Writes .claude/settings.local.json from profile hooks configuration.
+    # Writes .claude/settings.local.json from recipe hooks configuration.
     # Follows the same pattern as MCPManager for .mcp.json.
     module SettingsManager
       SETTINGS_FILE = '.claude/settings.local.json'
 
       module_function
 
-      # Write hooks from profile config into .claude/settings.local.json.
+      # Write hooks from recipe config into .claude/settings.local.json.
       # Merges with existing settings if the file already exists.
-      # @param profile_config [Hash] profile configuration (may contain 'hooks' key)
-      def write_settings(profile_config, target_dir: nil)
-        hooks = profile_config.is_a?(Hash) && profile_config['hooks']
+      # @param recipe_config [Hash] recipe configuration (may contain 'hooks' key)
+      def write_settings(recipe_config, target_dir: nil)
+        hooks = recipe_config.is_a?(Hash) && recipe_config['hooks']
         return unless hooks.is_a?(Hash) && hooks.any?
 
         base = target_dir || Dir.pwd
@@ -34,14 +34,14 @@ module Ruly
         puts "Updated #{settings_path} with #{hooks.keys.join(', ')} hook(s)"
       end
 
-      # Propagate parent profile hooks into subagent cwd directories.
-      # @param profile_config [Hash] profile configuration with 'hooks' and 'subagents'
+      # Propagate parent recipe hooks into subagent cwd directories.
+      # @param recipe_config [Hash] recipe configuration with 'hooks' and 'subagents'
       # @param script_files [Array<String>] paths to script files to copy into each cwd
-      def propagate_hooks_to_subdirs(profile_config, script_files: [])
-        hooks = profile_config.is_a?(Hash) && profile_config['hooks']
+      def propagate_hooks_to_subdirs(recipe_config, script_files: [])
+        hooks = recipe_config.is_a?(Hash) && recipe_config['hooks']
         return unless hooks.is_a?(Hash) && hooks.any?
 
-        subagents = profile_config['subagents']
+        subagents = recipe_config['subagents']
         return unless subagents.is_a?(Array)
 
         cwd_dirs = subagents.filter_map { |s| s['cwd'] }.uniq
@@ -51,7 +51,7 @@ module Ruly
           target = File.join(Dir.pwd, subdir)
           next unless Dir.exist?(target)
 
-          write_settings(profile_config, target_dir: target)
+          write_settings(recipe_config, target_dir: target)
 
           script_files.each do |src|
             next unless File.exist?(src)

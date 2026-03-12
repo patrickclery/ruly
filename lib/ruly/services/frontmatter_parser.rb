@@ -33,7 +33,7 @@ module Ruly
       # Strips or filters metadata fields from frontmatter.
       # @param content [String] The markdown content with optional frontmatter
       # @param keep_frontmatter [Boolean] When false, strips all frontmatter except Claude Code
-      #   directives. When true, strips only metadata fields (requires, profiles, essential, etc.)
+      #   directives. When true, strips only metadata fields (requires, recipes, essential, etc.)
       # @return [String] The content with frontmatter stripped/filtered
       def strip_metadata(content, keep_frontmatter: false)
         # Check if content has YAML frontmatter
@@ -63,7 +63,7 @@ module Ruly
           return body
         end
 
-        # With keep_frontmatter: strip only metadata fields (requires, profiles, essential)
+        # With keep_frontmatter: strip only metadata fields (requires, recipes, essential)
         # This handles both:
         # 1. Single line: "requires: value" or "requires: [value1, value2]"
         # 2. Multi-line array format:
@@ -74,8 +74,8 @@ module Ruly
         # Stop when we hit a line that starts with a letter (next YAML key) or end
         frontmatter = frontmatter.gsub(/^requires:.*?(?=^\w|\z)/m, '')
 
-        # Remove the profiles field and its values (same format as requires)
-        frontmatter = frontmatter.gsub(/^profiles:.*?(?=^\w|\z)/m, '')
+        # Remove the recipes field and its values (same format as requires)
+        frontmatter = frontmatter.gsub(/^recipes:.*?(?=^\w|\z)/m, '')
 
         # Remove the essential field (single line: "essential: true" or "essential: false")
         frontmatter = frontmatter.gsub(/^essential:.*?(?=\n|\z)/m, '')

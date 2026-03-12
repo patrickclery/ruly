@@ -14,8 +14,8 @@ RSpec.describe Ruly::Services::SettingsManager do
   end
 
   describe '.write_settings' do
-    context 'when profile has hooks' do
-      let(:profile_config) do
+    context 'when recipe has hooks' do
+      let(:recipe_config) do
         {
           'hooks' => {
             'WorktreeCreate' => [
@@ -34,7 +34,7 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
 
       it 'creates .claude/settings.local.json with hooks' do
-        described_class.write_settings(profile_config)
+        described_class.write_settings(recipe_config)
 
         expect(File.exist?('.claude/settings.local.json')).to be true
         settings = JSON.parse(File.read('.claude/settings.local.json'))
@@ -45,7 +45,7 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
     end
 
-    context 'when profile has no hooks' do
+    context 'when recipe has no hooks' do
       it 'does not create settings.local.json' do
         described_class.write_settings({})
         expect(File.exist?('.claude/settings.local.json')).to be false
@@ -66,7 +66,7 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
 
       it 'merges hooks into existing settings' do
-        profile_config = {
+        recipe_config = {
           'hooks' => {
             'WorktreeCreate' => [
               {'hooks' => [{'type' => 'command', 'command' => 'echo hi'}]}
@@ -74,7 +74,7 @@ RSpec.describe Ruly::Services::SettingsManager do
           }
         }
 
-        described_class.write_settings(profile_config)
+        described_class.write_settings(recipe_config)
 
         settings = JSON.parse(File.read('.claude/settings.local.json'))
         expect(settings['enableAllProjectMcpServers']).to be true
@@ -83,7 +83,7 @@ RSpec.describe Ruly::Services::SettingsManager do
     end
 
     context 'when target_dir is specified' do
-      let(:profile_config) do
+      let(:recipe_config) do
         {
           'hooks' => {
             'WorktreeCreate' => [
@@ -101,7 +101,7 @@ RSpec.describe Ruly::Services::SettingsManager do
         target = File.join(Dir.pwd, 'submodule-a')
         FileUtils.mkdir_p(target)
 
-        described_class.write_settings(profile_config, target_dir: target)
+        described_class.write_settings(recipe_config, target_dir: target)
 
         settings_path = File.join(target, '.claude', 'settings.local.json')
         expect(File.exist?(settings_path)).to be true
@@ -115,7 +115,7 @@ RSpec.describe Ruly::Services::SettingsManager do
         File.write(File.join(target, '.claude', 'settings.local.json'),
                    JSON.pretty_generate('permissions' => { 'allow' => ['Bash(*)'] }))
 
-        described_class.write_settings(profile_config, target_dir: target)
+        described_class.write_settings(recipe_config, target_dir: target)
 
         settings = JSON.parse(File.read(File.join(target, '.claude', 'settings.local.json')))
         expect(settings['permissions']['allow']).to eq(['Bash(*)'])
@@ -125,7 +125,7 @@ RSpec.describe Ruly::Services::SettingsManager do
 
     context 'with multiple hook types' do
       it 'writes all hook types' do
-        profile_config = {
+        recipe_config = {
           'hooks' => {
             'WorktreeCreate' => [
               {'hooks' => [{'type' => 'command', 'command' => 'create.sh'}]}
@@ -136,7 +136,7 @@ RSpec.describe Ruly::Services::SettingsManager do
           }
         }
 
-        described_class.write_settings(profile_config)
+        described_class.write_settings(recipe_config)
 
         settings = JSON.parse(File.read('.claude/settings.local.json'))
         expect(settings['hooks'].keys).to contain_exactly('WorktreeCreate', 'WorktreeRemove')
@@ -153,14 +153,14 @@ RSpec.describe Ruly::Services::SettingsManager do
       }
     end
 
-    let(:profile_config) do
+    let(:recipe_config) do
       {
         'hooks' => hooks,
         'subagents' => [
-          { 'name' => 'core_engineer', 'profile' => 'core-engineer', 'cwd' => 'workaxle-core' },
-          { 'name' => 'core_debugger', 'profile' => 'core-debugger', 'cwd' => 'workaxle-core' },
-          { 'name' => 'frontend_engineer', 'profile' => 'frontend-engineer', 'cwd' => 'workaxle-desktop' },
-          { 'name' => 'comms_jira', 'profile' => 'comms-jira' }
+          { 'name' => 'core_engineer', 'recipe' => 'core-engineer', 'cwd' => 'workaxle-core' },
+          { 'name' => 'core_debugger', 'recipe' => 'core-debugger', 'cwd' => 'workaxle-core' },
+          { 'name' => 'frontend_engineer', 'recipe' => 'frontend-engineer', 'cwd' => 'workaxle-desktop' },
+          { 'name' => 'comms_jira', 'recipe' => 'comms-jira' }
         ]
       }
     end
@@ -169,7 +169,7 @@ RSpec.describe Ruly::Services::SettingsManager do
       FileUtils.mkdir_p('workaxle-core')
       FileUtils.mkdir_p('workaxle-desktop')
 
-      described_class.propagate_hooks_to_subdirs(profile_config)
+      described_class.propagate_hooks_to_subdirs(recipe_config)
 
       %w[workaxle-core workaxle-desktop].each do |subdir|
         settings_path = File.join(subdir, '.claude', 'settings.local.json')
@@ -183,14 +183,14 @@ RSpec.describe Ruly::Services::SettingsManager do
       FileUtils.mkdir_p('workaxle-core')
       FileUtils.mkdir_p('workaxle-desktop')
 
-      described_class.propagate_hooks_to_subdirs(profile_config)
+      described_class.propagate_hooks_to_subdirs(recipe_config)
 
       expect(Dir.glob('*/.claude/settings.local.json').sort)
         .to eq(%w[workaxle-core/.claude/settings.local.json workaxle-desktop/.claude/settings.local.json])
     end
 
-    it 'does nothing when profile has no hooks' do
-      config = { 'subagents' => [{ 'name' => 'x', 'profile' => 'y', 'cwd' => 'sub' }] }
+    it 'does nothing when recipe has no hooks' do
+      config = { 'subagents' => [{ 'name' => 'x', 'recipe' => 'y', 'cwd' => 'sub' }] }
       FileUtils.mkdir_p('sub')
 
       described_class.propagate_hooks_to_subdirs(config)
@@ -201,7 +201,7 @@ RSpec.describe Ruly::Services::SettingsManager do
     it 'does nothing when no subagents have cwd' do
       config = {
         'hooks' => hooks,
-        'subagents' => [{ 'name' => 'x', 'profile' => 'y' }]
+        'subagents' => [{ 'name' => 'x', 'recipe' => 'y' }]
       }
 
       described_class.propagate_hooks_to_subdirs(config)
@@ -215,7 +215,7 @@ RSpec.describe Ruly::Services::SettingsManager do
       File.write('.claude/scripts/worktree-create.sh', "#!/bin/bash\necho hi")
       File.chmod(0o755, '.claude/scripts/worktree-create.sh')
 
-      described_class.propagate_hooks_to_subdirs(profile_config, script_files: ['.claude/scripts/worktree-create.sh'])
+      described_class.propagate_hooks_to_subdirs(recipe_config, script_files: ['.claude/scripts/worktree-create.sh'])
 
       target_script = 'workaxle-core/.claude/scripts/worktree-create.sh'
       expect(File.exist?(target_script)).to be true

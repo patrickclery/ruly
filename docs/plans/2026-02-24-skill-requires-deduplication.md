@@ -2,15 +2,15 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Stop inlining `requires:` into skills when the required file is already in the profile, and warn when a file is inlined into multiple skills but missing from the profile.
+**Goal:** Stop inlining `requires:` into skills when the required file is already in the recipe, and warn when a file is inlined into multiple skills but missing from the recipe.
 
-**Architecture:** Pass the set of profile-resolved file paths into `compile_skill_with_requires` so it can skip already-present dependencies. Add a post-squash check that detects files inlined into 2+ skills and suggests promoting them to the profile.
+**Architecture:** Pass the set of recipe-resolved file paths into `compile_skill_with_requires` so it can skip already-present dependencies. Add a post-squash check that detects files inlined into 2+ skills and suggests promoting them to the recipe.
 
 **Tech Stack:** Ruby, RSpec, existing Ruly checks framework
 
 ---
 
-### Task 1: Add failing test — skip requires already in profile
+### Task 1: Add failing test — skip requires already in recipe
 
 **Files:**
 - Create: `spec/ruly/cli_skill_requires_dedup_spec.rb`
@@ -40,12 +40,12 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
   end
 
-  describe 'skill requires deduplication against profile' do
+  describe 'skill requires deduplication against recipe' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'comms', 'skills'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'shared'))
 
-      # Shared file that will be in the profile AND required by skills
+      # Shared file that will be in the recipe AND required by skills
       File.write(File.join(test_dir, 'rules', 'shared', 'accounts.md'), <<~MD)
         ---
         description: Team account IDs
@@ -84,32 +84,32 @@ RSpec.describe Ruly::CLI, type: :cli do
       MD
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
-    context 'when a skill requires a file already in the profile' do
+    context 'when a skill requires a file already in the recipe' do
       before do
-        profiles_content = {
-          'test_profile' => {
-            'description' => 'Test profile',
+        recipes_content = {
+          'test_recipe' => {
+            'description' => 'Test recipe',
             'files' => [
-              'rules/shared/accounts.md',    # In profile
+              'rules/shared/accounts.md',    # In recipe
               'rules/comms/messaging.md'      # Has skill with requires: accounts.md
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'does not inline the required file into the skill' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
-        # Should NOT contain the accounts content since it's in the profile
+        # Should NOT contain the accounts content since it's in the recipe
         expect(skill_content).not_to include('Team Directory')
         expect(skill_content).not_to include('Alice')
         # But should still have the skill's own content
@@ -117,34 +117,34 @@ RSpec.describe Ruly::CLI, type: :cli do
         expect(skill_content).to include('Look up recipient')
       end
 
-      it 'includes the required file in the profile' do
-        cli.invoke(:squash, ['test_profile'])
+      it 'includes the required file in the recipe' do
+        cli.invoke(:squash, ['test_recipe'])
 
-        profile_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
-        expect(profile_content).to include('Team Directory')
-        expect(profile_content).to include('Alice')
+        recipe_content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
+        expect(recipe_content).to include('Team Directory')
+        expect(recipe_content).to include('Alice')
       end
     end
 
-    context 'when a skill requires a file NOT in the profile' do
+    context 'when a skill requires a file NOT in the recipe' do
       before do
-        # Profile does NOT include accounts.md
-        profiles_content = {
-          'test_profile' => {
-            'description' => 'Test profile',
+        # Recipe does NOT include accounts.md
+        recipes_content = {
+          'test_recipe' => {
+            'description' => 'Test recipe',
             'files' => [
-              'rules/comms/messaging.md'  # Has skill, but accounts.md NOT in profile
+              'rules/comms/messaging.md'  # Has skill, but accounts.md NOT in recipe
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
       it 'still inlines the required file into the skill' do
-        cli.invoke(:squash, ['test_profile'])
+        cli.invoke(:squash, ['test_recipe'])
 
         skill_content = File.read('.claude/skills/send-dm/SKILL.md', encoding: 'UTF-8')
         expect(skill_content).to include('Team Directory')
@@ -162,18 +162,18 @@ Expected: FAIL — the "does not inline" test fails because `compile_skill_with_
 
 ---
 
-### Task 2: Pass profile paths into `save_skill_files` and `compile_skill_with_requires`
+### Task 2: Pass recipe paths into `save_skill_files` and `compile_skill_with_requires`
 
 **Files:**
 - Modify: `lib/ruly/services/script_manager.rb:386-428`
 - Modify: `lib/ruly/cli.rb:390-393`
 
-**Step 1: Update `save_skill_files` signature to accept `profile_paths:`**
+**Step 1: Update `save_skill_files` signature to accept `recipe_paths:`**
 
-In `lib/ruly/services/script_manager.rb`, update `save_skill_files` to accept and forward a `profile_paths:` keyword:
+In `lib/ruly/services/script_manager.rb`, update `save_skill_files` to accept and forward a `recipe_paths:` keyword:
 
 ```ruby
-def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, profile_paths: Set.new)
+def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, recipe_paths: Set.new)
   return if skill_files.empty?
 
   skill_files.each do |file|
@@ -182,19 +182,19 @@ def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_met
     FileUtils.mkdir_p(skill_dir)
 
     content = compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
-                                          profile_paths:)
+                                          recipe_paths:)
     File.write(File.join(skill_dir, 'SKILL.md'), content)
   end
 end
 ```
 
-**Step 2: Update `compile_skill_with_requires` to skip profile-present files**
+**Step 2: Update `compile_skill_with_requires` to skip recipe-present files**
 
 Replace the method body in `lib/ruly/services/script_manager.rb:405-428`:
 
 ```ruby
 def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
-                                profile_paths: Set.new)
+                                recipe_paths: Set.new)
   original = file[:original_content] || file[:content]
   frontmatter, = parse_frontmatter.call(original)
   requires = frontmatter.is_a?(Hash) ? (frontmatter['requires'] || []) : []
@@ -211,13 +211,13 @@ def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip
     resolved_path = File.expand_path(required_path, source_dir)
     next unless File.file?(resolved_path)
 
-    # Skip if this file is already in the profile
+    # Skip if this file is already in the recipe
     canonical = begin
       File.realpath(resolved_path)
     rescue StandardError
       resolved_path
     end
-    next if profile_paths.include?(canonical)
+    next if recipe_paths.include?(canonical)
 
     raw_content = File.read(resolved_path, encoding: 'UTF-8')
     stripped = strip_metadata.call(raw_content)
@@ -228,34 +228,34 @@ def compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip
 end
 ```
 
-**Step 3: Update `cli.rb` to build and pass `profile_paths`**
+**Step 3: Update `cli.rb` to build and pass `recipe_paths`**
 
-In `lib/ruly/cli.rb`, update the `save_skill_files` wrapper (lines 390-393) to accept and pass `profile_paths`:
+In `lib/ruly/cli.rb`, update the `save_skill_files` wrapper (lines 390-393) to accept and pass `recipe_paths`:
 
 ```ruby
-def save_skill_files(skill_files, profile_paths: Set.new)
+def save_skill_files(skill_files, recipe_paths: Set.new)
   Services::ScriptManager.save_skill_files(skill_files, find_rule_file: method(:find_rule_file),
                                                         parse_frontmatter: Services::FrontmatterParser.method(:parse),
                                                         strip_metadata: Services::FrontmatterParser.method(:strip_metadata),
-                                                        profile_paths:)
+                                                        recipe_paths:)
 end
 ```
 
-Then update `post_squash` (line 367) to build the profile paths set from `local_sources` and pass it:
+Then update `post_squash` (line 367) to build the recipe paths set from `local_sources` and pass it:
 
 ```ruby
-def post_squash(output_file, agent, profile_name, profile_config,
+def post_squash(output_file, agent, recipe_name, recipe_config,
                 local_sources, command_files, skill_files, script_files)
   update_git_ignores(output_file, agent, command_files)
-  save_to_cache(output_file, profile_name, agent) if profile_name && options[:cache]
+  save_to_cache(output_file, recipe_name, agent) if recipe_name && options[:cache]
   if agent == 'claude' && !command_files.empty?
-    Services::ScriptManager.save_command_files(command_files, profile_config,
+    Services::ScriptManager.save_command_files(command_files, recipe_config,
                                                gem_root:)
   end
 
   if agent == 'claude' && !skill_files.empty?
-    profile_paths = build_profile_paths(local_sources)
-    save_skill_files(skill_files, profile_paths:)
+    recipe_paths = build_recipe_paths(local_sources)
+    save_skill_files(skill_files, recipe_paths:)
   end
 
   # ... rest unchanged
@@ -265,7 +265,7 @@ end
 Add the helper method in `cli.rb`:
 
 ```ruby
-def build_profile_paths(local_sources)
+def build_recipe_paths(local_sources)
   paths = Set.new
   local_sources.each do |source|
     full_path = find_rule_file(source[:path])
@@ -296,18 +296,18 @@ Expected: All existing tests still pass
 
 ```bash
 git add lib/ruly/services/script_manager.rb lib/ruly/cli.rb spec/ruly/cli_skill_requires_dedup_spec.rb
-git commit -m "feat: skip inlining skill requires already present in profile"
+git commit -m "feat: skip inlining skill requires already present in recipe"
 ```
 
 ---
 
-### Task 3: Wire profile paths through `SubagentProcessor`
+### Task 3: Wire recipe paths through `SubagentProcessor`
 
 **Files:**
 - Modify: `lib/ruly/services/subagent_processor.rb:185`
 - Modify: `lib/ruly/cli.rb:419-428` (the `process_subagents` method)
 
-The subagent processor also calls `save_skill_files` (line 185). It needs to pass the subagent's own `local_sources` as the profile paths, since the subagent's agent file IS its profile.
+The subagent processor also calls `save_skill_files` (line 185). It needs to pass the subagent's own `local_sources` as the recipe paths, since the subagent's agent file IS its recipe.
 
 **Step 1: Write the failing test**
 
@@ -357,7 +357,7 @@ describe 'skill requires deduplication in subagents' do
       Handle all comms tasks.
     MD
 
-    # Agent rule that includes accounts (profile content for subagent)
+    # Agent rule that includes accounts (recipe content for subagent)
     File.write(File.join(test_dir, 'rules', 'shared', 'agent-base.md'), <<~MD)
       ---
       description: Base agent rules
@@ -380,36 +380,36 @@ describe 'skill requires deduplication in subagents' do
     MD
 
     allow(cli).to receive_messages(gem_root: test_dir,
-                                   profiles_file: File.join(test_dir, 'profiles.yml'),
+                                   recipes_file: File.join(test_dir, 'recipes.yml'),
                                    rules_dir: File.join(test_dir, 'rules'))
   end
 
-  context 'when subagent profile includes a file also required by its skill' do
+  context 'when subagent recipe includes a file also required by its skill' do
     before do
-      profiles_content = {
-        'comms-profile' => {
-          'description' => 'Comms profile',
+      recipes_content = {
+        'comms-recipe' => {
+          'description' => 'Comms recipe',
           'files' => [
-            'rules/shared/agent-base.md',  # requires accounts.md → in subagent profile
+            'rules/shared/agent-base.md',  # requires accounts.md → in subagent recipe
             'rules/agent/comms.md'          # has skill requiring accounts.md
           ]
         },
-        'parent_profile' => {
+        'parent_recipe' => {
           'description' => 'Parent',
           'files' => ['rules/parent/main.md'],
           'subagents' => [
-            { 'name' => 'comms', 'profile' => 'comms-profile' }
+            { 'name' => 'comms', 'recipe' => 'comms-recipe' }
           ]
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'does not inline accounts into the subagent skill' do
-      cli.invoke(:squash, ['parent_profile'])
+      cli.invoke(:squash, ['parent_recipe'])
 
       skill_content = File.read('.claude/skills/post-comment/SKILL.md', encoding: 'UTF-8')
       expect(skill_content).not_to include('Team Directory')
@@ -422,24 +422,24 @@ end
 **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/patrick/Projects/ruly && bundle exec rspec spec/ruly/cli_skill_requires_dedup_spec.rb -v`
-Expected: FAIL — subagent path doesn't pass `profile_paths` yet.
+Expected: FAIL — subagent path doesn't pass `recipe_paths` yet.
 
-**Step 3: Update SubagentProcessor to pass profile paths**
+**Step 3: Update SubagentProcessor to pass recipe paths**
 
 In `lib/ruly/services/subagent_processor.rb`, update `generate_agent_file` (around line 185):
 
-Change the `save_skill_files` signature in the deps hash and calling code. The `save_skill_files` proc in `cli.rb` already accepts `profile_paths:`, so update the call site in `subagent_processor.rb:185`:
+Change the `save_skill_files` signature in the deps hash and calling code. The `save_skill_files` proc in `cli.rb` already accepts `recipe_paths:`, so update the call site in `subagent_processor.rb:185`:
 
 ```ruby
 # In generate_agent_file, after load_agent_sources:
-profile_paths = build_subagent_profile_paths(local_sources, deps[:find_rule_file])
-deps[:save_skill_files].call(skill_files, profile_paths:) unless skill_files.empty?
+recipe_paths = build_subagent_recipe_paths(local_sources, deps[:find_rule_file])
+deps[:save_skill_files].call(skill_files, recipe_paths:) unless skill_files.empty?
 ```
 
 Add the helper:
 
 ```ruby
-def build_subagent_profile_paths(local_sources, find_rule_file)
+def build_subagent_recipe_paths(local_sources, find_rule_file)
   paths = Set.new
   local_sources.each do |source|
     full_path = find_rule_file.call(source[:path])
@@ -470,7 +470,7 @@ Expected: All tests pass
 
 ```bash
 git add lib/ruly/services/subagent_processor.rb spec/ruly/cli_skill_requires_dedup_spec.rb
-git commit -m "feat: wire profile path dedup through subagent skill compilation"
+git commit -m "feat: wire recipe path dedup through subagent skill compilation"
 ```
 
 ---
@@ -481,7 +481,7 @@ git commit -m "feat: wire profile path dedup through subagent skill compilation"
 - Create: `lib/ruly/checks/duplicate_skill_requires.rb`
 - Modify: `lib/ruly/checks.rb`
 
-This check runs after squashing and warns when a file is inlined into 2+ skills, suggesting it should be added to the profile.
+This check runs after squashing and warns when a file is inlined into 2+ skills, suggesting it should be added to the recipe.
 
 **Step 1: Write the failing test**
 
@@ -526,8 +526,8 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
       MD
     end
 
-    context 'when a file is required by 2+ skills and not in profile' do
-      it 'returns a warning suggesting promotion to profile' do
+    context 'when a file is required by 2+ skills and not in recipe' do
+      it 'returns a warning suggesting promotion to recipe' do
         skill_files = [
           {
             path: 'rules/comms/skills/send-dm.md',
@@ -544,7 +544,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new)
+                                      recipe_paths: Set.new)
 
         expect(result[:passed]).to be(true) # Warnings don't fail the build
         expect(result[:warnings]).not_to be_empty
@@ -553,7 +553,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
       end
     end
 
-    context 'when a file is required by 2+ skills but IS in profile' do
+    context 'when a file is required by 2+ skills but IS in recipe' do
       it 'returns no warnings' do
         accounts_path = File.realpath(File.join(test_dir, 'rules', 'shared', 'accounts.md'))
 
@@ -573,7 +573,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new([accounts_path]))
+                                      recipe_paths: Set.new([accounts_path]))
 
         expect(result[:warnings]).to be_empty
       end
@@ -592,7 +592,7 @@ RSpec.describe Ruly::Checks::DuplicateSkillRequires do
         result = described_class.call(skill_files,
                                       find_rule_file:,
                                       parse_frontmatter:,
-                                      profile_paths: Set.new)
+                                      recipe_paths: Set.new)
 
         expect(result[:warnings]).to be_empty
       end
@@ -615,13 +615,13 @@ Create `lib/ruly/checks/duplicate_skill_requires.rb`:
 
 module Ruly
   module Checks
-    # Warns when a file is required by multiple skills but not in the profile.
-    # Suggests promoting the file to the profile's files: list to avoid duplication.
+    # Warns when a file is required by multiple skills but not in the recipe.
+    # Suggests promoting the file to the recipe's files: list to avoid duplication.
     class DuplicateSkillRequires < Base
       class << self
-        def call(skill_files, find_rule_file:, parse_frontmatter:, profile_paths: Set.new)
+        def call(skill_files, find_rule_file:, parse_frontmatter:, recipe_paths: Set.new)
           require_map = build_require_map(skill_files, find_rule_file:, parse_frontmatter:)
-          warnings = detect_duplicates(require_map, profile_paths)
+          warnings = detect_duplicates(require_map, recipe_paths)
 
           result = build_result(warnings:)
           report(warnings) if warnings.any?
@@ -662,10 +662,10 @@ module Ruly
           require_map
         end
 
-        def detect_duplicates(require_map, profile_paths)
+        def detect_duplicates(require_map, recipe_paths)
           require_map.filter_map do |file_path, skills|
             next if skills.size < 2
-            next if profile_paths.include?(file_path)
+            next if recipe_paths.include?(file_path)
 
             {
               file: file_path,
@@ -676,15 +676,15 @@ module Ruly
 
         def report(warnings)
           puts "\n💡 Skill requires optimization suggestion:"
-          puts '   These files are inlined into multiple skills but not in the profile.'
-          puts "   Adding them to the profile's files: list would eliminate duplication.\n\n"
+          puts '   These files are inlined into multiple skills but not in the recipe.'
+          puts "   Adding them to the recipe's files: list would eliminate duplication.\n\n"
 
           warnings.each do |warning|
             puts "   📄 #{warning[:file]}"
             puts "      └─ inlined into #{warning[:skills].size} skills: #{warning[:skills].join(', ')}"
           end
 
-          puts "\n   Add these files to the profile's `files:` list to deduplicate."
+          puts "\n   Add these files to the recipe's `files:` list to deduplicate."
           puts ''
         end
       end
@@ -707,7 +707,7 @@ require_relative 'checks/duplicate_skill_requires'
 module Ruly
   module Checks
     def self.run_all(local_sources, command_files = [], skill_files: [],
-                     find_rule_file: nil, parse_frontmatter: nil, profile_paths: Set.new)
+                     find_rule_file: nil, parse_frontmatter: nil, recipe_paths: Set.new)
       check_classes = [
         AmbiguousLinks
       ]
@@ -720,7 +720,7 @@ module Ruly
       # Skill-specific checks (only if we have the deps)
       if skill_files.any? && find_rule_file && parse_frontmatter
         DuplicateSkillRequires.call(skill_files, find_rule_file:, parse_frontmatter:,
-                                                 profile_paths:)
+                                                 recipe_paths:)
       end
 
       results.all?
@@ -786,21 +786,21 @@ context 'when squashing produces duplicate skill requires' do
       Use skills to send messages.
     MD
 
-    # Profile does NOT include accounts.md
-    profiles_content = {
-      'test_profile' => {
-        'description' => 'Test profile',
+    # Recipe does NOT include accounts.md
+    recipes_content = {
+      'test_recipe' => {
+        'description' => 'Test recipe',
         'files' => ['rules/comms/messaging.md']
       }
     }
 
     # rubocop:disable RSpec/AnyInstance
-    allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+    allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
     # rubocop:enable RSpec/AnyInstance
   end
 
   it 'outputs a warning about duplicate requires' do
-    output = capture(:stdout) { cli.invoke(:squash, ['test_profile']) }
+    output = capture(:stdout) { cli.invoke(:squash, ['test_recipe']) }
     expect(output).to include('optimization suggestion')
     expect(output).to include('accounts.md')
   end
@@ -821,10 +821,10 @@ Ruly::Checks.run_all(local_sources, command_files,
                      skill_files:,
                      find_rule_file: method(:find_rule_file),
                      parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                     profile_paths: build_profile_paths(local_sources))
+                     recipe_paths: build_recipe_paths(local_sources))
 ```
 
-Note: `build_profile_paths` was already added in Task 2.
+Note: `build_recipe_paths` was already added in Task 2.
 
 **Step 4: Run test to verify it passes**
 
@@ -845,9 +845,9 @@ git commit -m "feat: wire duplicate skill requires check into post-squash pipeli
 
 ---
 
-### Task 6: Manual verification with real comms profile
+### Task 6: Manual verification with real comms recipe
 
-**Step 1: Run squash in a temp dir with the comms profile**
+**Step 1: Run squash in a temp dir with the comms recipe**
 
 ```bash
 cd $(mktemp -d) && ruly squash comms
@@ -855,21 +855,21 @@ cd $(mktemp -d) && ruly squash comms
 
 **Step 2: Verify skills no longer contain duplicated content**
 
-Check that `accounts.md` content is NOT in skills that require it (since it's in the comms profile):
+Check that `accounts.md` content is NOT in skills that require it (since it's in the comms recipe):
 
 ```bash
 grep -l "Team Directory" .claude/skills/*/SKILL.md
 ```
 
-Expected: No matches (or only skills whose requires aren't in the profile).
+Expected: No matches (or only skills whose requires aren't in the recipe).
 
 **Step 3: Verify the warning fires for any remaining duplicates**
 
 Look at the squash output for the optimization suggestion message.
 
-**Step 4: Commit (if any profile adjustments needed)**
+**Step 4: Commit (if any recipe adjustments needed)**
 
-Only if the manual test reveals profile config changes are needed.
+Only if the manual test reveals recipe config changes are needed.
 
 ---
 

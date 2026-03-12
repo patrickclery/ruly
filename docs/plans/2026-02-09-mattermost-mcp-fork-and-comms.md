@@ -4,9 +4,9 @@
 
 **Goal:** Fork the pvev/mattermost-mcp server and add DM channel support (mirroring the Teams MCP fork pattern), then create Ruly comms rules for Mattermost DMs with threaded conversations.
 
-**Architecture:** Fork pvev/mattermost-mcp (TypeScript, MCP SDK), add tools for creating DM channels and sending DMs by user ID. Create `rules/comms/mattermost/` mirroring `rules/comms/ms-teams/` with commands, agents, and common config. Add Ruly profile entries for the new MCP server and subagent.
+**Architecture:** Fork pvev/mattermost-mcp (TypeScript, MCP SDK), add tools for creating DM channels and sending DMs by user ID. Create `rules/comms/mattermost/` mirroring `rules/comms/ms-teams/` with commands, agents, and common config. Add Ruly recipe entries for the new MCP server and subagent.
 
-**Tech Stack:** TypeScript, @modelcontextprotocol/sdk, Mattermost REST API v4, Ruly profiles (YAML)
+**Tech Stack:** TypeScript, @modelcontextprotocol/sdk, Mattermost REST API v4, Ruly recipes (YAML)
 
 ---
 
@@ -1082,19 +1082,19 @@ git commit -m "feat: add Mattermost columns to Team Directory"
 
 ---
 
-## Task 12: Add Mattermost profiles to `profiles.yml`
+## Task 12: Add Mattermost recipes to `recipes.yml`
 
 **Files:**
-- Modify: `/Users/patrick/Projects/ruly/profiles.yml`
-- Modify: `/Users/patrick/.config/ruly/profiles.yml` (must match)
+- Modify: `/Users/patrick/Projects/ruly/recipes.yml`
+- Modify: `/Users/patrick/.config/ruly/recipes.yml` (must match)
 
-**Step 1: Read current profiles.yml**
+**Step 1: Read current recipes.yml**
 
 Already read above.
 
-**Step 2: Add Mattermost subagent profile**
+**Step 2: Add Mattermost subagent recipe**
 
-Add after the `ms-teams-dm` profile:
+Add after the `ms-teams-dm` recipe:
 
 ```yaml
   mattermost-dm:
@@ -1107,13 +1107,13 @@ Add after the `ms-teams-dm` profile:
       - mattermost  # For Mattermost MCP calls
 ```
 
-**Step 3: Add `mattermost_dm` subagent to profiles that have `ms_teams_dm`**
+**Step 3: Add `mattermost_dm` subagent to recipes that have `ms_teams_dm`**
 
-For each profile that currently lists `ms_teams_dm` as a subagent (full, jira, comms, agile), add:
+For each recipe that currently lists `ms_teams_dm` as a subagent (full, jira, comms, agile), add:
 
 ```yaml
       - name: mattermost_dm
-        profile: mattermost-dm
+        recipe: mattermost-dm
 ```
 
 And add `- mattermost` to their `mcp_servers` list.
@@ -1121,14 +1121,14 @@ And add `- mattermost` to their `mcp_servers` list.
 **Step 4: Copy to user config**
 
 ```bash
-cp /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/.config/ruly/profiles.yml
+cp /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/.config/ruly/recipes.yml
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add profiles.yml
-git commit -m "feat: add Mattermost DM profiles and subagent config"
+git add recipes.yml
+git commit -m "feat: add Mattermost DM recipes and subagent config"
 ```
 
 ---
@@ -1172,7 +1172,7 @@ git commit -m "docs: add Mattermost commands to README"
 | 9 | Create DM subagent rule | ruly/rules |
 | 10 | Create DM command rule | ruly/rules |
 | 11 | Add Mattermost columns to accounts.md | ruly/rules |
-| 12 | Add profiles for Mattermost | ruly |
+| 12 | Add recipes for Mattermost | ruly |
 | 13 | Update README.md | ruly |
 
 **New tools added to fork:** `mattermost_create_direct_channel`, `mattermost_send_direct_message`, `mattermost_get_direct_channel_posts`, `mattermost_search_users`

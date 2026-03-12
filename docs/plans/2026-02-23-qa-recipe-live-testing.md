@@ -1,12 +1,12 @@
-# QA Profile Live Testing & Improvement Plan
+# QA Recipe Live Testing & Improvement Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Verify and fix the QA profile/skill so it reliably accepts acceptance criteria, logs in, writes a Playwright spec, and runs it — tested live against WA-15829 (manager-to-manager delegation).
+**Goal:** Verify and fix the QA recipe/skill so it reliably accepts acceptance criteria, logs in, writes a Playwright spec, and runs it — tested live against WA-15829 (manager-to-manager delegation).
 
-**Architecture:** Iterative live testing. First verify Playwright infrastructure works (login + existing spec). Then run the QA skill manually in the foreground against real AC (WA-15829). Fix what breaks. Repeat until reliable. The test subject is the profile/skill itself — WA-15829 is just the test case.
+**Architecture:** Iterative live testing. First verify Playwright infrastructure works (login + existing spec). Then run the QA skill manually in the foreground against real AC (WA-15829). Fix what breaks. Repeat until reliable. The test subject is the recipe/skill itself — WA-15829 is just the test case.
 
-**Tech Stack:** Ruly profiles (YAML), Ruly rules (Markdown), automation-test-qa repo (Playwright + TypeScript), `npx playwright test`, `ruly squash`.
+**Tech Stack:** Ruly recipes (YAML), Ruly rules (Markdown), automation-test-qa repo (Playwright + TypeScript), `npx playwright test`, `ruly squash`.
 
 ---
 
@@ -19,22 +19,22 @@ AC3: LM Branch X → delegate to LM Branch Y → succeeds
 AC4: LM Branch X → delegate to DM Branch Y → succeeds
 AC5: DM Dept1/BranchX → delegate to DM Dept2/BranchY → succeeds
 AC6: DM Dept1/BranchX → delegate to LM BranchY → succeeds
-AC7: Delegation shows in Profile Logs (who, location/dept, date range)
+AC7: Delegation shows in Recipe Logs (who, location/dept, date range)
 AC8: Delegated Manager can perform timesheet/leave approvals during effective period
 AC9: No Employees visible in recipient dropdown
 ```
 
-## Context: Current QA Profile State
+## Context: Current QA Recipe State
 
 | Component | File | Status |
 |-----------|------|--------|
-| Profile | `profiles.yml` lines 560-574 | Exists — loads qa-testing.md, playwright.md, jira/, 2 skills, playwright MCP |
+| Recipe | `recipes.yml` lines 560-574 | Exists — loads qa-testing.md, playwright.md, jira/, 2 skills, playwright MCP |
 | Rule | `rules/workaxle/qa/qa-testing.md` | Exists — repo layout, patterns, env config |
 | Skill | `rules/workaxle/skills/run-acceptance-test.md` | Exists — 7-step workflow |
 | Skill | `rules/workaxle/skills/sync-qa-repo.md` | Exists — pull + report |
 | Dispatch | `rules/workaxle/core/dispatches/use-qa.md` | Exists — wired into core |
 | Repo | `/Users/patrick/agents/qa/` | Cloned — has page objects, fixtures, specs |
-| Agent dir | `~/agents/WA-15829/` | Has core profile squashed in CLAUDE.local.md |
+| Agent dir | `~/agents/WA-15829/` | Has core recipe squashed in CLAUDE.local.md |
 
 ## Context: Environment
 
@@ -109,7 +109,7 @@ Use Playwright MCP to navigate to the delegation feature on dev.workaxle.com:
 ```
 Navigate to https://dev.workaxle.com
 After login, find the delegation/temporary access section
-(likely: People > employee profile > Temporary Access tab, or Management > somewhere)
+(likely: People > employee recipe > Temporary Access tab, or Management > somewhere)
 ```
 
 Record the selectors needed for:
@@ -155,16 +155,16 @@ git commit -m "test(WA-15829): add delegation smoke test — navigation only"
 
 ---
 
-## Task 3: Squash QA Profile and Test in Foreground
+## Task 3: Squash QA Recipe and Test in Foreground
 
-This is where we test the actual QA profile/skill. We squash it, start a foreground Claude session, and see if the skill can write and run a spec.
+This is where we test the actual QA recipe/skill. We squash it, start a foreground Claude session, and see if the skill can write and run a spec.
 
-**Files:** None (testing existing profile)
+**Files:** None (testing existing recipe)
 
-**Step 1: Squash the QA profile**
+**Step 1: Squash the QA recipe**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile qa
+cd $(mktemp -d) && ruly squash --recipe qa
 ```
 
 Verify output looks reasonable:
@@ -226,7 +226,7 @@ Based on what Task 3 reveals, fix the rules. Common issues predicted:
 **Files:**
 - Modify: `rules/workaxle/qa/qa-testing.md`
 - Modify: `rules/workaxle/skills/run-acceptance-test.md`
-- Possibly modify: `profiles.yml`
+- Possibly modify: `recipes.yml`
 
 ### Issue A: Agent doesn't know it needs ENV=DEV
 
@@ -249,9 +249,9 @@ ENV=DEV npx playwright test tests/{area}/{feature}.spec.ts
 
 The `playwright.md` rule is 300+ lines of generic Playwright patterns that don't match the automation-test-qa repo patterns. It teaches raw `page.click()` / `page.$()` style instead of the repo's page object + fixture pattern.
 
-Fix: Remove `playwright.md` from the QA profile — the `qa-testing.md` already covers the correct patterns.
+Fix: Remove `playwright.md` from the QA recipe — the `qa-testing.md` already covers the correct patterns.
 
-In `profiles.yml`, change:
+In `recipes.yml`, change:
 
 ```yaml
   qa:
@@ -301,20 +301,20 @@ Fix: Add to the skill workflow a note to test ONE AC first, verify it works, the
 cd /Users/patrick/Projects/ruly/rules
 git add workaxle/qa/qa-testing.md workaxle/skills/run-acceptance-test.md
 cd /Users/patrick/Projects/ruly
-git add profiles.yml
-git commit -m "fix(qa): improve QA profile based on live testing — ENV=DEV, remove playwright.md, explicit selector discovery"
+git add recipes.yml
+git commit -m "fix(qa): improve QA recipe based on live testing — ENV=DEV, remove playwright.md, explicit selector discovery"
 ```
 
 ---
 
-## Task 5: Re-test with Fixed Profile
+## Task 5: Re-test with Fixed Recipe
 
-Repeat Task 3 with the fixed profile. This is the GREEN phase.
+Repeat Task 3 with the fixed recipe. This is the GREEN phase.
 
 **Step 1: Re-squash**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile qa
+cd $(mktemp -d) && ruly squash --recipe qa
 cp CLAUDE.local.md /Users/patrick/agents/qa/CLAUDE.local.md
 ```
 
@@ -338,7 +338,7 @@ Give it the same 3 AC from WA-15829.
 
 ---
 
-## Task 6: Refactor — Trim and Focus the Profile
+## Task 6: Refactor — Trim and Focus the Recipe
 
 Once the skill works end-to-end, simplify.
 
@@ -349,7 +349,7 @@ Once the skill works end-to-end, simplify.
 **Step 1: Measure token count**
 
 ```bash
-cd $(mktemp -d) && ruly squash --profile qa && ruly stats
+cd $(mktemp -d) && ruly squash --recipe qa && ruly stats
 ```
 
 **Step 2: Remove anything the agent didn't use**
@@ -369,8 +369,8 @@ Quick validation — give it 1 AC and confirm it still works.
 cd /Users/patrick/Projects/ruly/rules
 git add workaxle/qa/qa-testing.md workaxle/skills/run-acceptance-test.md
 cd /Users/patrick/Projects/ruly
-git add profiles.yml
-git commit -m "refactor(qa): trim QA profile — remove unused sections, focus instructions"
+git add recipes.yml
+git commit -m "refactor(qa): trim QA recipe — remove unused sections, focus instructions"
 ```
 
 ---
@@ -393,7 +393,7 @@ In the session:
 Test the delegation AC for WA-15829 on dev.workaxle.com
 ```
 
-The core profile should recognize this as a QA task and dispatch to the `qa_tester` subagent.
+The core recipe should recognize this as a QA task and dispatch to the `qa_tester` subagent.
 
 **Step 2: Verify dispatch works**
 
@@ -413,14 +413,14 @@ If dispatch doesn't trigger, check `rules/workaxle/core/dispatches/use-qa.md`.
 |------|-------|------|---------------|
 | 1 | Setup | Verify Playwright infra (login + existing spec) | Quick |
 | 2 | RED | Write manual delegation smoke test | Quick |
-| 3 | RED | Squash QA profile, test in foreground with WA-15829 AC | Medium |
+| 3 | RED | Squash QA recipe, test in foreground with WA-15829 AC | Medium |
 | 4 | GREEN | Fix rules based on live failures | Medium |
-| 5 | GREEN | Re-test with fixed profile | Medium |
-| 6 | REFACTOR | Trim profile, verify still works | Quick |
+| 5 | GREEN | Re-test with fixed recipe | Medium |
+| 6 | REFACTOR | Trim recipe, verify still works | Quick |
 | 7 | VALIDATE | Test via core dispatch (subagent mode) | Quick |
 
 **Key predicted fixes:**
 1. Add `ENV=DEV` to all test commands
-2. Remove `playwright.md` from profile (conflicts with repo patterns)
+2. Remove `playwright.md` from recipe (conflicts with repo patterns)
 3. Make Playwright MCP selector discovery explicit in the skill
 4. Add "test one AC first" guidance

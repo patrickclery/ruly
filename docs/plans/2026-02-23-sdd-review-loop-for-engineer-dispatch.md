@@ -6,96 +6,96 @@
 
 **Architecture:** The `core_engineer` becomes the single implementation subagent. It already has a superset of everything `bug_fix` and `core_architect` load. The dispatcher routes all coding work (features, bug fixes, design questions) to `core_engineer`. After every dispatch, the SDD review loop runs using the existing reviewer prompt templates from the SDD skill.
 
-**Tech Stack:** Ruly profiles (YAML), markdown dispatch rules
+**Tech Stack:** Ruly recipes (YAML), markdown dispatch rules
 
 ---
 
-### Task 1: Remove `bug_fix` subagent from profiles.yml
+### Task 1: Remove `bug_fix` subagent from recipes.yml
 
 **Files:**
-- Modify: `profiles.yml`
+- Modify: `recipes.yml`
 
-**Step 1: Remove `bug_fix` from the `core` profile's subagents list**
+**Step 1: Remove `bug_fix` from the `core` recipe's subagents list**
 
-Delete these lines from the core profile subagents section (~lines 86-87):
+Delete these lines from the core recipe subagents section (~lines 86-87):
 ```yaml
       - name: bug_fix
-        profile: bug-fix
+        recipe: bug-fix
 ```
 
-**Step 2: Remove `bug_fix` from the `orchestrator` profile's subagents list**
+**Step 2: Remove `bug_fix` from the `orchestrator` recipe's subagents list**
 
-Delete these lines from the orchestrator profile subagents section (~lines 502-503):
+Delete these lines from the orchestrator recipe subagents section (~lines 502-503):
 ```yaml
       - name: bug_fix
-        profile: bug-fix
+        recipe: bug-fix
 ```
 
-**Step 3: Remove the `bug-fix` profile definition entirely**
+**Step 3: Remove the `bug-fix` recipe definition entirely**
 
-Delete the entire `bug-fix:` profile block (~lines 850-881).
+Delete the entire `bug-fix:` recipe block (~lines 850-881).
 
 **Step 4: Verify YAML is valid**
 
-Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/profiles.yml')"`
+Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/recipes.yml')"`
 Expected: No error output
 
 ---
 
-### Task 2: Remove `core_architect` subagent from profiles.yml
+### Task 2: Remove `core_architect` subagent from recipes.yml
 
 **Files:**
-- Modify: `profiles.yml`
+- Modify: `recipes.yml`
 
-**Step 1: Remove `core_architect` from the `core` profile's subagents list**
+**Step 1: Remove `core_architect` from the `core` recipe's subagents list**
 
 Delete these lines (~lines 76-77):
 ```yaml
       - name: core_architect
-        profile: core-architect
+        recipe: core-architect
 ```
 
-**Step 2: Remove `use-core-architect.md` from the `core` profile's files list**
+**Step 2: Remove `use-core-architect.md` from the `core` recipe's files list**
 
 Delete this line (~line 33):
 ```yaml
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
 ```
 
-**Step 3: Remove `core_architect` from the `orchestrator` profile's subagents list**
+**Step 3: Remove `core_architect` from the `orchestrator` recipe's subagents list**
 
 Delete these lines (~lines 466-467):
 ```yaml
       - name: core_architect
-        profile: core-architect
+        recipe: core-architect
 ```
 
-**Step 4: Remove `use-core-architect.md` from the `orchestrator` profile's files list**
+**Step 4: Remove `use-core-architect.md` from the `orchestrator` recipe's files list**
 
-Find and delete this line from the orchestrator profile:
+Find and delete this line from the orchestrator recipe:
 ```yaml
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-architect.md
 ```
 
-**Step 5: Remove the `core-architect` profile definition entirely**
+**Step 5: Remove the `core-architect` recipe definition entirely**
 
-Delete the entire `core-architect:` profile block (~lines 739-768).
+Delete the entire `core-architect:` recipe block (~lines 739-768).
 
 **Step 6: Verify YAML is valid**
 
-Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/profiles.yml')"`
+Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/recipes.yml')"`
 Expected: No error output
 
 ---
 
-### Task 3: Add SDD reviewer prompt templates to core profile
+### Task 3: Add SDD reviewer prompt templates to core recipe
 
 **Files:**
-- Modify: `profiles.yml`
+- Modify: `recipes.yml`
 
-**Step 1: Add the two SDD reviewer prompt files to the core profile**
+**Step 1: Add the two SDD reviewer prompt files to the core recipe**
 
-In `profiles.yml`, inside the `core:` profile's `files:` list, add after the Context Fetching section and before `subagents:`:
+In `recipes.yml`, inside the `core:` recipe's `files:` list, add after the Context Fetching section and before `subagents:`:
 
 ```yaml
       # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
@@ -105,11 +105,11 @@ In `profiles.yml`, inside the `core:` profile's `files:` list, add after the Con
 
 **Why not the full SKILL.md?** It describes multi-task plan execution with TodoWrite. The dispatcher only needs the review portion — the prompt templates for dispatching reviewers.
 
-**Why not implementer-prompt.md?** The `core_engineer` IS the implementer. It already has TDD, coding standards, and verification via its profile.
+**Why not implementer-prompt.md?** The `core_engineer` IS the implementer. It already has TDD, coding standards, and verification via its recipe.
 
 **Step 2: Verify YAML is valid**
 
-Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/profiles.yml')"`
+Run: `ruby -ryaml -e "YAML.load_file('/Users/patrick/Projects/ruly/recipes.yml')"`
 Expected: No error output
 
 ---
@@ -130,16 +130,16 @@ Run: `git rm rules/workaxle/core/dispatches/use-core-architect.md`
 **Files:**
 - Delete: `rules/workaxle/core/dispatches/bug-fix.md`
 
-**Step 1: Remove `bug-fix.md` from the `core` profile's files list in profiles.yml**
+**Step 1: Remove `bug-fix.md` from the `core` recipe's files list in recipes.yml**
 
 Delete this line (~line 38):
 ```yaml
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/bug-fix.md
 ```
 
-**Step 2: Remove `bug-fix.md` from the `orchestrator` profile's files list in profiles.yml**
+**Step 2: Remove `bug-fix.md` from the `orchestrator` recipe's files list in recipes.yml**
 
-Find and delete the corresponding line from the orchestrator profile.
+Find and delete the corresponding line from the orchestrator recipe.
 
 **Step 3: Delete the file**
 
@@ -152,9 +152,9 @@ Run: `git rm rules/workaxle/core/dispatches/bug-fix.md`
 **Files:**
 - Delete: `rules/workaxle/core/skills/bug-fix.md`
 
-**Step 1: Remove from any profile that loads it**
+**Step 1: Remove from any recipe that loads it**
 
-Search profiles.yml for references to `rules/workaxle/core/skills/bug-fix.md` and remove those lines.
+Search recipes.yml for references to `rules/workaxle/core/skills/bug-fix.md` and remove those lines.
 
 **Step 2: Delete the file**
 
@@ -360,38 +360,38 @@ After: `5. If fix approved, dispatch `core_engineer` subagent`
 
 ---
 
-### Task 12: Sync profile files
+### Task 12: Sync recipe files
 
 **Files:**
-- Modify: `~/.config/ruly/profiles.yml`
-- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/profiles.yml`
+- Modify: `~/.config/ruly/recipes.yml`
+- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/recipes.yml`
 
-**Step 1: Apply ALL profile changes from Tasks 1-3 and 5-6 to both files**
+**Step 1: Apply ALL recipe changes from Tasks 1-3 and 5-6 to both files**
 
-Both files must mirror the changes made to the project's `profiles.yml`:
-- Remove `bug_fix` subagent and `bug-fix` profile
-- Remove `core_architect` subagent and `core-architect` profile
+Both files must mirror the changes made to the project's `recipes.yml`:
+- Remove `bug_fix` subagent and `bug-fix` recipe
+- Remove `core_architect` subagent and `core-architect` recipe
 - Remove `use-core-architect.md` and `bug-fix.md` from file lists
 - Remove `bug-fix.md` skill from file lists
-- Add SDD reviewer prompt templates to core profile
+- Add SDD reviewer prompt templates to core recipe
 
 **Step 2: Verify all three files match**
 
-Run: `diff /Users/patrick/Projects/ruly/profiles.yml ~/.config/ruly/profiles.yml`
+Run: `diff /Users/patrick/Projects/ruly/recipes.yml ~/.config/ruly/recipes.yml`
 Expected: No output (files match)
 
-Run: `diff /Users/patrick/Projects/ruly/profiles.yml /Users/patrick/Projects/chezmoi/config/ruly/profiles.yml`
+Run: `diff /Users/patrick/Projects/ruly/recipes.yml /Users/patrick/Projects/chezmoi/config/ruly/recipes.yml`
 Expected: No output (files match)
 
 ---
 
 ### Task 13: Test with ruly squash
 
-**Step 1: Squash the core profile in a temp directory**
+**Step 1: Squash the core recipe in a temp directory**
 
 Run:
 ```bash
-cd $(mktemp -d) && ruly squash --profile core
+cd $(mktemp -d) && ruly squash --recipe core
 ```
 
 Expected: Squash completes without errors. The output should contain:
@@ -416,7 +416,7 @@ In the squashed output, confirm these anchor targets exist:
 
 ```bash
 cd /Users/patrick/Projects/ruly
-git add -A profiles.yml rules/workaxle/core/dispatches/ rules/workaxle/core/skills/ rules/workaxle/core/commands/ rules/workaxle/orchestrator/ rules/bug/
+git add -A recipes.yml rules/workaxle/core/dispatches/ rules/workaxle/core/skills/ rules/workaxle/core/commands/ rules/workaxle/orchestrator/ rules/bug/
 git commit -m "refactor: consolidate bug_fix and core_architect into core_engineer with SDD review
 
 Remove bug_fix and core_architect subagents. The core_engineer handles

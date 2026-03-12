@@ -27,35 +27,35 @@ RSpec.describe Ruly::CLI, type: :cli do
       File.write(File.join(test_dir, 'rules', 'test.md'), '# Test Rule')
 
       allow(cli).to receive_messages(gem_root: test_dir,
-                                     profiles_file: File.join(test_dir, 'profiles.yml'),
+                                     recipes_file: File.join(test_dir, 'recipes.yml'),
                                      rules_dir: File.join(test_dir, 'rules'))
     end
 
-    context 'when a subagent profile has its own subagents' do
+    context 'when a subagent recipe has its own subagents' do
       before do
-        profiles_content = {
+        recipes_content = {
           'child-with-subagents' => {
             'description' => 'Child that has its own subagents',
             'files' => ['rules/test.md'],
             'subagents' => [
-              {'name' => 'grandchild', 'profile' => 'grandchild-profile'}
+              {'name' => 'grandchild', 'recipe' => 'grandchild-recipe'}
             ]
           },
-          'grandchild-profile' => {
-            'description' => 'Grandchild profile',
+          'grandchild-recipe' => {
+            'description' => 'Grandchild recipe',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent profile',
+            'description' => 'Parent recipe',
             'files' => ['rules/test.md'],
             'subagents' => [
-              {'name' => 'nested_one', 'profile' => 'child-with-subagents'}
+              {'name' => 'nested_one', 'recipe' => 'child-with-subagents'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 
@@ -70,24 +70,24 @@ RSpec.describe Ruly::CLI, type: :cli do
       end
     end
 
-    context 'when a subagent profile has no subagents (leaf node)' do
+    context 'when a subagent recipe has no subagents (leaf node)' do
       before do
-        profiles_content = {
-          'leaf-profile' => {
-            'description' => 'Leaf profile with no subagents',
+        recipes_content = {
+          'leaf-recipe' => {
+            'description' => 'Leaf recipe with no subagents',
             'files' => ['rules/test.md']
           },
           'parent' => {
-            'description' => 'Parent profile',
+            'description' => 'Parent recipe',
             'files' => ['rules/test.md'],
             'subagents' => [
-              {'name' => 'leaf_agent', 'profile' => 'leaf-profile'}
+              {'name' => 'leaf_agent', 'recipe' => 'leaf-recipe'}
             ]
           }
         }
 
         # rubocop:disable RSpec/AnyInstance
-        allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+        allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
         # rubocop:enable RSpec/AnyInstance
       end
 

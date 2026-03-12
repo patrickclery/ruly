@@ -20,14 +20,14 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'append repo content' do
       context = {
         agent_name: 'test_agent',
         description: 'Test',
-        local_sources: [{ content: '# Profile Rule' }],
+        local_sources: [{ content: '# Recipe Rule' }],
         repo_content: "## Repository Context\n\n# My Repo\n\nGuidance here."
       }
 
       output = StringIO.new
       described_class.write_agent_content(output, context)
 
-      expect(output.string).to include('# Profile Rule')
+      expect(output.string).to include('# Recipe Rule')
       expect(output.string).to include('## Repository Context')
       expect(output.string).to include('Guidance here.')
     end
@@ -62,7 +62,7 @@ RSpec.describe Ruly::Services::SubagentProcessor, 'append repo content' do
   end
 
   describe '.collect_hooks' do
-    it 'returns hooks from parent profile config' do
+    it 'returns hooks from parent recipe config' do
       parent = {
         'hooks' => {
           'WorktreeCreate' => [{ 'hooks' => [{ 'type' => 'command', 'command' => 'test.sh' }] }]

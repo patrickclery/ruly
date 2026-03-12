@@ -2,129 +2,129 @@
 
 module Ruly
   module Services
-    # Handles profile YAML loading, validation, and source processing.
-    # Extracted from CLI to keep profile logic self-contained.
-    module ProfileLoader # rubocop:disable Metrics/ModuleLength
+    # Handles recipe YAML loading, validation, and source processing.
+    # Extracted from CLI to keep recipe logic self-contained.
+    module RecipeLoader # rubocop:disable Metrics/ModuleLength
       module_function
 
-      # Main entry point: loads and processes a profile's sources.
-      # Returns [sources_array, profile_config].
+      # Main entry point: loads and processes a recipe's sources.
+      # Returns [sources_array, recipe_config].
       #
-      # @param profile_name [String]
+      # @param recipe_name [String]
       # @param gem_root [String] root directory of the gem/project
-      # @param scan_files_for_profile_tags [Proc, nil] optional callback for tag scanning
+      # @param scan_files_for_recipe_tags [Proc, nil] optional callback for tag scanning
       # @return [Array<(Array<Hash>, Hash)>]
-      def load_profile_sources(profile_name, gem_root:, base_profiles_file: nil,
-                              profiles: nil, scan_files_for_profile_tags: nil)
-        profiles ||= begin
-          validate_profiles_file!(gem_root:)
-          load_all_profiles(base_profiles_file:, gem_root:)
+      def load_recipe_sources(recipe_name, gem_root:, base_recipes_file: nil,
+                              recipes: nil, scan_files_for_recipe_tags: nil)
+        recipes ||= begin
+          validate_recipes_file!(gem_root:)
+          load_all_recipes(base_recipes_file:, gem_root:)
         end
-        profile = validate_profile!(profile_name, profiles)
+        recipe = validate_recipe!(recipe_name, recipes)
 
         sources = []
 
-        process_profile_files(profile, sources, gem_root:)
-        process_profile_skills(profile, sources, gem_root:)
-        process_profile_commands(profile, sources, gem_root:)
-        process_profile_scripts(profile, sources, gem_root:)
-        process_profile_sources(profile, sources, gem_root:)
-        process_legacy_remote_sources(profile, sources)
+        process_recipe_files(recipe, sources, gem_root:)
+        process_recipe_skills(recipe, sources, gem_root:)
+        process_recipe_commands(recipe, sources, gem_root:)
+        process_recipe_scripts(recipe, sources, gem_root:)
+        process_recipe_sources(recipe, sources, gem_root:)
+        process_legacy_remote_sources(recipe, sources)
 
-        # Scan for files with matching profile tags in frontmatter
-        if scan_files_for_profile_tags
-          tagged_sources = scan_files_for_profile_tags.call(profile_name)
+        # Scan for files with matching recipe tags in frontmatter
+        if scan_files_for_recipe_tags
+          tagged_sources = scan_files_for_recipe_tags.call(recipe_name)
 
-          # Merge tagged sources with profile sources, deduplicating by path
+          # Merge tagged sources with recipe sources, deduplicating by path
           existing_paths = sources.to_set { |s| s[:path] }
           tagged_sources.each do |tagged_source|
             sources << tagged_source unless existing_paths.include?(tagged_source[:path])
           end
         end
 
-        [sources, profile]
+        [sources, recipe]
       end
 
-      # Validates that a profiles.yml file exists.
+      # Validates that a recipes.yml file exists.
       #
       # @param gem_root [String]
-      # @raise [SystemExit] if profiles.yml not found
-      def validate_profiles_file!(gem_root:)
-        return if File.exist?(profiles_file_path(gem_root))
+      # @raise [SystemExit] if recipes.yml not found
+      def validate_recipes_file!(gem_root:)
+        return if File.exist?(recipes_file_path(gem_root))
 
-        puts "\u274C profiles.yml not found"
+        puts "\u274C recipes.yml not found"
         exit 1
       end
 
-      # Returns the path to the base profiles.yml file.
+      # Returns the path to the base recipes.yml file.
       #
       # @param gem_root [String]
       # @return [String]
-      def profiles_file_path(gem_root)
-        File.join(gem_root, 'profiles.yml')
+      def recipes_file_path(gem_root)
+        File.join(gem_root, 'recipes.yml')
       end
 
-      # Returns the path to the user's profiles.yml config file.
+      # Returns the path to the user's recipes.yml config file.
       #
       # @return [String]
-      def user_profiles_file
+      def user_recipes_file
         config_dir = File.join(Dir.home, '.config', 'ruly')
         FileUtils.mkdir_p(config_dir)
-        File.join(config_dir, 'profiles.yml')
+        File.join(config_dir, 'recipes.yml')
       end
 
-      # Loads all profiles from base and user config files, merged.
+      # Loads all recipes from base and user config files, merged.
       #
       # @param gem_root [String]
       # @param gem_root [String]
-      # @param base_profiles_file [String, nil] override for the base profiles.yml path
+      # @param base_recipes_file [String, nil] override for the base recipes.yml path
       # @return [Hash]
-      def load_all_profiles(gem_root:, base_profiles_file: nil)
-        profiles = {}
+      def load_all_recipes(gem_root:, base_recipes_file: nil)
+        recipes = {}
 
-        # Load base profiles
-        base_file = base_profiles_file || profiles_file_path(gem_root)
+        # Load base recipes
+        base_file = base_recipes_file || recipes_file_path(gem_root)
         if File.exist?(base_file)
           base_config = YAML.safe_load_file(base_file, aliases: true) || {}
-          profiles.merge!(base_config['profiles'] || {})
+          recipes.merge!(base_config['recipes'] || {})
         end
 
-        # Load user config profiles (highest priority)
-        user_config_file = File.expand_path('~/.config/ruly/profiles.yml')
+        # Load user config recipes (highest priority)
+        user_config_file = File.expand_path('~/.config/ruly/recipes.yml')
         if File.exist?(user_config_file)
           user_config = YAML.safe_load_file(user_config_file, aliases: true) || {}
-          profiles.merge!(user_config['profiles'] || {})
+          recipes.merge!(user_config['recipes'] || {})
         end
 
-        resolve_extends!(profiles)
+        resolve_extends!(recipes)
 
-        profiles
+        recipes
       end
 
-      # Validates that a profile exists in the loaded config.
+      # Validates that a recipe exists in the loaded config.
       #
-      # @param profile_name [String]
-      # @param profiles [Hash]
-      # @return [Hash, Array] the profile config
-      # @raise [Thor::Error] if profile not found
-      def validate_profile!(profile_name, profiles)
-        profile = profiles[profile_name]
-        return profile if profile
+      # @param recipe_name [String]
+      # @param recipes [Hash]
+      # @return [Hash, Array] the recipe config
+      # @raise [Thor::Error] if recipe not found
+      def validate_recipe!(recipe_name, recipes)
+        recipe = recipes[recipe_name]
+        return recipe if recipe
 
-        puts "\u274C Profile '#{profile_name}' not found"
-        puts "Available profiles: #{profiles.keys.join(', ')}"
-        raise Thor::Error, "Profile '#{profile_name}' not found"
+        puts "\u274C Recipe '#{recipe_name}' not found"
+        puts "Available recipes: #{recipes.keys.join(', ')}"
+        raise Thor::Error, "Recipe '#{recipe_name}' not found"
       end
 
-      # Processes the 'files' key from a profile config.
+      # Processes the 'files' key from a recipe config.
       #
-      # @param profile [Hash, Array] profile config (Array for agent profiles)
+      # @param recipe [Hash, Array] recipe config (Array for agent recipes)
       # @param sources [Array<Hash>] accumulator for sources
       # @param gem_root [String]
-      def process_profile_files(profile, sources, gem_root:)
-        # For agent profiles (arrays), the profile itself is the list of files
-        # For standard profiles (hashes), the files are in profile['files']
-        files = profile.is_a?(Array) ? profile : profile['files']
+      def process_recipe_files(recipe, sources, gem_root:)
+        # For agent recipes (arrays), the recipe itself is the list of files
+        # For standard recipes (hashes), the files are in recipe['files']
+        files = recipe.is_a?(Array) ? recipe : recipe['files']
 
         files&.each do |file|
           full_path = find_rule_file(file, gem_root:)
@@ -148,29 +148,29 @@ module Ruly
         end
       end
 
-      # Processes the 'skills' key from a profile config.
-      def process_profile_skills(profile, sources, gem_root:)
-        process_categorized_key(profile, sources, category: :skill, gem_root:, key: 'skills')
+      # Processes the 'skills' key from a recipe config.
+      def process_recipe_skills(recipe, sources, gem_root:)
+        process_categorized_key(recipe, sources, category: :skill, gem_root:, key: 'skills')
       end
 
-      # Processes the 'commands' key from a profile config.
-      def process_profile_commands(profile, sources, gem_root:)
-        process_categorized_key(profile, sources, category: :command, gem_root:, key: 'commands')
+      # Processes the 'commands' key from a recipe config.
+      def process_recipe_commands(recipe, sources, gem_root:)
+        process_categorized_key(recipe, sources, category: :command, gem_root:, key: 'commands')
       end
 
-      # Processes a categorized profile key (skills or commands) into sources.
+      # Processes a categorized recipe key (skills or commands) into sources.
       # Both keys share the same logic: resolve files, expand directories to .md files,
       # and tag with the appropriate category marker.
       #
-      # @param profile [Hash, Array] profile config
+      # @param recipe [Hash, Array] recipe config
       # @param sources [Array<Hash>] accumulator for sources
-      # @param key [String] profile key name ('skills' or 'commands')
+      # @param key [String] recipe key name ('skills' or 'commands')
       # @param category [Symbol] category marker (:skill or :command)
       # @param gem_root [String]
-      def process_categorized_key(profile, sources, category:, gem_root:, key:)
-        return if profile.is_a?(Array)
+      def process_categorized_key(recipe, sources, category:, gem_root:, key:)
+        return if recipe.is_a?(Array)
 
-        profile[key]&.each do |file|
+        recipe[key]&.each do |file|
           full_path = find_rule_file(file, gem_root:)
           if full_path
             if File.directory?(full_path)
@@ -186,15 +186,15 @@ module Ruly
         end
       end
 
-      # Processes the 'scripts' key from a profile config.
+      # Processes the 'scripts' key from a recipe config.
       #
-      # @param profile [Hash, Array] profile config
+      # @param recipe [Hash, Array] recipe config
       # @param sources [Array<Hash>] accumulator for sources
       # @param gem_root [String]
-      def process_profile_scripts(profile, sources, gem_root:)
-        return if profile.is_a?(Array)
+      def process_recipe_scripts(recipe, sources, gem_root:)
+        return if recipe.is_a?(Array)
 
-        profile['scripts']&.each do |file|
+        recipe['scripts']&.each do |file|
           full_path = find_rule_file(file, gem_root:)
           if full_path
             if File.directory?(full_path)
@@ -211,16 +211,16 @@ module Ruly
         end
       end
 
-      # Processes the 'sources' key from a profile config.
+      # Processes the 'sources' key from a recipe config.
       #
-      # @param profile [Hash, Array]
+      # @param recipe [Hash, Array]
       # @param sources [Array<Hash>]
       # @param gem_root [String]
-      def process_profile_sources(profile, sources, gem_root:)
-        # Agent profiles (arrays) don't have sources, only files
-        return if profile.is_a?(Array)
+      def process_recipe_sources(recipe, sources, gem_root:)
+        # Agent recipes (arrays) don't have sources, only files
+        return if recipe.is_a?(Array)
 
-        sources_list = profile['sources'] || []
+        sources_list = recipe['sources'] || []
         sources_list.each do |source_spec|
           process_source_spec(source_spec, sources, gem_root:)
         end
@@ -328,7 +328,7 @@ module Ruly
       end
 
       # Processes a local directory, adding all .md files.
-      # Script files are no longer auto-included; use the explicit 'scripts' profile key instead.
+      # Script files are no longer auto-included; use the explicit 'scripts' recipe key instead.
       #
       # @param directory_path [String]
       # @param sources [Array<Hash>]
@@ -357,15 +357,15 @@ module Ruly
         end
       end
 
-      # Handles legacy 'remote_sources' key from profile config.
+      # Handles legacy 'remote_sources' key from recipe config.
       #
-      # @param profile [Hash, Array]
+      # @param recipe [Hash, Array]
       # @param sources [Array<Hash>]
-      def process_legacy_remote_sources(profile, sources)
-        # Agent profiles (arrays) don't have remote_sources
-        return if profile.is_a?(Array)
+      def process_legacy_remote_sources(recipe, sources)
+        # Agent recipes (arrays) don't have remote_sources
+        return if recipe.is_a?(Array)
 
-        profile['remote_sources']&.each do |url|
+        recipe['remote_sources']&.each do |url|
           sources << {path: url, type: 'remote'}
         end
       end
@@ -373,59 +373,59 @@ module Ruly
       # Array keys that get merged via union (concat + uniq).
       ARRAY_MERGE_KEYS = %w[files skills commands scripts sources remote_sources mcp_servers omit_command_prefix].freeze
 
-      # Resolve all `extends:` declarations in the profiles hash, in-place.
+      # Resolve all `extends:` declarations in the recipes hash, in-place.
       #
-      # @param profiles [Hash] all loaded profiles (mutated in place)
+      # @param recipes [Hash] all loaded recipes (mutated in place)
       # @raise [Ruly::Error] on circular extends references or missing parent
-      def resolve_extends!(profiles)
+      def resolve_extends!(recipes)
         resolved = Set.new
 
-        profiles.each_key do |name|
-          resolve_single_extends!(name, profiles, resolved, Set.new)
+        recipes.each_key do |name|
+          resolve_single_extends!(name, recipes, resolved, Set.new)
         end
       end
 
-      # Recursively resolve extends for a single profile.
+      # Recursively resolve extends for a single recipe.
       #
-      # @param name [String] profile name
-      # @param profiles [Hash] all profiles
-      # @param resolved [Set] already fully-resolved profile names
+      # @param name [String] recipe name
+      # @param recipes [Hash] all recipes
+      # @param resolved [Set] already fully-resolved recipe names
       # @param in_progress [Set] currently being resolved (cycle detection)
-      def resolve_single_extends!(name, profiles, resolved, in_progress)
+      def resolve_single_extends!(name, recipes, resolved, in_progress)
         return if resolved.include?(name)
 
-        profile = profiles[name]
-        return unless profile.is_a?(Hash) && profile['extends']
+        recipe = recipes[name]
+        return unless recipe.is_a?(Hash) && recipe['extends']
 
-        parent_name = profile['extends']
+        parent_name = recipe['extends']
 
         if in_progress.include?(name)
           raise Ruly::Error, "Circular extends detected: #{in_progress.to_a.join(' -> ')} -> #{name}"
         end
 
-        unless profiles.key?(parent_name)
+        unless recipes.key?(parent_name)
           raise Ruly::Error,
-                "Profile '#{name}' extends '#{parent_name}', but '#{parent_name}' does not exist"
+                "Recipe '#{name}' extends '#{parent_name}', but '#{parent_name}' does not exist"
         end
 
         in_progress.add(name)
 
         # Resolve parent first (handles transitive extends)
-        resolve_single_extends!(parent_name, profiles, resolved, in_progress)
+        resolve_single_extends!(parent_name, recipes, resolved, in_progress)
 
-        parent = profiles[parent_name]
-        merge_profile!(profile, parent)
-        profile.delete('extends')
+        parent = recipes[parent_name]
+        merge_recipe!(recipe, parent)
+        recipe.delete('extends')
 
         in_progress.delete(name)
         resolved.add(name)
       end
 
-      # Merge parent profile keys into child profile (in-place).
+      # Merge parent recipe keys into child recipe (in-place).
       #
-      # @param child [Hash] child profile (mutated)
-      # @param parent [Hash] parent profile (read-only)
-      def merge_profile!(child, parent)
+      # @param child [Hash] child recipe (mutated)
+      # @param parent [Hash] parent recipe (read-only)
+      def merge_recipe!(child, parent)
         parent.each do |key, parent_value|
           next if key == 'extends'
 

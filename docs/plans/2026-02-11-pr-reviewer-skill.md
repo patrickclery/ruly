@@ -4,7 +4,7 @@
 
 **Goal:** Create a PR review skill that fetches context, verifies readiness gates, runs code review against WorkAxle standards, and guides interactive comment posting.
 
-**Architecture:** A new skill file in `rules/github/pr/skills/` defines the review workflow. The context fetcher subagent gets an optional `--author` parameter for reviewing others' PRs. The existing `review` profile is renamed to `reviewer` and wired to this skill plus WorkAxle coding standards.
+**Architecture:** A new skill file in `rules/github/pr/skills/` defines the review workflow. The context fetcher subagent gets an optional `--author` parameter for reviewing others' PRs. The existing `review` recipe is renamed to `reviewer` and wired to this skill plus WorkAxle coding standards.
 
 **Tech Stack:** Ruly rules/skills, gh CLI, context fetcher subagent, superpowers:code-reviewer
 
@@ -296,13 +296,13 @@ against WorkAxle standards → interactive comment posting → submit review"
 
 ---
 
-### Task 3: Rename `review` Profile to `reviewer` and Wire New Skill
+### Task 3: Rename `review` Recipe to `reviewer` and Wire New Skill
 
 **Files:**
-- Modify: `profiles.yml` (lines 277-285)
-- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/profiles.yml` (same section)
+- Modify: `recipes.yml` (lines 277-285)
+- Modify: `/Users/patrick/Projects/chezmoi/config/ruly/recipes.yml` (same section)
 
-**Step 1: Replace the `review` profile with `reviewer` in `profiles.yml`**
+**Step 1: Replace the `review` recipe with `reviewer` in `recipes.yml`**
 
 Replace lines 277-285:
 
@@ -336,25 +336,25 @@ With:
       - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
     subagents:
       - name: context_fetcher
-        profile: context-fetcher
+        recipe: context-fetcher
 ```
 
 **Step 2: Apply the exact same change to the chezmoi config**
 
-Replace the same `review:` block in `/Users/patrick/Projects/chezmoi/config/ruly/profiles.yml` with the identical `reviewer:` block.
+Replace the same `review:` block in `/Users/patrick/Projects/chezmoi/config/ruly/recipes.yml` with the identical `reviewer:` block.
 
-**Step 3: Verify no other profiles reference the old `review` name**
+**Step 3: Verify no other recipes reference the old `review` name**
 
-Search for `profile: review` in both profile files to ensure nothing dispatches to the old name.
+Search for `recipe: review` in both recipe files to ensure nothing dispatches to the old name.
 
 **Step 4: Commit**
 
 ```bash
-git add profiles.yml
-git commit -m "feat: rename review profile to reviewer, wire reviewing-prs skill
+git add recipes.yml
+git commit -m "feat: rename review recipe to reviewer, wire reviewing-prs skill
 
-Replaces the old review profile (QA stage) with a focused PR code
-review profile including readiness gates, WorkAxle standards, and
+Replaces the old review recipe (QA stage) with a focused PR code
+review recipe including readiness gates, WorkAxle standards, and
 interactive commenting via superpowers:code-reviewer."
 ```
 
@@ -388,9 +388,9 @@ git push
 
 ```bash
 cd /Users/patrick/Projects/chezmoi
-# The profiles.yml change was already made in Task 3
-git add config/ruly/profiles.yml
-git commit -m "feat: rename review profile to reviewer"
+# The recipes.yml change was already made in Task 3
+git add config/ruly/recipes.yml
+git commit -m "feat: rename review recipe to reviewer"
 git push
 cd /Users/patrick/Projects/ruly
 ```
@@ -403,7 +403,7 @@ cd /Users/patrick/Projects/ruly
 
 ```bash
 cd $(mktemp -d)
-ruly squash --profile reviewer
+ruly squash --recipe reviewer
 ```
 
 Expected: Squash completes without errors, output includes the reviewing-prs skill content and all `requires:` dependencies.

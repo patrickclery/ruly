@@ -1,12 +1,12 @@
-# Profile definitions for Ruly
-# Each profile defines a collection of rule files to combine
-# Use 'ruly import --profile <name>' or 'ruly squash --profile <name>' to use a specific profile
+# Recipe definitions for Ruly
+# Each recipe defines a collection of rule files to combine
+# Use 'ruly import --recipe <name>' or 'ruly squash --recipe <name>' to use a specific recipe
 
-# Global default tier (can be overridden per profile or in user config)
+# Global default tier (can be overridden per recipe or in user config)
 tier: claude_pro
 
-profiles:
-  # WorkAxle profiles - Dynamic loading based on current task
+recipes:
+  # WorkAxle recipes - Dynamic loading based on current task
   core:
     description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
     omit_command_prefix:
@@ -49,47 +49,47 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_debugger
-        profile: core-debugger
+        recipe: core-debugger
       - name: core_engineer
-        profile: core-engineer
+        recipe: core-engineer
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
         model: sonnet
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
         model: sonnet
       - name: comms_mattermost
-        profile: comms-mattermost
+        recipe: comms-mattermost
         model: sonnet
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
         model: sonnet
       - name: merger
-        profile: merger
+        recipe: merger
       - name: dashboard
-        profile: dashboard
+        recipe: dashboard
       - name: pr_readiness
-        profile: pr-readiness
+        recipe: pr-readiness
       - name: core_reviewer
-        profile: core-reviewer
+        recipe: core-reviewer
       - name: pr_review_loop
-        profile: pr-review-loop
+        recipe: pr-review-loop
       - name: qa_tester
-        profile: qa
+        recipe: qa
       - name: pr_creator
-        profile: pr-creator
+        recipe: pr-creator
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
@@ -245,30 +245,30 @@ profiles:
     subagents:
       # Only agents that genuinely need fresh context / isolation
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
         model: sonnet
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
         model: sonnet
       - name: comms_mattermost
-        profile: comms-mattermost
+        recipe: comms-mattermost
         model: sonnet
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
         model: sonnet
       - name: merger
-        profile: merger
+        recipe: merger
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
 
   auth0:
@@ -305,16 +305,16 @@ profiles:
 
     subagents:
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
 
   refactor:
@@ -500,69 +500,69 @@ profiles:
     subagents:
       # === Backend Subagents (promoted from core) ===
       - name: core_debugger
-        profile: core-debugger
+        recipe: core-debugger
         cwd: workaxle-core
         append: true
       - name: core_engineer
-        profile: core-engineer
+        recipe: core-engineer
         cwd: workaxle-core
         append: true
       # === NestJS Subagents ===
       - name: nestjs_engineer
-        profile: nestjs-engineer
+        recipe: nestjs-engineer
         append: true
       - name: gateway_engineer
-        profile: gateway
+        recipe: gateway
         cwd: workaxle-gateway
         append: true
       # === Frontend Subagents ===
       - name: frontend_engineer
-        profile: frontend-engineer
+        recipe: frontend-engineer
         cwd: workaxle-desktop
         append: true
       - name: frontend_reviewer
-        profile: frontend-reviewer
+        recipe: frontend-reviewer
         cwd: workaxle-desktop
         append: true
       # === Context Subagents ===
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
         model: sonnet
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
         model: sonnet
       - name: comms_mattermost
-        profile: comms-mattermost
+        recipe: comms-mattermost
         model: sonnet
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
         model: sonnet
       - name: merger
-        profile: merger
+        recipe: merger
       - name: dashboard
-        profile: dashboard
+        recipe: dashboard
       - name: pr_readiness
-        profile: pr-readiness
+        recipe: pr-readiness
       - name: core_reviewer
-        profile: core-reviewer
+        recipe: core-reviewer
         cwd: workaxle-core
         append: true
       - name: pr_review_loop
-        profile: pr-review-loop
+        recipe: pr-review-loop
       - name: qa_tester
-        profile: qa
+        recipe: qa
     hooks:
       WorktreeCreate:
         - hooks:
@@ -747,9 +747,9 @@ profiles:
       - Ref # Documentation reference lookup
     subagents:
       - name: media_stack
-        profile: media-stack
+        recipe: media-stack
       - name: linux_sysadmin
-        profile: linux-sysadmin
+        recipe: linux-sysadmin
 
   media-stack:
     description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
@@ -943,7 +943,7 @@ profiles:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
 
-  # === Frontend Profiles ===
+  # === Frontend Recipes ===
 
   frontend:
     description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
@@ -976,36 +976,36 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: frontend_engineer
-        profile: frontend-engineer
+        recipe: frontend-engineer
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
         model: sonnet
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
         model: sonnet
       - name: comms_mattermost
-        profile: comms-mattermost
+        recipe: comms-mattermost
         model: sonnet
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
         model: sonnet
       - name: merger
-        profile: merger
+        recipe: merger
       - name: pr_readiness
-        profile: pr-readiness
+        recipe: pr-readiness
       - name: core_reviewer
-        profile: core-reviewer
+        recipe: core-reviewer
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
 
   frontend-engineer:
@@ -1057,7 +1057,7 @@ profiles:
       # === PR readiness chart ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
 
-  # === Startup profiles — Generic Next.js + NestJS + Postgres stack ===
+  # === Startup recipes — Generic Next.js + NestJS + Postgres stack ===
   startup:
     description: "Startup team orchestrator — dispatches to specialized roles"
     files:
@@ -1069,18 +1069,18 @@ profiles:
       - playwright
     subagents:
       - name: frontend_engineer
-        profile: startup-frontend
+        recipe: startup-frontend
       - name: backend_engineer
-        profile: startup-backend
+        recipe: startup-backend
       - name: uiux_designer
-        profile: startup-uiux
+        recipe: startup-uiux
       - name: devops_engineer
-        profile: startup-devops
+        recipe: startup-devops
       - name: marketing
-        profile: startup-marketing
+        recipe: startup-marketing
         model: haiku
       - name: sales
-        profile: startup-sales
+        recipe: startup-sales
         model: haiku
 
   startup-frontend:
@@ -1157,27 +1157,27 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
       - name: core_engineer
-        profile: core-engineer
+        recipe: core-engineer
       - name: context_jira
-        profile: context-jira
+        recipe: context-jira
         model: haiku
       - name: context_github
-        profile: context-github
+        recipe: context-github
         model: haiku
       - name: context_teams
-        profile: context-teams
+        recipe: context-teams
         model: haiku
       - name: context_summarizer
-        profile: context-summarizer
+        recipe: context-summarizer
         model: haiku
       - name: comms_jira
-        profile: comms-jira
+        recipe: comms-jira
         model: sonnet
       - name: comms_teams
-        profile: comms-teams
+        recipe: comms-teams
         model: sonnet
       - name: comms_github
-        profile: comms-github
+        recipe: comms-github
         model: sonnet
     mcp_servers:
       - atlassian

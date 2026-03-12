@@ -20,7 +20,7 @@ RSpec.describe Ruly::CLI, type: :cli do
     end
   end
 
-  describe 'profile-level skills key' do
+  describe 'recipe-level skills key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-skills'))
@@ -40,12 +40,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'description' => 'Test with explicit skills key',
           'files' => ['rules/core/main.md'],
           'skills' => ['rules/my-skills/deploy.md']
@@ -53,19 +53,19 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'outputs files in skills key as SKILL.md' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/skills/deploy/SKILL.md')).to be(true)
       expect(File.read('.claude/skills/deploy/SKILL.md')).to include('Deploy steps')
     end
 
     it 'does not include skills key files in main output' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).not_to include('Deploy steps')
@@ -84,37 +84,37 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'description' => 'Test without explicit skills key',
           'files' => ['rules/core/skills/debug.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'squashes files in /skills/ path into main output when in files key' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).to include('Debug content that should be squashed')
     end
 
     it 'does not create SKILL.md for files in files key' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/skills/debug/SKILL.md')).to be(false)
     end
   end
 
-  describe 'profile-level commands key' do
+  describe 'recipe-level commands key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-commands'))
@@ -131,12 +131,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'commands' => ['rules/my-commands/deploy.md'],
           'description' => 'Test with explicit commands key',
           'files' => ['rules/core/main.md']
@@ -144,19 +144,19 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'outputs files in commands key to .claude/commands/' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/commands/deploy.md')).to be(true)
       expect(File.read('.claude/commands/deploy.md')).to include('Deploy command content')
     end
 
     it 'does not include commands key files in main output' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).not_to include('Deploy command content')
@@ -175,37 +175,37 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'description' => 'Test without explicit commands key',
           'files' => ['rules/core/commands/build.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'squashes files in /commands/ path into main output when in files key' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       content = File.read('CLAUDE.local.md', encoding: 'UTF-8')
       expect(content).to include('Build content that should be squashed')
     end
 
     it 'does not create command file for files in files key' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/commands/build.md')).to be(false)
     end
   end
 
-  describe 'profile-level bins key' do
+  describe 'recipe-level bins key' do
     before do
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'core'))
       FileUtils.mkdir_p(File.join(test_dir, 'rules', 'my-bin'))
@@ -219,12 +219,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'scripts' => ['rules/my-bin/deploy.sh'],
           'description' => 'Test with explicit bins key',
           'files' => ['rules/core/main.md']
@@ -232,12 +232,12 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'copies files in bins key to .claude/scripts/' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/scripts/deploy.sh')).to be(true)
       expect(File.executable?('.claude/scripts/deploy.sh')).to be(true)
@@ -269,12 +269,12 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'description' => 'Test with skills directory',
           'files' => ['rules/core/main.md'],
           'skills' => [File.join(test_dir, 'rules', 'all-skills/')]
@@ -282,12 +282,12 @@ RSpec.describe Ruly::CLI, type: :cli do
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'expands directories in skills key to individual skill files' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
 
       expect(File.exist?('.claude/skills/a/SKILL.md')).to be(true)
       expect(File.exist?('.claude/skills/b/SKILL.md')).to be(true)
@@ -318,28 +318,28 @@ RSpec.describe Ruly::CLI, type: :cli do
 
       allow(cli).to receive_messages(
         gem_root: test_dir,
-        profiles_file: File.join(test_dir, 'profiles.yml'),
+        recipes_file: File.join(test_dir, 'recipes.yml'),
         rules_dir: File.join(test_dir, 'rules')
       )
 
-      profiles_content = {
-        'test_profile' => {
+      recipes_content = {
+        'test_recipe' => {
           'description' => 'Test with skill outside /skills/',
           'files' => ['rules/core/main.md']
         }
       }
 
       # rubocop:disable RSpec/AnyInstance
-      allow_any_instance_of(described_class).to receive(:load_all_profiles).and_return(profiles_content)
+      allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(recipes_content)
       # rubocop:enable RSpec/AnyInstance
     end
 
     it 'allows skills: frontmatter to reference files outside /skills/ directory' do
-      expect { cli.invoke(:squash, ['test_profile']) }.not_to raise_error
+      expect { cli.invoke(:squash, ['test_recipe']) }.not_to raise_error
     end
 
     it 'creates SKILL.md for frontmatter-referenced skills' do
-      cli.invoke(:squash, ['test_profile'])
+      cli.invoke(:squash, ['test_recipe'])
       expect(File.exist?('.claude/skills/helper-skill/SKILL.md')).to be(true)
     end
   end

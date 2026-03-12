@@ -103,13 +103,13 @@ RSpec.describe Ruly::CLI do
         expect(result).not_to include('common.md')
       end
 
-      it 'strips profiles field but keeps other frontmatter' do
+      it 'strips recipes field but keeps other frontmatter' do
         content = <<~MD
           ---
           description: Test file
-          profiles:
-            - profile1
-            - profile2
+          recipes:
+            - recipe1
+            - recipe2
           ---
           # Content
         MD
@@ -117,9 +117,9 @@ RSpec.describe Ruly::CLI do
         result = cli.send(:strip_metadata_from_frontmatter, content, keep_frontmatter: true)
 
         expect(result).to include('description: Test file')
-        expect(result).not_to include('profiles:')
-        expect(result).not_to include('profile1')
-        expect(result).not_to include('profile2')
+        expect(result).not_to include('recipes:')
+        expect(result).not_to include('recipe1')
+        expect(result).not_to include('recipe2')
       end
 
       it 'strips essential field but keeps other frontmatter' do
@@ -137,12 +137,12 @@ RSpec.describe Ruly::CLI do
         expect(result).not_to include('essential:')
       end
 
-      it 'strips all metadata fields (requires, profiles, essential) but keeps others' do
+      it 'strips all metadata fields (requires, recipes, essential) but keeps others' do
         content = <<~MD
           ---
           description: Test file
-          profiles:
-            - test_profile
+          recipes:
+            - test_recipe
           requires:
             - common.md
           essential: true
@@ -155,7 +155,7 @@ RSpec.describe Ruly::CLI do
 
         expect(result).to include('description: Test file')
         expect(result).to include('author: Jane')
-        expect(result).not_to include('profiles:')
+        expect(result).not_to include('recipes:')
         expect(result).not_to include('requires:')
         expect(result).not_to include('essential:')
       end
@@ -163,8 +163,8 @@ RSpec.describe Ruly::CLI do
       it 'removes frontmatter entirely if only metadata fields remain' do
         content = <<~MD
           ---
-          profiles:
-            - test_profile
+          recipes:
+            - test_recipe
           requires:
             - common.md
           essential: true
@@ -284,8 +284,8 @@ RSpec.describe Ruly::CLI do
         description: Test rule
         requires:
           - other.md
-        profiles:
-          - some-profile
+        recipes:
+          - some-recipe
         essential: true
         ---
         # Test Rule
@@ -318,7 +318,7 @@ RSpec.describe Ruly::CLI do
       output_content = File.read(File.join(test_dir, 'output.md'), encoding: 'UTF-8')
       expect(output_content).to include('description: Test rule')
       expect(output_content).not_to include('requires:')
-      expect(output_content).not_to include('profiles:')
+      expect(output_content).not_to include('recipes:')
       expect(output_content).not_to include('essential:')
     end
   end
