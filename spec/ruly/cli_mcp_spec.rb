@@ -28,10 +28,6 @@ RSpec.describe Ruly::CLI do
         'args' => ['-y', '@anthropic/mcp-playwright'],
         'command' => 'npx'
       },
-      'task-master-ai' => {
-        'args' => ['/path/to/task-master'],
-        'command' => 'node'
-      },
       'teams' => {
         'args' => ['-y', '@anthropic/mcp-teams'],
         'command' => 'npx'

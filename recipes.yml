@@ -135,9 +135,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    mcp_servers:
-      - Ref # For API documentation lookup
-
   pr:
     description: "WorkAxle PR creation and management"
     omit_command_prefix: github
@@ -195,9 +192,6 @@ recipes:
     skills:
       # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-    mcp_servers:
-      - Ref
-
   core-engineer-skilled:
     description: "WorkAxle engineer with on-demand skills for reviewing, debugging, and fixing"
     model: sonnet
@@ -294,9 +288,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-    mcp_servers:
-      - Ref # For documentation lookup
-
     subagents:
       - name: context_jira
         recipe: context-jira
@@ -352,7 +343,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
     mcp_servers:
       - teams # MS Teams integration
-      - Ref # Documentation lookup
 
   finalize:
     description: "WorkAxle final testing and cleanup phase"
@@ -577,7 +567,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
-      - Ref # For documentation lookup
     # playwright-cli is available globally via npm — no MCP server needed
 
   nestjs-engineer:
@@ -596,9 +585,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
     skills:
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-    mcp_servers:
-      - Ref
-
   playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
     files:
@@ -642,7 +628,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
     mcp_servers:
       - atlassian # For Confluence page creation only (Jira uses CLI)
-      - Ref # For documentation lookup and external research
 
   initiative-core:
     description: "WorkAxle initiative investigation and planning"
@@ -654,9 +639,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - Ref # For documentation lookup and external research
-
   agile:
     description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
     omit_command_prefix:
@@ -703,7 +685,6 @@ recipes:
     mcp_servers:
       - atlassian # For Confluence page creation and Jira epic/story/initiative creation
       - teams # For Teams DM notifications
-      - Ref # For documentation lookup and external research
 
   local:
     description: "Local development dispatcher - routes media/sysadmin tasks to subagents"
@@ -726,7 +707,6 @@ recipes:
       # Virtual browser
       - /Users/patrick/Projects/ruly/rules/neko-virtual-browser.md
     mcp_servers:
-      - Ref # Documentation reference lookup
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: media_stack
@@ -762,7 +742,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
     mcp_servers:
       - plane # Plane project management
-      - Ref # Documentation reference lookup
     # playwright-cli is available globally via npm — no MCP server needed
 
   merger:
@@ -995,7 +974,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
     mcp_servers:
-      - Ref
     # playwright-cli is available globally via npm — no MCP server needed
 
   frontend-reviewer:

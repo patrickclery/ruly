@@ -61,7 +61,7 @@ function generateProfileYaml(answers: DemoAnswers): string {
     }
     lines.push("    mcp_servers:");
     lines.push("      - playwright");
-    lines.push("      - task-master-ai");
+    lines.push("      - teams");
   }
 
   return lines.join("\n");
@@ -106,9 +106,9 @@ function generateMcpJson(): string {
           command: "npx",
           args: ["-y", "@anthropic/playwright-mcp"],
         },
-        "task-master-ai": {
+        teams: {
           command: "npx",
-          args: ["-y", "task-master-ai"],
+          args: ["-y", "@anthropic/mcp-teams"],
         },
       },
     },

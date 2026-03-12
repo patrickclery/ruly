@@ -47,18 +47,15 @@ Choose MCP servers based on the specific task requirements:
 ```yaml
 # Bug Investigation (Jira uses CLI, not MCP)
 mcp_servers:
-  - task-master-ai  # Task management and workflow tracking
   - teams           # For Teams DM notifications
 
 # Testing
 # playwright-cli is available globally via npm — no MCP server needed
 mcp_servers:
-  - task-master-ai  # Task management and workflow tracking
 
 # Confluence Operations (only case needing atlassian MCP)
 mcp_servers:
   - atlassian       # For Confluence page creation only
-  - task-master-ai  # Task management and workflow tracking
 ```
 
 ### 4. Model Specification
@@ -104,7 +101,6 @@ workaxle-bug:
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
     - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
   mcp_servers:
-    - task-master-ai  # Task management and workflow tracking
     - teams           # For Teams DM notifications
     # Note: Jira uses CLI (jira issue view, jira issue move, etc.)
 ```
@@ -122,7 +118,6 @@ workaxle-review:
     - /Users/patrick/Projects/ruly/rules/comms/  # Includes jira, confluence
   mcp_servers:
     - atlassian       # For Confluence page creation only
-    - task-master-ai  # Task management and workflow tracking
   # playwright-cli is available globally via npm — no MCP server needed
 ```
 
@@ -214,8 +209,6 @@ workaxle-bug:
 - `memory` - Persistent memory storage
 - `plane` - Plane project management
 - ~~`playwright`~~ - **REMOVED** — opens headed browsers that steal focus. Use `playwright-cli` (headless CLI) instead.
-- `Ref` - Documentation reference lookup
-- `task-master-ai` - Task management and workflow tracking
 - `teams` - Microsoft Teams integration
 
 ### Jira CLI Commands (replaces atlassian MCP for Jira)

@@ -378,7 +378,7 @@ ruly mcp --recipe workaxle-bug
 
 # Append to existing .mcp.json instead of overwriting
 ruly mcp playwright -a
-ruly mcp --append task-master-ai
+ruly mcp --append teams
 
 # Combine recipe servers with additional servers
 ruly mcp -r workaxle-bug playwright
@@ -417,7 +417,7 @@ recipes:
       - /path/to/rules/bug/
       - /path/to/rules/debugging.md
     mcp_servers:
-      - task-master-ai
+      - teams
 
   testing:
     description: "Testing and QA workflows"
@@ -530,7 +530,7 @@ Bug investigation and debugging
 ## MCP Servers
 
 This subagent has access to the following MCP servers:
-- task-master-ai
+- teams
 
 ---
 *Last generated: 2026-02-04 12:30:00*
@@ -850,7 +850,7 @@ recipes:
       - rules/core.md
       - rules/common.md
     mcp_servers:
-      - task-master-ai
+      - teams
 
   extended:
     extends: base
@@ -858,12 +858,12 @@ recipes:
     files:
       - rules/extra.md
     mcp_servers:
-      - playwright
+      - atlassian
 ```
 
 After resolution, `extended` will have:
 - `files`: `[rules/core.md, rules/common.md, rules/extra.md]`
-- `mcp_servers`: `[task-master-ai, playwright]`
+- `mcp_servers`: `[teams, atlassian]`
 - `description`: `"Extended recipe with extra tools"`
 
 Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.

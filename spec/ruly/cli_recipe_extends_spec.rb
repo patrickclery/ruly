@@ -41,7 +41,7 @@ RSpec.describe Ruly::Services::RecipeLoader, '.resolve_extends!' do
             files:
               - rules/base.md
             mcp_servers:
-              - task-master-ai
+              - teams
           child:
             extends: base
             description: "Child recipe"
@@ -59,7 +59,7 @@ RSpec.describe Ruly::Services::RecipeLoader, '.resolve_extends!' do
       )
 
       expect(recipes['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
-      expect(recipes['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
+      expect(recipes['child']['mcp_servers']).to eq(%w[teams playwright])
       expect(recipes['child']).not_to have_key('extends')
       # Parent should be unchanged
       expect(recipes['base']['files']).to eq(['rules/base.md'])
@@ -106,13 +106,13 @@ RSpec.describe Ruly::Services::RecipeLoader, '.resolve_extends!' do
 
     it 'unions mcp_servers' do
       recipes = {
-        'base' => {'mcp_servers' => ['task-master-ai']},
+        'base' => {'mcp_servers' => ['teams']},
         'child' => {'extends' => 'base', 'mcp_servers' => ['playwright']}
       }
 
       described_class.resolve_extends!(recipes)
 
-      expect(recipes['child']['mcp_servers']).to eq(%w[task-master-ai playwright])
+      expect(recipes['child']['mcp_servers']).to eq(%w[teams playwright])
     end
 
     it 'handles child with no array key (inherits parent array)' do
