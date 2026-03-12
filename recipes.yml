@@ -740,6 +740,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/claude_proxy_context.md
       # Local dev tools
       - /Users/patrick/Projects/ruly/rules/llmux-tools-setup.md
+      # Awesomer GitHub Pages deploy
+      - /Users/patrick/Projects/ruly/rules/home/awesomer-github-pages-deploy.md
       # Virtual browser
       - /Users/patrick/Projects/ruly/rules/neko-virtual-browser.md
     mcp_servers:
