@@ -618,13 +618,11 @@ profiles:
     description: "WorkAxle Playwright E2E testing and browser automation"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
       - /Users/patrick/Projects/ruly/rules/comms/jira/
-    mcp_servers:
-      - playwright # For browser automation and E2E testing
+    # playwright-cli is available globally via npm — no MCP server needed
 
   qa:
     description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
@@ -638,8 +636,7 @@ profiles:
     skills:
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
-    mcp_servers:
-      - playwright # For exploring UI when page objects are missing
+    # playwright-cli is available globally via npm — no MCP server needed
 
   spike:
     description: "WorkAxle spike investigation and research for Jira tasks"
@@ -1028,11 +1025,9 @@ profiles:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
-      # === Playwright ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/playwright.md
     mcp_servers:
-      - playwright
       - Ref
+    # playwright-cli is available globally via npm — no MCP server needed
 
   frontend-reviewer:
     description: "WorkAxle frontend PR code review - React/TypeScript standards enforcement"
