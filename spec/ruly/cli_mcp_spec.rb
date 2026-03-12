@@ -24,10 +24,6 @@ RSpec.describe Ruly::CLI do
         'args' => ['-y', '@anthropic/mcp-atlassian'],
         'command' => 'npx'
       },
-      'mattermost' => {
-        'args' => ['-y', '@anthropic/mcp-mattermost'],
-        'command' => 'npx'
-      },
       'playwright' => {
         'args' => ['-y', '@anthropic/mcp-playwright'],
         'command' => 'npx'
@@ -230,7 +226,7 @@ RSpec.describe Ruly::CLI do
           'child-a' => {
             'description' => 'Child A with MCP',
             'files' => [],
-            'mcp_servers' => %w[teams mattermost]
+            'mcp_servers' => %w[teams playwright]
           },
           'child-b' => {
             'description' => 'Child B with nested subagent',
@@ -266,7 +262,7 @@ RSpec.describe Ruly::CLI do
     it 'collects MCP servers from direct subagents' do
       recipe_config = recipes_with_subagents['recipes']['parent']
       result = cli.send(:collect_all_mcp_servers, recipe_config)
-      expect(result).to include('teams', 'mattermost', 'atlassian')
+      expect(result).to include('teams', 'playwright', 'atlassian')
     end
 
     it 'collects MCP servers from nested subagents (grandchildren)' do
@@ -290,7 +286,7 @@ RSpec.describe Ruly::CLI do
     it 'returns only own servers when no subagents' do
       recipe_config = recipes_with_subagents['recipes']['child-a']
       result = cli.send(:collect_all_mcp_servers, recipe_config)
-      expect(result).to eq(%w[teams mattermost])
+      expect(result).to eq(%w[teams playwright])
     end
 
     it 'handles circular references without infinite loop' do
@@ -305,7 +301,7 @@ RSpec.describe Ruly::CLI do
           'recipe-b' => {
             'description' => 'Recipe B',
             'files' => [],
-            'mcp_servers' => ['mattermost'],
+            'mcp_servers' => ['playwright'],
             'subagents' => [{'name' => 'a', 'recipe' => 'recipe-a'}]
           }
         }
@@ -314,7 +310,7 @@ RSpec.describe Ruly::CLI do
 
       recipe_config = circular_recipes['recipes']['recipe-a']
       result = cli.send(:collect_all_mcp_servers, recipe_config)
-      expect(result).to contain_exactly('teams', 'mattermost')
+      expect(result).to contain_exactly('teams', 'playwright')
     end
 
     it 'handles missing subagent recipes gracefully' do
@@ -343,7 +339,7 @@ RSpec.describe Ruly::CLI do
           'comms-sub' => {
             'description' => 'Comms subagent with MCP servers',
             'files' => [],
-            'mcp_servers' => %w[teams mattermost],
+            'mcp_servers' => %w[teams playwright],
             'subagents' => [
               {'name' => 'teams_dm', 'recipe' => 'teams-dm-sub'}
             ]
@@ -376,7 +372,7 @@ RSpec.describe Ruly::CLI do
       cli.send(:update_mcp_settings, recipe_config_with_mcp)
 
       content = JSON.parse(File.read('.mcp.json'))
-      expect(content['mcpServers'].keys).to contain_exactly('teams', 'mattermost')
+      expect(content['mcpServers'].keys).to contain_exactly('teams', 'playwright')
     end
 
     it 'merges parent MCP servers with subagent MCP servers' do
@@ -387,7 +383,7 @@ RSpec.describe Ruly::CLI do
       cli.send(:update_mcp_settings, recipe_config_with_mcp)
 
       content = JSON.parse(File.read('.mcp.json'))
-      expect(content['mcpServers'].keys).to contain_exactly('playwright', 'teams', 'mattermost')
+      expect(content['mcpServers'].keys).to contain_exactly('playwright', 'teams')
     end
   end
 end

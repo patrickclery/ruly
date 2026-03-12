@@ -60,11 +60,13 @@ module Ruly
           next if File.basename(file_path) == 'stats.md'
 
           content = File.read(file_path, encoding: 'UTF-8')
-          tokens = count_tokens(content)
+          stripped = Services::FrontmatterParser.strip_metadata(content)
+          tokens = count_tokens(stripped)
           file_stats << {
             path: file_path,
-            size: content.bytesize,
-            tokens:
+            size: stripped.bytesize,
+            tokens:,
+            needs_trailing_newline: !stripped.end_with?("\n")
           }
         end
 
@@ -381,7 +383,12 @@ module Ruly
       end
 
       # Build a map of recipe name to list of file paths
-      # Includes files:, commands:, skills:, and their transitive requires: dependencies
+      # Build map of recipe -> files that go into CLAUDE.local.md
+      # Commands and skills are saved to separate files during squash,
+      # so they are excluded from the recipe total. However, their
+      # transitive requires: dependencies ARE included (they go into CLAUDE.local.md).
+      # If a command/skill is also a requires: dependency of another file,
+      # it ends up in CLAUDE.local.md (squash processes requires first).
       def build_recipe_files_map
         return {} unless recipes_file && File.exist?(recipes_file)
 
@@ -394,21 +401,42 @@ module Ruly
           next unless recipe.is_a?(Hash)
 
           files = Set.new
+          external_files = Set.new # commands/skills listed directly in recipe
 
-          # Collect from files:, commands:, and skills: arrays
-          %w[files commands skills].each do |key|
+          # Collect from files: array (these go into CLAUDE.local.md)
+          (recipe['files'] || []).each do |path|
+            if File.directory?(path)
+              Dir.glob(File.join(path, '**', '*.md')).each { |f| files.add(f) }
+            elsif File.exist?(path)
+              files.add(path)
+            end
+          end
+
+          # Collect commands/skills (saved as separate files, not in CLAUDE.local.md)
+          %w[commands skills].each do |key|
             next unless recipe[key]
 
             recipe[key].each do |path|
               if File.directory?(path)
-                Dir.glob(File.join(path, '**', '*.md')).each { |f| files.add(f) }
+                Dir.glob(File.join(path, '**', '*.md')).each { |f| external_files.add(f) }
               elsif File.exist?(path)
-                files.add(path)
+                external_files.add(path)
               end
             end
           end
 
-          # Expand transitive requires: dependencies
+          # Expand transitive requires from files: entries
+          expand_requirements(files)
+
+          # Add requires of command/skill files to the main set
+          # (requires go into CLAUDE.local.md even when the parent is a command/skill)
+          external_files.each do |ext_path|
+            next unless File.exist?(ext_path)
+
+            extract_requirements(ext_path).each { |r| files.add(r) }
+          end
+
+          # Expand any newly added requires transitively
           expand_requirements(files)
 
           recipe_files_map[name] = files.to_a unless files.empty?
@@ -426,11 +454,17 @@ module Ruly
 
         recipe_stats = recipe_stats.sort_by { |s| -s[:tokens] }
 
+        # Calculate squash output size: content + separators + trailing newlines from puts
+        content_bytes = recipe_stats.sum { |s| s[:size] }
+        separators = [recipe_stats.size - 1, 0].max
+        trailing_newlines = recipe_stats.count { |s| s[:needs_trailing_newline] }
+        total_size = content_bytes + separators + trailing_newlines
+
         file.puts "## Recipe: #{recipe_name}"
         file.puts
         file.puts "- **Files**: #{recipe_stats.size}"
         file.puts "- **Total Tokens**: #{format_number(recipe_stats.sum { |s| s[:tokens] })}"
-        file.puts "- **Total Size**: #{format_bytes(recipe_stats.sum { |s| s[:size] })}"
+        file.puts "- **Total Size**: #{format_bytes(total_size)}"
         file.puts
         write_stats_table(file, recipe_stats)
       end

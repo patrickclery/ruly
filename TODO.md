@@ -155,7 +155,7 @@
   - **Options**:
     1. **Contacts MCP server** - Custom MCP that serves team directory from a JSON/SQLite file
        - Tools: `contacts_lookup(name)`, `contacts_by_squad(squad)`, `contacts_by_role(role)`
-       - Returns: Jira ID, GitHub handle, Teams ID, Mattermost ID, squad, role
+       - Returns: Jira ID, GitHub handle, Teams ID, squad, role
        - Source of truth: JSON file synced via chezmoi (replaces accounts.md)
     2. **CLI command** - `ruly contacts lookup "Patrick Clery"` returns all IDs
        - Simpler to implement, agents call via Bash tool

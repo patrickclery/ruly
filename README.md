@@ -487,7 +487,6 @@ recipes:
       - /path/to/rules/comms/
     mcp_servers:
       - teams
-      - mattermost
 
   feature:
     description: "Feature development"
@@ -497,10 +496,10 @@ recipes:
       - Ref
 ```
 
-Running `ruly squash core` produces a `.mcp.json` containing `teams`, `mattermost`, and `Ref` — all propagated from the subagent recipes — even though `core` itself defines no MCP servers. The console output shows which servers were propagated:
+Running `ruly squash core` produces a `.mcp.json` containing `teams` and `Ref` — all propagated from the subagent recipes — even though `core` itself defines no MCP servers. The console output shows which servers were propagated:
 
 ```
-🔌 Propagated MCP servers from subagents: teams, mattermost, Ref
+🔌 Propagated MCP servers from subagents: teams, Ref
 🔌 Updated .mcp.json with MCP servers
 ```
 
@@ -603,12 +602,6 @@ rules/
     │   │   └── dm.md                     # User command: /ms-teams:dm
     │   └── agents/
     │       └── ms-teams-dm.md            # Subagent: dispatched on "send it"
-    └── mattermost/
-        ├── common.md                     # Shared patterns (loaded by both)
-        ├── commands/
-        │   └── dm.md                     # User command: /mattermost:dm
-        └── agents/
-            └── mattermost-dm.md          # Subagent: dispatched on "send it"
 ```
 
 **Key distinction:**

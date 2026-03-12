@@ -86,6 +86,24 @@ RSpec.describe Ruly::Operations::Stats do
         content = File.read(output_file)
         expect(content).to match(/\d+(\.\d+)?\s*(B|KB|MB)/)
       end
+
+      it 'strips frontmatter before counting tokens and size' do
+        body = '# Content without frontmatter'
+        content_with_frontmatter = "---\nrequires:\n  - ./other.md\nrecipes:\n  - my-recipe\n---\n\n#{body}"
+        file1 = create_test_file('rules/test.md', content_with_frontmatter)
+
+        sources = [{path: file1, type: 'local'}]
+
+        result = described_class.call(output_file:, sources:)
+
+        # Tokens/size should be based on stripped content (body only), not raw file
+        stripped_content = Ruly::Services::FrontmatterParser.strip_metadata(content_with_frontmatter)
+        expected_tokens = Tiktoken.get_encoding('cl100k_base').encode(stripped_content).length
+        expected_size = stripped_content.bytesize
+
+        expect(result[:data][:files].first[:tokens]).to eq(expected_tokens)
+        expect(result[:data][:files].first[:size]).to eq(expected_size)
+      end
     end
 
     context 'with empty sources' do
@@ -810,6 +828,46 @@ RSpec.describe Ruly::Operations::Stats do
         expect(content).to match(/## Recipe: my-recipe.*Total Tokens/m)
       end
 
+      it 'recipe size matches squash output size including separators' do
+        # Content without trailing newline - puts will add one
+        file1 = create_test_file('rules/file1.md', '# File 1 content')
+        # Content with trailing newline - puts won't add extra
+        file2 = create_test_file('rules/file2.md', "# File 2 content\n")
+        file3 = create_test_file('rules/file3.md', '# File 3 content')
+
+        create_recipes_file({
+                              'size-recipe' => {'files' => [file1, file2, file3]}
+                            })
+
+        sources = [
+          {path: file1, type: 'local'},
+          {path: file2, type: 'local'},
+          {path: file3, type: 'local'}
+        ]
+
+        # Calculate expected squash output size:
+        # content bytes + (n-1) separators + trailing newlines from puts
+        stripped1 = Ruly::Services::FrontmatterParser.strip_metadata(File.read(file1))
+        stripped2 = Ruly::Services::FrontmatterParser.strip_metadata(File.read(file2))
+        stripped3 = Ruly::Services::FrontmatterParser.strip_metadata(File.read(file3))
+
+        content_bytes = stripped1.bytesize + stripped2.bytesize + stripped3.bytesize
+        separators = 2 # n-1 for 3 files
+        trailing_newlines = [stripped1, stripped2, stripped3].count { |s| !s.end_with?("\n") }
+        expected_size = content_bytes + separators + trailing_newlines
+
+        result = described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+
+        output = File.read(output_file)
+        recipe_start = output.index('## Recipe: size-recipe')
+        size_match = output[recipe_start..].match(/\*\*Total Size\*\*: (.+)/)
+        reported_size_str = size_match[1]
+
+        # Also verify via the recipe stats computation
+        # The recipe section should report the squash-equivalent size
+        expect(reported_size_str).to eq("#{expected_size} B")
+      end
+
       it 'expands directory paths in recipes' do
         FileUtils.mkdir_p(File.join(test_dir, 'rules', 'subdir'))
         file1 = create_test_file('rules/subdir/file1.md', '# File 1')
@@ -942,7 +1000,7 @@ RSpec.describe Ruly::Operations::Stats do
         expect(content).to include('**Files**: 2')
       end
 
-      it 'includes commands and skills files in recipe token counts' do
+      it 'excludes commands and skills files from recipe token counts' do
         main_file = create_test_file('rules/main.md', '# Main content')
         command_file = create_test_file('rules/commands/do-thing.md', '# Command: Do the thing')
         skill_file = create_test_file('rules/skills/my-skill.md', '# Skill: My skill')
@@ -964,10 +1022,54 @@ RSpec.describe Ruly::Operations::Stats do
         described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
 
         content = File.read(output_file)
-        expect(content).to include('## Recipe: full-recipe')
-        expect(content).to include('do-thing.md')
-        expect(content).to include('my-skill.md')
-        expect(content).to include('**Files**: 3')
+        # Extract only the recipe section (from header to next ## or end-of-file marker)
+        recipe_start = content.index('## Recipe: full-recipe')
+        recipe_end = content.index("\n## ", recipe_start + 1) || content.index("\n---\n", recipe_start + 1) || content.length
+        recipe_section = content[recipe_start...recipe_end]
+        expect(recipe_section).to include('main.md')
+        # Commands and skills go to separate files during squash, not CLAUDE.local.md
+        expect(recipe_section).not_to include('do-thing.md')
+        expect(recipe_section).not_to include('my-skill.md')
+        expect(recipe_section).to include('**Files**: 1')
+      end
+
+      it 'includes requires of commands/skills in recipe token counts' do
+        main_file = create_test_file('rules/main.md', '# Main content')
+        command_file = create_test_file('rules/commands/do-thing.md', <<~MARKDOWN)
+          ---
+          requires:
+            - ../helpers/shared.md
+          ---
+
+          # Command: Do the thing
+        MARKDOWN
+        shared_file = create_test_file('rules/helpers/shared.md', '# Shared helper content')
+
+        create_recipes_file({
+                              'cmd-requires-recipe' => {
+                                'files' => [main_file],
+                                'commands' => [command_file]
+                              }
+                            })
+
+        sources = [
+          {path: main_file, type: 'local'},
+          {path: command_file, type: 'local'},
+          {path: shared_file, type: 'local'}
+        ]
+
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+
+        content = File.read(output_file)
+        # Extract only the recipe section
+        recipe_start = content.index('## Recipe: cmd-requires-recipe')
+        recipe_end = content.index("\n## ", recipe_start + 1) || content.index("\n---\n", recipe_start + 1) || content.length
+        recipe_section = content[recipe_start...recipe_end]
+        # The command itself is excluded (goes to separate file)
+        expect(recipe_section).not_to include('do-thing.md')
+        # But the command's requires ARE included (they go into CLAUDE.local.md)
+        expect(recipe_section).to include('shared.md')
+        expect(recipe_section).to include('**Files**: 2')
       end
     end
   end
