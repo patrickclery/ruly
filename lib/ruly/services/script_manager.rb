@@ -404,7 +404,24 @@ module Ruly
       # @return [String] skill content (never inlines requires)
       def compile_skill_with_requires(file, find_rule_file: nil, parse_frontmatter: nil, strip_metadata: nil,
                                       recipe_paths: Set.new)
-        file[:content]
+        content = file[:content]
+        original = file[:original_content] || ''
+
+        # Re-inject model directive if present in original frontmatter
+        # (strip_metadata removes it from inline content but skills need it)
+        if original =~ /^---\s*\n(.*?)^---\s*$/m
+          frontmatter = Regexp.last_match(1)
+          if frontmatter =~ /^model:\s*(.+)$/
+            model_value = Regexp.last_match(1).strip
+            content = if content =~ /\A---\n(.*?)^---/m
+                        content.sub(/\A---\n/, "---\nmodel: #{model_value}\n")
+                      else
+                        "---\nmodel: #{model_value}\n---\n#{content}"
+                      end
+          end
+        end
+
+        content
       end
     end
   end

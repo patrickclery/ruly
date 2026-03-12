@@ -50,7 +50,7 @@ module Ruly
         unless keep_frontmatter
           # Extract Claude Code directives to preserve
           claude_directives = {}
-          %w[name description permissionMode allowed_tools model].each do |key|
+          %w[name description permissionMode allowed_tools].each do |key|
             claude_directives[key] = Regexp.last_match(1).strip if frontmatter =~ /^#{key}:\s*(.+)$/
           end
 
