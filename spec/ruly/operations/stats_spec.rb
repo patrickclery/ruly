@@ -911,6 +911,64 @@ RSpec.describe Ruly::Operations::Stats do
         # Empty recipe should either not appear or show 0 files
         expect(content).not_to include('## Recipe: empty-recipe')
       end
+
+      it 'includes files from requires: dependencies in recipe token counts' do
+        parent_file = create_test_file('rules/parent.md', <<~MARKDOWN)
+          ---
+          requires:
+            - ./child.md
+          ---
+
+          # Parent Content with some words
+        MARKDOWN
+        child_file = create_test_file('rules/child.md', '# Child file with additional content')
+
+        create_recipes_file({
+                              'requires-recipe' => {'files' => [parent_file]}
+                            })
+
+        sources = [
+          {path: parent_file, type: 'local'},
+          {path: child_file, type: 'local'}
+        ]
+
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: requires-recipe')
+        # Child file should be included in recipe section via requires
+        expect(content).to include('child.md')
+        # Recipe should show 2 files, not 1
+        expect(content).to include('**Files**: 2')
+      end
+
+      it 'includes commands and skills files in recipe token counts' do
+        main_file = create_test_file('rules/main.md', '# Main content')
+        command_file = create_test_file('rules/commands/do-thing.md', '# Command: Do the thing')
+        skill_file = create_test_file('rules/skills/my-skill.md', '# Skill: My skill')
+
+        create_recipes_file({
+                              'full-recipe' => {
+                                'files' => [main_file],
+                                'commands' => [command_file],
+                                'skills' => [skill_file]
+                              }
+                            })
+
+        sources = [
+          {path: main_file, type: 'local'},
+          {path: command_file, type: 'local'},
+          {path: skill_file, type: 'local'}
+        ]
+
+        described_class.call(output_file:, recipes_file:, rules_dir:, sources:)
+
+        content = File.read(output_file)
+        expect(content).to include('## Recipe: full-recipe')
+        expect(content).to include('do-thing.md')
+        expect(content).to include('my-skill.md')
+        expect(content).to include('**Files**: 3')
+      end
     end
   end
 end
