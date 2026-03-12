@@ -230,7 +230,7 @@ module Ruly
       resolved = sources.filter_map { |s| s[:type] == 'local' ? (p = find_rule_file(s[:path])) && s.merge(path: p) : s }
       puts "📊 Analyzing #{resolved.size} files..."
       out = options[:output]
-      out = File.join(Dir.pwd, out) if out == 'stats.md'
+      out = File.join(rules_dir, out) if out == 'stats.md'
       Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes_file:, rules_dir:,
                                                                        sources: resolved))
     end
