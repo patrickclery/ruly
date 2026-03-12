@@ -360,7 +360,6 @@ recipes:
     mcp_servers:
       - teams # MS Teams integration
       - mattermost # Mattermost integration
-      - playwright # UI testing
       - Ref # Documentation lookup
 
   finalize:
@@ -385,8 +384,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    mcp_servers:
-      - playwright # For UI/integration testing
+    # playwright-cli is available globally via npm — no MCP server needed
 
   core-reviewer:
     description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
@@ -592,8 +590,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
     mcp_servers:
-      - playwright # For E2E testing
       - Ref # For documentation lookup
+    # playwright-cli is available globally via npm — no MCP server needed
 
   nestjs-engineer:
     description: "WorkAxle NestJS microservice development — TypeORM, gRPC, RabbitMQ, Jest"
@@ -745,8 +743,8 @@ recipes:
       # Virtual browser
       - /Users/patrick/Projects/ruly/rules/neko-virtual-browser.md
     mcp_servers:
-      - playwright # Browser automation and UI testing
       - Ref # Documentation reference lookup
+    # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: media_stack
         recipe: media-stack
@@ -780,9 +778,9 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
     mcp_servers:
-      - playwright # Browser automation and UI testing
       - plane # Plane project management
       - Ref # Documentation reference lookup
+    # playwright-cli is available globally via npm — no MCP server needed
 
   merger:
     description: "PR merging commands only (no code knowledge needed)"
@@ -1067,8 +1065,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/startup/core/reference/technology-stack.md
       - /Users/patrick/Projects/ruly/rules/startup/core/reference/project-structure.md
       - /Users/patrick/Projects/ruly/rules/startup/core/dispatches/
-    mcp_servers:
-      - playwright
+    # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: frontend_engineer
         recipe: startup-frontend
@@ -1103,8 +1100,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/frontend/tailwind-patterns.md
     # UI/UX Pro Max is loaded automatically via Claude Code plugin
-    mcp_servers:
-      - playwright
+    # playwright-cli is available globally via npm — no MCP server needed
 
   startup-devops:
     description: "DevOps engineer — CI/CD, Docker, deployment"

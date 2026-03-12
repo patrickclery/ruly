@@ -51,8 +51,8 @@ mcp_servers:
   - teams           # For Teams DM notifications
 
 # Testing
+# playwright-cli is available globally via npm — no MCP server needed
 mcp_servers:
-  - playwright      # For UI/integration testing
   - task-master-ai  # Task management and workflow tracking
 
 # Confluence Operations (only case needing atlassian MCP)
@@ -122,8 +122,8 @@ workaxle-review:
     - /Users/patrick/Projects/ruly/rules/comms/  # Includes jira, confluence
   mcp_servers:
     - atlassian       # For Confluence page creation only
-    - playwright      # UI testing and demos
     - task-master-ai  # Task management and workflow tracking
+  # playwright-cli is available globally via npm — no MCP server needed
 ```
 
 ## Best Practices
@@ -189,7 +189,7 @@ workaxle-bug:
   mcp_servers:
     - atlassian   # WRONG - Jira now uses CLI, atlassian only for Confluence
     - grafana     # Not needed for bug fixing
-    - playwright  # Not needed for bug fixing
+    - playwright  # REMOVED — opens headed browsers; use playwright-cli instead
 ```
 
 ## Related Files
@@ -213,7 +213,7 @@ workaxle-bug:
 - `jetbrains` - JetBrains IDE integration
 - `memory` - Persistent memory storage
 - `plane` - Plane project management
-- `playwright` - Browser automation and UI testing
+- ~~`playwright`~~ - **REMOVED** — opens headed browsers that steal focus. Use `playwright-cli` (headless CLI) instead.
 - `Ref` - Documentation reference lookup
 - `task-master-ai` - Task management and workflow tracking
 - `teams` - Microsoft Teams integration
