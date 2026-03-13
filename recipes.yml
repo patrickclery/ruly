@@ -49,8 +49,10 @@ recipes:
     subagents:
       - name: core_debugger
         recipe: core-debugger
+        model: opus
       - name: core_engineer
         recipe: core-engineer
+        model: opus
       - name: context_jira
         recipe: context-jira
         model: haiku
@@ -87,6 +89,7 @@ recipes:
 
   core-debugger:
     description: "WorkAxle bug investigation and fixing orchestrator"
+    model: opus
     omitCommandPrefix: workaxle
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -143,6 +146,7 @@ recipes:
 
   core-engineer:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
+    model: opus
     files:
       # === Superpowers: TDD & Verification (core tenets) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
@@ -475,10 +479,12 @@ recipes:
       # === Backend Subagents (promoted from core) ===
       - name: core_debugger
         recipe: core-debugger
+        model: opus
         cwd: workaxle-core
         append: true
       - name: core_engineer
         recipe: core-engineer
+        model: opus
         cwd: workaxle-core
         append: true
       # === NestJS Subagents ===
@@ -1105,6 +1111,7 @@ recipes:
     subagents:
       - name: core_engineer
         recipe: core-engineer
+        model: opus
       - name: context_jira
         recipe: context-jira
         model: haiku
