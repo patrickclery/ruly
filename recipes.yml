@@ -895,7 +895,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
     # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
@@ -963,8 +962,6 @@ recipes:
         cwd: workaxle-core
         name: core_reviewer
         recipe: core-reviewer
-      - name: pr_review_loop
-        recipe: pr-review-loop
       - name: qa_tester
         recipe: qa
   playwright:
