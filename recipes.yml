@@ -117,7 +117,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
     # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
     # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
@@ -156,14 +155,8 @@ recipes:
         name: context_summarizer
         recipe: context-summarizer
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
   comms:
     commands:
       - /Users/patrick/Projects/ruly/rules/comms/commands/
@@ -231,7 +224,6 @@ recipes:
     # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
@@ -275,14 +267,8 @@ recipes:
         name: context_summarizer
         recipe: context-summarizer
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
       - name: merger
         recipe: merger
       - name: pr_readiness
@@ -350,7 +336,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
     # === Dispatch Rules (support subagents only — no core-engineer/debugger dispatch) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
@@ -394,14 +379,8 @@ recipes:
         recipe: context-summarizer
     # === Communications ===
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
     # === PR & Merge ===
       - name: merger
         recipe: merger
@@ -503,7 +482,6 @@ recipes:
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
       - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
     # === Dispatch rules for agents that remain agents ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
     model: sonnet
@@ -522,14 +500,8 @@ recipes:
     subagents:
     # Only agents that genuinely need fresh context / isolation
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
       - name: merger
         recipe: merger
       - model: haiku
@@ -637,7 +609,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
     # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/dispatches/use-frontend-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
@@ -656,14 +627,8 @@ recipes:
       - name: frontend_engineer
         recipe: frontend-engineer
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
       - name: merger
         recipe: merger
       - name: pr_readiness
@@ -928,7 +893,6 @@ recipes:
     # === NestJS Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-nestjs-engineer.md
     # === Cross-Cutting Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
@@ -994,14 +958,8 @@ recipes:
         name: context_summarizer
         recipe: context-summarizer
       - model: sonnet
-        name: comms_jira
-        recipe: comms-jira
-      - model: sonnet
-        name: comms_teams
-        recipe: comms-teams
-      - model: sonnet
-        name: comms_github
-        recipe: comms-github
+        name: comms
+        recipe: comms
       - name: merger
         recipe: merger
       - name: pr_readiness
