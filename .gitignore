@@ -17,6 +17,7 @@ mcp.yml
 /test_results.json
 
 # Local-only directories and submodules
+docs/plans/
 rules/
 workaxle-rules/
 .gitmodules
