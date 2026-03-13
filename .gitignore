@@ -52,3 +52,5 @@ node_modules/
 # Next.js site build output
 site/out/
 site/.next/
+/.claude/worktrees/
+
