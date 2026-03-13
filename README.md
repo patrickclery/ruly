@@ -868,6 +868,39 @@ After resolution, `extended` will have:
 
 Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.
 
+#### Context Isolation (`isolate`)
+
+When running Claude Code in a subdirectory, it walks up the directory tree loading every `CLAUDE.md` and `CLAUDE.local.md` it finds. This can cause context bloat when worktrees or submodules are nested inside directories that have their own Claude instructions.
+
+The `isolate: true` recipe option prevents this inheritance by populating `claudeMdExcludes` in `.claude/settings.local.json` with every parent `CLAUDE.md` and `CLAUDE.local.md` file found between the output directory and the filesystem root.
+
+```yaml
+recipes:
+  my-isolated-recipe:
+    description: "Engineer with no parent context inheritance"
+    isolate: true
+    files:
+      - /path/to/rules/core.md
+      - /path/to/rules/frameworks/
+```
+
+After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.json` will contain:
+
+```json
+{
+  "claudeMdExcludes": [
+    "/Users/you/agents/orchestrator/CLAUDE.local.md",
+    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.md",
+    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.local.md"
+  ]
+}
+```
+
+**When to use:**
+- Worktrees nested inside parent projects with large CLAUDE files
+- Submodules that should only use their own squashed rules
+- Any recipe where you want a clean, self-contained context
+
 ### Commands
 
 - **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is

@@ -281,6 +281,7 @@ recipes:
       - name: pr_creator
         recipe: pr-creator
   core-solo:
+    isolate: true
     commands:
     # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
@@ -865,6 +866,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
   # Required for Confluence page creation
   orchestrator:
+    isolate: true
     commands:
     # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
