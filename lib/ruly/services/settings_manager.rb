@@ -12,12 +12,17 @@ module Ruly
 
       module_function
 
-      # Write hooks from recipe config into .claude/settings.local.json.
+      # Write hooks and model from recipe config into .claude/settings.local.json.
       # Merges with existing settings if the file already exists.
-      # @param recipe_config [Hash] recipe configuration (may contain 'hooks' key)
+      # @param recipe_config [Hash] recipe configuration (may contain 'hooks' and 'model' keys)
       def write_settings(recipe_config, target_dir: nil)
-        hooks = recipe_config.is_a?(Hash) && recipe_config['hooks']
-        return unless hooks.is_a?(Hash) && hooks.any?
+        return unless recipe_config.is_a?(Hash)
+
+        hooks = recipe_config['hooks']
+        model = recipe_config['model']
+        has_hooks = hooks.is_a?(Hash) && hooks.any?
+        has_model = model.is_a?(String) && !model.empty?
+        return unless has_hooks || has_model
 
         base = target_dir || Dir.pwd
         settings_path = File.join(base, SETTINGS_FILE)
@@ -29,9 +34,13 @@ module Ruly
                      {}
                    end
 
-        existing['hooks'] = hooks
+        existing['hooks'] = hooks if has_hooks
+        existing['model'] = model if has_model
         File.write(settings_path, JSON.pretty_generate(existing))
-        puts "Updated #{settings_path} with #{hooks.keys.join(', ')} hook(s)"
+        parts = []
+        parts << "#{hooks.keys.join(', ')} hook(s)" if has_hooks
+        parts << "model: #{model}" if has_model
+        puts "Updated #{settings_path} with #{parts.join(', ')}"
       end
 
       # Propagate parent recipe hooks into subagent cwd directories.

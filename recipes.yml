@@ -25,7 +25,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-dashboard.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
@@ -75,8 +74,6 @@ recipes:
         model: sonnet
       - name: merger
         recipe: merger
-      - name: dashboard
-        recipe: dashboard
       - name: pr_readiness
         recipe: pr-readiness
       - name: core_reviewer
@@ -456,7 +453,6 @@ recipes:
       # === Cross-Cutting Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-dashboard.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
@@ -526,8 +522,6 @@ recipes:
         model: sonnet
       - name: merger
         recipe: merger
-      - name: dashboard
-        recipe: dashboard
       - name: pr_readiness
         recipe: pr-readiness
       - name: core_reviewer
@@ -764,6 +758,7 @@ recipes:
 
   comms-jira:
     description: "Jira commenting, bug reports, and ready-for-qa transitions"
+    model: sonnet
     omit_command_prefix: comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -787,6 +782,7 @@ recipes:
 
   comms-teams:
     description: "MS Teams DMs and channel notifications"
+    model: sonnet
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
@@ -800,6 +796,7 @@ recipes:
 
   comms-github:
     description: "GitHub PR review requests and comment resolution"
+    model: sonnet
     omit_command_prefix: comms/github
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -811,6 +808,7 @@ recipes:
 
   dashboard:
     description: "Open PRs dashboard with context fetching via subagent"
+    model: haiku
     omit_command_prefix: comms
     files:
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
@@ -845,16 +843,19 @@ recipes:
 
   context-jira:
     description: "Downloads Jira ticket details"
+    model: haiku
     skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-jira.md
 
   context-github:
     description: "Downloads GitHub PR details for a ticket"
+    model: haiku
     skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-github.md
 
   context-teams:
     description: "Searches Teams threads for ticket/PR references"
+    model: haiku
     skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-teams.md
     mcp_servers:
@@ -862,6 +863,7 @@ recipes:
 
   context-summarizer:
     description: "Reads cached .toon files and produces ticket summary"
+    model: haiku
     skills:
       - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-summarizer.md
 
@@ -1057,12 +1059,14 @@ recipes:
 
   startup-marketing:
     description: "Marketing — landing pages, SEO, blog posts, social content"
+    model: haiku
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/content/marketing-patterns.md
 
   startup-sales:
     description: "Sales — product descriptions, pitch content, outreach"
+    model: haiku
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/content/sales-patterns.md

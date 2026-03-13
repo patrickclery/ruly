@@ -45,7 +45,33 @@ RSpec.describe Ruly::Services::SettingsManager do
       end
     end
 
-    context 'when recipe has no hooks' do
+    context 'when recipe has model' do
+      it 'writes model to settings.local.json' do
+        described_class.write_settings({ 'model' => 'haiku' })
+
+        settings = JSON.parse(File.read('.claude/settings.local.json'))
+        expect(settings['model']).to eq('haiku')
+      end
+
+      it 'writes both model and hooks' do
+        recipe_config = {
+          'model' => 'sonnet',
+          'hooks' => {
+            'WorktreeCreate' => [
+              { 'hooks' => [{ 'type' => 'command', 'command' => 'echo hi' }] }
+            ]
+          }
+        }
+
+        described_class.write_settings(recipe_config)
+
+        settings = JSON.parse(File.read('.claude/settings.local.json'))
+        expect(settings['model']).to eq('sonnet')
+        expect(settings['hooks']).to have_key('WorktreeCreate')
+      end
+    end
+
+    context 'when recipe has no hooks or model' do
       it 'does not create settings.local.json' do
         described_class.write_settings({})
         expect(File.exist?('.claude/settings.local.json')).to be false
