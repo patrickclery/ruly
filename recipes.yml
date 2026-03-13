@@ -686,20 +686,18 @@ recipes:
       # Dispatch rules
       - /Users/patrick/Projects/ruly/rules/home/use-media-stack.md
       - /Users/patrick/Projects/ruly/rules/home/use-linux-sysadmin.md
-      # Synology infrastructure (shared)
-      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
-      # Non-media services
-      - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
-      - /Users/patrick/Projects/ruly/rules/home/sso-authelia-traefik-synology.md
-      - /Users/patrick/Projects/ruly/rules/home/immich-synology-setup.md
-      - /Users/patrick/Projects/ruly/rules/home/claude_proxy.md
-      - /Users/patrick/Projects/ruly/rules/home/claude_proxy_context.md
-      # Local dev tools
-      - /Users/patrick/Projects/ruly/rules/llmux-tools-setup.md
       # Awesomer GitHub Pages deploy
       - /Users/patrick/Projects/ruly/rules/home/awesomer-github-pages-deploy.md
-      # Virtual browser
-      - /Users/patrick/Projects/ruly/rules/neko-virtual-browser.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/sso-authelia-traefik-synology.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/immich-synology-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/claude-proxy.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/claude-proxy-context.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/llmux-tools-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/neko-virtual-browser.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/openclaw-tower-financial-advisor.md
     mcp_servers:
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
@@ -716,12 +714,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/syn-qbittorrent-management.md
       - /Users/patrick/Projects/ruly/rules/home/lidarr-music-import.md
       - /Users/patrick/Projects/ruly/rules/home/synology-monitoring-stack.md
-      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
 
   linux-sysadmin:
     description: "Linux system administration subagent - Arch/CachyOS, RAID, LUKS, btrfs, GRUB, NVIDIA"
     files:
-      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
     skills:
       - /Users/patrick/Projects/ruly/rules/linux-sysadmin/skills/raid-luks-install.md
 
@@ -729,11 +727,11 @@ recipes:
     description: "Local development with Plane and GitHub integration (no Playwright)"
     files:
       - /Users/patrick/Projects/ruly/rules/awesomer
-      - /Users/patrick/Projects/ruly/rules/home/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/home/plane-synology-setup.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
     mcp_servers:
       - plane # Plane project management
     # playwright-cli is available globally via npm — no MCP server needed
