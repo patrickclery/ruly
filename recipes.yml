@@ -8,17 +8,17 @@ recipes:
     # === Orchestrator (multi-service patterns) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
     # === Jira Ticket Creation ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/epic.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/story.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/initiative.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/epic.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/story.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/initiative.md
     # === Confluence ===
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/how-to.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/change-proposals.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/how-to.md
     # === Communication Commands (DMs, commenting) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/details.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
     files:
@@ -47,7 +47,6 @@ recipes:
     # For Confluence page creation and Jira epic/story/initiative creation
       - teams
     omit_command_prefix:
-      - comms/github
       - comms
       - workaxle
   auth0:
