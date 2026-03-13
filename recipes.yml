@@ -578,8 +578,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
     description: "WorkAxle final testing and cleanup phase"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -719,8 +719,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -742,8 +742,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
     description: "WorkAxle gRPC service development"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -768,8 +768,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
   jira:
     commands:
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/details.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
     description: "Jira operations (uses CLI)"
     files:
@@ -1029,8 +1029,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
     description: "WorkAxle code refactoring"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
