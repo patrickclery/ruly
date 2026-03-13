@@ -164,26 +164,10 @@ recipes:
       - model: sonnet
         name: comms_github
         recipe: comms-github
-  comms-github:
+  comms:
     commands:
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
-    description: "GitHub PR review requests and comment resolution"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
-    model: sonnet
-    omit_command_prefix: comms/github
-  comms-jira:
-    # for ready-for-qa
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/qa-report.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
-    description: "Jira commenting, bug reports, and ready-for-qa transitions"
+      - /Users/patrick/Projects/ruly/rules/comms/commands/
+    description: "Unified communications - Jira, GitHub, Teams, Confluence"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
@@ -195,25 +179,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/workflow.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/filters.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
     mcp_servers:
       - teams
     model: sonnet
     omit_command_prefix: comms
-  # for ready-for-qa Teams notification
-  comms-teams:
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-    description: "MS Teams DMs and channel notifications"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
-    mcp_servers:
-      - teams
-    model: sonnet
-  # For Teams DM notifications
   confluence:
     description: "WorkAxle Confluence operations (requires atlassian MCP)"
     files:
@@ -507,13 +478,6 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
     model: opus
-    skills:
-    # === Superpowers (on-demand, not inlined) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-    # === Debugging (inlined as skill, not subagent) ===
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
   core-engineer-skilled:
     commands:
     # === PR Operations ===
