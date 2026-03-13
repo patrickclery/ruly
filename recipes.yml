@@ -826,6 +826,8 @@ recipes:
   # playwright-cli is available globally via npm — no MCP server needed
   merger:
     commands:
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
@@ -868,10 +870,6 @@ recipes:
   orchestrator:
     isolate: true
     commands:
-    # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
     # === Context Fetching ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     description: "WorkAxle multi-service dispatcher - routes directly to specialized subagents"
@@ -912,10 +910,6 @@ recipes:
       - github
       - comms
     skills:
-    # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    # === Git Skills ===
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
     subagents:
     # === Backend Subagents (promoted from core) ===
       - append: true

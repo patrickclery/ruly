@@ -211,10 +211,6 @@ module Ruly
           hooks:, repo_content:
         )
         write_agent_file(agent_file, context)
-        unless command_files.empty?
-          save_subagent_commands(command_files, agent_name, recipe_config,
-                                 verbose: deps[:verbose])
-        end
       rescue StandardError => e
         puts "    \u{26A0}\u{FE0F}  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
       end
