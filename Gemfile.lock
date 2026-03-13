@@ -42,6 +42,7 @@ GEM
       ast (~> 2.4.1)
       racc
     prism (1.9.0)
+    psych-comments (0.1.1)
     public_suffix (6.0.2)
     racc (1.8.1)
     rainbow (3.1.1)
@@ -107,6 +108,8 @@ GEM
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
+    yalphabetize (0.12.1)
+      psych-comments
 
 PLATFORMS
   arm64-darwin
@@ -127,6 +130,7 @@ DEPENDENCIES
   thor (~> 1.2)
   tiktoken_ruby (~> 0.0.9)
   webmock (~> 3.0)
+  yalphabetize
 
 BUNDLED WITH
    2.6.9

@@ -2,25 +2,262 @@
 # Each recipe defines a collection of rule files to combine
 # Use 'ruly import --recipe <name>' or 'ruly squash --recipe <name>' to use a specific recipe
 
-# Global default tier (can be overridden per recipe or in user config)
-tier: claude_pro
-
 recipes:
-  # WorkAxle recipes - Dynamic loading based on current task
-  core:
-    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
+  agile:
+    commands:
+    # === Orchestrator (multi-service patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
+    # === Jira Ticket Creation ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/epic.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/story.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/initiative.md
+    # === Confluence ===
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/how-to.md
+    # === Communication Commands (DMs, commenting) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
+    description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
+    files:
+    # === WorkAxle Core ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+    # === Reference ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+    # === Orchestrator (multi-service patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multi-service-development.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multiple.md
+    # === Shared Communication Files ===
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
+      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    # === MS Teams ===
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+    mcp_servers:
+      - atlassian
+    # For Confluence page creation and Jira epic/story/initiative creation
+      - teams
+    omit_command_prefix:
+      - comms/github
+      - comms
+      - workaxle
+  auth0:
+    commands:
+    # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    # PR operations
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
+    description: "WorkAxle Auth0 password and session management development"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+    # Auth0 specific
+      - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
+    # Context fetching via subagent (MUST be always loaded)
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
     omit_command_prefix:
       - comms/github
       - github
       - comms
+    skills:
+    # PR operations
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    subagents:
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
+      - model: haiku
+        name: context_teams
+        recipe: context-teams
+      - model: haiku
+        name: context_summarizer
+        recipe: context-summarizer
+  awesomer:
+    description: "Local development with Plane and GitHub integration (no Playwright)"
     files:
-      # === Branch Lock (main worktree stays on main) ===
+      - /Users/patrick/Projects/ruly/rules/awesomer
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
+    mcp_servers:
+      - plane
+  bounce-investigator:
+    commands:
+    # === Context Fetching (orchestrator handles context) ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
+    files:
+    # === Branch Lock (main worktree stays on main) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
-      # === Reference (high-level codebase understanding) ===
+    # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
-      # === Dispatch Rules ===
+    # === Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - command: .claude/scripts/worktree-create.sh
+              timeout: 120
+              type: command
+    mcp_servers:
+      - atlassian
+      - teams
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    skills:
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/bounce-investigator.md
+    subagents:
+      - model: opus
+        name: core_engineer
+        recipe: core-engineer
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
+      - model: haiku
+        name: context_teams
+        recipe: context-teams
+      - model: haiku
+        name: context_summarizer
+        recipe: context-summarizer
+      - model: sonnet
+        name: comms_jira
+        recipe: comms-jira
+      - model: sonnet
+        name: comms_teams
+        recipe: comms-teams
+      - model: sonnet
+        name: comms_github
+        recipe: comms-github
+  comms-github:
+    commands:
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
+    description: "GitHub PR review requests and comment resolution"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
+    model: sonnet
+    omit_command_prefix: comms/github
+  comms-jira:
+    # for ready-for-qa
+    commands:
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/qa-report.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
+    description: "Jira commenting, bug reports, and ready-for-qa transitions"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
+      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/workflow.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/filters.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+    mcp_servers:
+      - teams
+    model: sonnet
+    omit_command_prefix: comms
+  # for ready-for-qa Teams notification
+  comms-teams:
+    commands:
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
+    description: "MS Teams DMs and channel notifications"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+    mcp_servers:
+      - teams
+    model: sonnet
+  # For Teams DM notifications
+  confluence:
+    description: "WorkAxle Confluence operations (requires atlassian MCP)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/comms/confluence/
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+    mcp_servers:
+      - atlassian
+  context-github:
+    description: "Downloads GitHub PR details for a ticket"
+    model: haiku
+    skills:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-github.md
+  context-jira:
+    description: "Downloads Jira ticket details"
+    model: haiku
+    skills:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-jira.md
+  context-summarizer:
+    description: "Reads cached .toon files and produces ticket summary"
+    model: haiku
+    skills:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-summarizer.md
+  context-teams:
+    description: "Searches Teams threads for ticket/PR references"
+    mcp_servers:
+      - teams
+    model: haiku
+    skills:
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-teams.md
+  # WorkAxle recipes - Dynamic loading based on current task
+  core:
+    commands:
+    # === Context Fetching (orchestrator handles context) ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
+    files:
+    # === Branch Lock (main worktree stays on main) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+    # === Reference (high-level codebase understanding) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+    # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
@@ -31,49 +268,50 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-creator.md
-      # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
+    # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
       - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
     hooks:
       WorktreeCreate:
         - hooks:
-            - type: command
-              command: .claude/scripts/worktree-create.sh
+            - command: .claude/scripts/worktree-create.sh
               timeout: 120
+              type: command
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     skills:
-      # === PR Operations ===
+    # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    commands:
-      # === Context Fetching (orchestrator handles context) ===
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
-      - name: core_debugger
+      - model: opus
+        name: core_debugger
         recipe: core-debugger
-        model: opus
-      - name: core_engineer
+      - model: opus
+        name: core_engineer
         recipe: core-engineer
-        model: opus
-      - name: context_jira
+      - model: haiku
+        name: context_jira
         recipe: context-jira
-        model: haiku
-      - name: context_github
+      - model: haiku
+        name: context_github
         recipe: context-github
-        model: haiku
-      - name: context_teams
+      - model: haiku
+        name: context_teams
         recipe: context-teams
-        model: haiku
-      - name: context_summarizer
+      - model: haiku
+        name: context_summarizer
         recipe: context-summarizer
-        model: haiku
-      - name: comms_jira
+      - model: sonnet
+        name: comms_jira
         recipe: comms-jira
-        model: sonnet
-      - name: comms_teams
+      - model: sonnet
+        name: comms_teams
         recipe: comms-teams
-        model: sonnet
-      - name: comms_github
+      - model: sonnet
+        name: comms_github
         recipe: comms-github
-        model: sonnet
       - name: merger
         recipe: merger
       - name: pr_readiness
@@ -86,86 +324,47 @@ recipes:
         recipe: qa
       - name: pr_creator
         recipe: pr-creator
-
   core-debugger:
+    commands:
+    # === Commands ===
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
     description: "WorkAxle bug investigation and fixing orchestrator"
-    model: opus
-    omitCommandPrefix: workaxle
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === Essential (no feature-flags, no outbox — bugs don't need these) ===
+    # === Essential (no feature-flags, no outbox — bugs don't need these) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      # === Bug Investigation ===
+    # === Bug Investigation ===
       - /Users/patrick/Projects/ruly/rules/bug/policies.md
       - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+    model: opus
+    omitCommandPrefix: workaxle
     skills:
-      # === Bug Investigation ===
+    # === Bug Investigation ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-    commands:
-      # === Commands ===
-      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
-
-  migration:
-    description: "WorkAxle database migrations"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
-
-  grpc:
-    description: "WorkAxle gRPC service development"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
-    skills:
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    commands:
-      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-  pr:
-    description: "WorkAxle PR creation and management"
-    omit_command_prefix: github
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/
-    skills:
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-
   core-engineer:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
-    model: opus
     files:
-      # === Superpowers: TDD & Verification (core tenets) ===
+    # === Superpowers: TDD & Verification (core tenets) ===
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
       - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-      # === WorkAxle Core ===
+    # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === Essential (ALL — features need feature-flags and outbox) ===
+    # === Essential (ALL — features need feature-flags and outbox) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      # === Frameworks ===
+    # === Frameworks ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === Framework Standards ===
+    # === Framework Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
@@ -177,152 +376,273 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
-      # === Testing (RSpec) ===
+    # === Testing (RSpec) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      # === Standards ===
+    # === Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
-      # === Migrations ===
+    # === Migrations ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+    model: opus
     skills:
-      # === Debugging (inlined as skill, not subagent) ===
+    # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
   core-engineer-skilled:
+    commands:
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+    # === Context ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     description: "WorkAxle engineer with on-demand skills for reviewing, debugging, and fixing"
+    files:
+    # === Core (always loaded) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+    # === Frameworks (always loaded — needed for daily coding) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+    # === Standards (always loaded — core coding patterns) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+    # === TDD (always loaded — engineer always uses TDD) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+    # === Dispatch rules for agents that remain agents ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
     model: sonnet
     omit_command_prefix:
       - comms/github
       - github
       - comms
-    files:
-      # === Core (always loaded) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
-      # === Frameworks (always loaded — needed for daily coding) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === Standards (always loaded — core coding patterns) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      # === TDD (always loaded — engineer always uses TDD) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-      # === Dispatch rules for agents that remain agents ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
     skills:
-      # === Compiled Skills (loaded on demand via Skill tool) ===
+    # === Compiled Skills (loaded on demand via Skill tool) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/code-review.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/skills/bug-diagnosis.md
-      # === Existing skills ===
+    # === Existing skills ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-      # === PR Operations ===
+    # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    commands:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      # === Context ===
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
     subagents:
-      # Only agents that genuinely need fresh context / isolation
-      - name: comms_jira
+    # Only agents that genuinely need fresh context / isolation
+      - model: sonnet
+        name: comms_jira
         recipe: comms-jira
-        model: sonnet
-      - name: comms_teams
+      - model: sonnet
+        name: comms_teams
         recipe: comms-teams
-        model: sonnet
-      - name: comms_github
+      - model: sonnet
+        name: comms_github
         recipe: comms-github
-        model: sonnet
       - name: merger
         recipe: merger
-      - name: context_jira
+      - model: haiku
+        name: context_jira
         recipe: context-jira
-        model: haiku
-      - name: context_github
+      - model: haiku
+        name: context_github
         recipe: context-github
-        model: haiku
-      - name: context_teams
+      - model: haiku
+        name: context_teams
         recipe: context-teams
-        model: haiku
-      - name: context_summarizer
+      - model: haiku
+        name: context_summarizer
         recipe: context-summarizer
-        model: haiku
-
-  auth0:
-    description: "WorkAxle Auth0 password and session management development"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
+    # playwright-cli is available globally via npm — no MCP server needed
+  core-reviewer:
+    commands:
+    # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
+    description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
     files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/
+    # === PR common ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+    # === Jira statuses (for readiness gates) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    # === WorkAxle standards (review lens) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+    # === WorkAxle frameworks ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      # Auth0 specific
-      - /Users/patrick/Projects/ruly/rules/auth0-password-session-management.md
-      # Context fetching via subagent (MUST be always loaded)
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
-    skills:
-      # PR operations
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    commands:
-      # Context fetching via subagent (MUST be always loaded)
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-      # PR operations
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-    subagents:
-      - name: context_jira
-        recipe: context-jira
-        model: haiku
-      - name: context_github
-        recipe: context-github
-        model: haiku
-      - name: context_teams
-        recipe: context-teams
-        model: haiku
-      - name: context_summarizer
-        recipe: context-summarizer
-        model: haiku
-
-  refactor:
-    description: "WorkAxle code refactoring"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+    # === WorkAxle Ruby standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
+    # === Superpowers code-reviewer ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
+    omit_command_prefix: github
     skills:
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    # === Reviewing skill ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+  # === Corporate Advisor — workplace strategy and communication ===
+  corporate-advisor:
+    description: "Corporate strategy advisor — appeal planning, narrative building, and organizational navigation"
+    skills:
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/appeal-strategy-advisor.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/counter-argument-stress-tester.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/culture-reader.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/narrative-builder.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/outcome-planner.md
+      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/relationship-mapper.md
+  dashboard:
     commands:
+      - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
+    description: "Open PRs dashboard with context fetching via subagent"
+    files:
+      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+    model: haiku
+    omit_command_prefix: comms
+  # MS Teams integration
+  finalize:
+    commands:
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-
+    description: "WorkAxle final testing and cleanup phase"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+  # === Frontend Recipes ===
+  frontend:
+    commands:
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+    # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
+    files:
+    # === Frontend Core (minimal for routing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+    # === Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/dispatches/use-frontend-engineer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+    # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    skills:
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    # === Skills ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
+    subagents:
+      - name: frontend_engineer
+        recipe: frontend-engineer
+      - model: sonnet
+        name: comms_jira
+        recipe: comms-jira
+      - model: sonnet
+        name: comms_teams
+        recipe: comms-teams
+      - model: sonnet
+        name: comms_github
+        recipe: comms-github
+      - name: merger
+        recipe: merger
+      - name: pr_readiness
+        recipe: pr-readiness
+      - name: core_reviewer
+        recipe: core-reviewer
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
+      - model: haiku
+        name: context_teams
+        recipe: context-teams
+      - model: haiku
+        name: context_summarizer
+        recipe: context-summarizer
+  frontend-engineer:
+    description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
+    files:
+    # === Superpowers: TDD & Verification ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+    # === Frontend Rules (all 9) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
+    mcp_servers: 
+  # playwright-cli is available globally via npm — no MCP server needed
+  frontend-reviewer:
+    commands:
+    # === PR readiness chart ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
+    description: "WorkAxle frontend PR code review - React/TypeScript standards enforcement"
+    files:
+    # === Superpowers: Code Review ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
+    # === Frontend Standards (review lens) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
+    # === PR common ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+    # === Jira statuses (for readiness gates) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
+    omit_command_prefix: github
+    skills:
+    # === Reviewing skill ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
   full:
     description: "Complete WorkAxle documentation"
     files:
@@ -343,292 +663,50 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/user-svc/
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
     mcp_servers:
-      - teams # MS Teams integration
-
-  finalize:
-    description: "WorkAxle final testing and cleanup phase"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
-      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
-    skills:
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+      - teams
+  gateway:
     commands:
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/make-tests-green.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    # playwright-cli is available globally via npm — no MCP server needed
-
-  core-reviewer:
-    description: "WorkAxle PR code review — readiness gates, standards enforcement, interactive commenting"
-    omit_command_prefix: github
-    files:
-      # === PR common ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      # === Jira statuses (for readiness gates) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-      # === WorkAxle standards (review lens) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
-      # === WorkAxle frameworks ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
-      # === WorkAxle Ruby standards ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
-      # === Superpowers code-reviewer ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
-    skills:
-      # === Reviewing skill ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
-    commands:
-      # === PR readiness chart ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
-
-  jira:
-    description: "Jira operations (uses CLI)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
-      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
-    mcp_servers:
-      - teams # For Teams DM notifications
-
-  confluence:
-    description: "WorkAxle Confluence operations (requires atlassian MCP)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-    mcp_servers:
-      - atlassian # Required for Confluence page creation
-
-  orchestrator:
-    description: "WorkAxle multi-service dispatcher - routes directly to specialized subagents"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
-    files:
-      # === Branch Lock (submodule repos stay on main) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/essential/branch-lock.md
-      # === Worktree Setup ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/reference/worktree-setup.md
-      # === Orchestrator Dispatch ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
-      # === WorkAxle Core Context (for understanding routing signals) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      # === Backend Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
-      # === NestJS Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-nestjs-engineer.md
-      # === Cross-Cutting Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
-    skills:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      # === Git Skills ===
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
-    commands:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    subagents:
-      # === Backend Subagents (promoted from core) ===
-      - name: core_debugger
-        recipe: core-debugger
-        model: opus
-        cwd: workaxle-core
-        append: true
-      - name: core_engineer
-        recipe: core-engineer
-        model: opus
-        cwd: workaxle-core
-        append: true
-      # === NestJS Subagents ===
-      - name: nestjs_engineer
-        recipe: nestjs-engineer
-        append: true
-      - name: gateway_engineer
-        recipe: gateway
-        cwd: workaxle-gateway
-        append: true
-      # === Frontend Subagents ===
-      - name: frontend_engineer
-        recipe: frontend-engineer
-        cwd: workaxle-desktop
-        append: true
-      - name: frontend_reviewer
-        recipe: frontend-reviewer
-        cwd: workaxle-desktop
-        append: true
-      # === Context Subagents ===
-      - name: context_jira
-        recipe: context-jira
-        model: haiku
-      - name: context_github
-        recipe: context-github
-        model: haiku
-      - name: context_teams
-        recipe: context-teams
-        model: haiku
-      - name: context_summarizer
-        recipe: context-summarizer
-        model: haiku
-      - name: comms_jira
-        recipe: comms-jira
-        model: sonnet
-      - name: comms_teams
-        recipe: comms-teams
-        model: sonnet
-      - name: comms_github
-        recipe: comms-github
-        model: sonnet
-      - name: merger
-        recipe: merger
-      - name: pr_readiness
-        recipe: pr-readiness
-      - name: core_reviewer
-        recipe: core-reviewer
-        cwd: workaxle-core
-        append: true
-      - name: pr_review_loop
-        recipe: pr-review-loop
-      - name: qa_tester
-        recipe: qa
-    hooks:
-      WorktreeCreate:
-        - hooks:
-            - type: command
-              command: .claude/scripts/worktree-create.sh
-              timeout: 120
-
-  gateway:
     description: "WorkAxle Gateway NestJS/TypeScript development with orchestrator patterns"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
-      # === Shared NestJS Patterns (TypeORM, gRPC, RabbitMQ, Jest) ===
+    # === Shared NestJS Patterns (TypeORM, gRPC, RabbitMQ, Jest) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
+    mcp_servers: 
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+  grpc:
     commands:
+      - /Users/patrick/Projects/ruly/rules/bug/commands/grpc.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
       - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-    mcp_servers:
-    # playwright-cli is available globally via npm — no MCP server needed
-
-  nestjs-engineer:
-    description: "WorkAxle NestJS microservice development — TypeORM, gRPC, RabbitMQ, Jest"
-    files:
-      # === Superpowers: TDD & Verification ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-      # === WorkAxle Core Context ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # === NestJS Patterns (TypeORM, gRPC, RabbitMQ, outbox, config, testing) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
-      # === Orchestrator Context (docker, service mapping, feature flags) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
-    skills:
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-  playwright:
-    description: "WorkAxle Playwright E2E testing and browser automation"
+    description: "WorkAxle gRPC service development"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-      - /Users/patrick/Projects/ruly/rules/comms/jira/
-    # playwright-cli is available globally via npm — no MCP server needed
-
-  qa:
-    description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
-    files:
-      # === QA Testing Workflow (repo layout, patterns, env) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-testing.md
-      # === Selector patterns (battle-tested from live testing) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/qa/playwright-selector-patterns.md
-      # === Jira (only ticket fetching — for extracting AC) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
-    skills:
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
-    # playwright-cli is available globally via npm — no MCP server needed
-
-  spike:
-    description: "WorkAxle spike investigation and research for Jira tasks"
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/grpc.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/services/grpc/
     omit_command_prefix:
       - comms/github
+      - github
       - comms
-      - workaxle
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
-      - /Users/patrick/Projects/ruly/rules/comms/
     skills:
-      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-    commands:
-      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
-    mcp_servers:
-      - atlassian # For Confluence page creation only (Jira uses CLI)
-
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+  # For Confluence page creation only (Jira uses CLI)
   initiative-core:
     description: "WorkAxle initiative investigation and planning"
     files:
@@ -639,61 +717,36 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/
       - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
       - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-  agile:
-    description: "WorkAxle agile planning — epics, stories, initiatives, change proposals, spikes"
-    omit_command_prefix:
-      - comms/github
-      - comms
-      - workaxle
-    files:
-      # === WorkAxle Core ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      # === Reference ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      # === Orchestrator (multi-service patterns) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multi-service-development.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/multiple.md
-      # === Shared Communication Files ===
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
-      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-      # === MS Teams ===
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
+  jira:
     commands:
-      # === Orchestrator (multi-service patterns) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/commands/spike.md
-      # === Jira Ticket Creation ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/epic.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/story.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/initiative.md
-      # === Confluence ===
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/change-proposals.md
-      - /Users/patrick/Projects/ruly/rules/comms/confluence/commands/how-to.md
-      # === Communication Commands (DMs, commenting) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
       - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
       - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
+    description: "Jira operations (uses CLI)"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/
+      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
     mcp_servers:
-      - atlassian # For Confluence page creation and Jira epic/story/initiative creation
-      - teams # For Teams DM notifications
-
+      - teams
+  linux-sysadmin:
+    description: "Linux system administration subagent - Arch/CachyOS, RAID, LUKS, btrfs, GRUB, NVIDIA"
+    files:
+      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/linux-sysadmin/skills/raid-luks-install.md
+  # For Teams DM notifications
   local:
     description: "Local development dispatcher - routes media/sysadmin tasks to subagents"
     files:
-      # Dispatch rules
+    # Dispatch rules
       - /Users/patrick/Projects/ruly/rules/home/use-media-stack.md
       - /Users/patrick/Projects/ruly/rules/home/use-linux-sysadmin.md
-      # Awesomer GitHub Pages deploy
+    # Awesomer GitHub Pages deploy
       - /Users/patrick/Projects/ruly/rules/home/awesomer-github-pages-deploy.md
+    mcp_servers: 
     skills:
       - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
       - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
@@ -704,14 +757,12 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/skills/llmux-tools-setup.md
       - /Users/patrick/Projects/ruly/rules/home/skills/neko-virtual-browser.md
       - /Users/patrick/Projects/ruly/rules/home/skills/openclaw-tower-financial-advisor.md
-    mcp_servers:
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: media_stack
         recipe: media-stack
       - name: linux_sysadmin
         recipe: linux-sysadmin
-
   media-stack:
     description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
     files:
@@ -721,104 +772,190 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/lidarr-music-import.md
       - /Users/patrick/Projects/ruly/rules/home/synology-monitoring-stack.md
       - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
-
-  linux-sysadmin:
-    description: "Linux system administration subagent - Arch/CachyOS, RAID, LUKS, btrfs, GRUB, NVIDIA"
-    files:
-      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
-    skills:
-      - /Users/patrick/Projects/ruly/rules/linux-sysadmin/skills/raid-luks-install.md
-
-  awesomer:
-    description: "Local development with Plane and GitHub integration (no Playwright)"
-    files:
-      - /Users/patrick/Projects/ruly/rules/awesomer
-      - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
-      - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
-    mcp_servers:
-      - plane # Plane project management
-    # playwright-cli is available globally via npm — no MCP server needed
-
+  # Plane project management
+  # playwright-cli is available globally via npm — no MCP server needed
   merger:
-    description: "PR merging commands only (no code knowledge needed)"
-    omit_command_prefix: github
-    files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      # PR details and merging
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
-    skills:
-      - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
-      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
     commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-branches.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
-
-  comms-jira:
-    description: "Jira commenting, bug reports, and ready-for-qa transitions"
-    model: sonnet
-    omit_command_prefix: comms
+    description: "PR merging commands only (no code knowledge needed)"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/adf-formatting.md
-      - /Users/patrick/Projects/ruly/rules/comms/atlassian-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/workflow.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/filters.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md  # for ready-for-qa
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/comment.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/bug-report.md
-      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/qa-report.md
-      - /Users/patrick/Projects/ruly/rules/comms/commands/full-context.md
-    mcp_servers:
-      - teams  # for ready-for-qa Teams notification
-
-  comms-teams:
-    description: "MS Teams DMs and channel notifications"
-    model: sonnet
+    # PR details and merging
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+    omit_command_prefix: github
+    skills:
+      - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+  migration:
+    description: "WorkAxle database migrations"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/profiles/migration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/
+  # playwright-cli is available globally via npm — no MCP server needed
+  nestjs-engineer:
+    description: "WorkAxle NestJS microservice development — TypeORM, gRPC, RabbitMQ, Jest"
+    files:
+    # === Superpowers: TDD & Verification ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+    # === WorkAxle Core Context ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+    # === NestJS Patterns (TypeORM, gRPC, RabbitMQ, outbox, config, testing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
+    # === Orchestrator Context (docker, service mapping, feature flags) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/structure.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+  # Required for Confluence page creation
+  orchestrator:
     commands:
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/dm.md
-      - /Users/patrick/Projects/ruly/rules/comms/ms-teams/commands/details.md
-    mcp_servers:
-      - teams
-
-  comms-github:
-    description: "GitHub PR review requests and comment resolution"
-    model: sonnet
-    omit_command_prefix: comms/github
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+    # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    description: "WorkAxle multi-service dispatcher - routes directly to specialized subagents"
+    files:
+    # === Branch Lock (submodule repos stay on main) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/essential/branch-lock.md
+    # === Worktree Setup ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/reference/worktree-setup.md
+    # === Orchestrator Dispatch ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
+    # === WorkAxle Core Context (for understanding routing signals) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+    # === Backend Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
+    # === NestJS Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-nestjs-engineer.md
+    # === Cross-Cutting Dispatch Rules ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
+    # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - command: .claude/scripts/worktree-create.sh
+              timeout: 120
+              type: command
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    skills:
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    # === Git Skills ===
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+    subagents:
+    # === Backend Subagents (promoted from core) ===
+      - append: true
+        cwd: workaxle-core
+        model: opus
+        name: core_debugger
+        recipe: core-debugger
+      - append: true
+        cwd: workaxle-core
+        model: opus
+        name: core_engineer
+        recipe: core-engineer
+      # === NestJS Subagents ===
+      - append: true
+        name: nestjs_engineer
+        recipe: nestjs-engineer
+      - append: true
+        cwd: workaxle-gateway
+        name: gateway_engineer
+        recipe: gateway
+      # === Frontend Subagents ===
+      - append: true
+        cwd: workaxle-desktop
+        name: frontend_engineer
+        recipe: frontend-engineer
+      - append: true
+        cwd: workaxle-desktop
+        name: frontend_reviewer
+        recipe: frontend-reviewer
+      # === Context Subagents ===
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
+      - model: haiku
+        name: context_teams
+        recipe: context-teams
+      - model: haiku
+        name: context_summarizer
+        recipe: context-summarizer
+      - model: sonnet
+        name: comms_jira
+        recipe: comms-jira
+      - model: sonnet
+        name: comms_teams
+        recipe: comms-teams
+      - model: sonnet
+        name: comms_github
+        recipe: comms-github
+      - name: merger
+        recipe: merger
+      - name: pr_readiness
+        recipe: pr-readiness
+      - append: true
+        cwd: workaxle-core
+        name: core_reviewer
+        recipe: core-reviewer
+      - name: pr_review_loop
+        recipe: pr-review-loop
+      - name: qa_tester
+        recipe: qa
+  playwright:
+    description: "WorkAxle Playwright E2E testing and browser automation"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/e2e-testing-multi-service.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/workaxle-e2e-feature-implementation.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
+      - /Users/patrick/Projects/ruly/rules/comms/jira/
+  pr:
+    description: "WorkAxle PR creation and management"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/
+    omit_command_prefix: github
+    skills:
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+  pr-creator:
+    commands:
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-branch.md
+    description: "PR creation commands - create, create-develop, create-dual, create-branch"
     files:
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
       - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/pr-comment-resolution.md
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
-      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/resolve-outdated-comments.md
-
-  dashboard:
-    description: "Open PRs dashboard with context fetching via subagent"
-    model: haiku
-    omit_command_prefix: comms
-    files:
-      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
-    commands:
-      - /Users/patrick/Projects/ruly/rules/comms/commands/dashboard.md
-
+    omit_command_prefix: github
   pr-readiness:
     description: "Verify PR readiness against definition of done (subagent execution)"
     files:
@@ -826,58 +963,50 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
     skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
-
   pr-review-loop:
     description: "Automated PR review feedback loop - monitors reviews, fixes issues, re-checks"
     omit_command_prefix: github
     skills:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-
-  pr-creator:
-    description: "PR creation commands - create, create-develop, create-dual, create-branch"
-    omit_command_prefix: github
+  # playwright-cli is available globally via npm — no MCP server needed
+  qa:
+    description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
     files:
-      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+    # === QA Testing Workflow (repo layout, patterns, env) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-testing.md
+    # === Selector patterns (battle-tested from live testing) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/qa/playwright-selector-patterns.md
+    # === Jira (only ticket fetching — for extracting AC) ===
+      - /Users/patrick/Projects/ruly/rules/comms/jira/fetching-jira-details.md
+    skills:
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
+  refactor:
     commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-branch.md
-
-  context-jira:
-    description: "Downloads Jira ticket details"
-    model: haiku
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/comms/github/pr/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/commands/ready-for-qa.md
+    description: "WorkAxle code refactoring"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
     skills:
-      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-jira.md
-
-  context-github:
-    description: "Downloads GitHub PR details for a ticket"
-    model: haiku
-    skills:
-      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-github.md
-
-  context-teams:
-    description: "Searches Teams threads for ticket/PR references"
-    model: haiku
-    skills:
-      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-downloader-teams.md
-    mcp_servers:
-      - teams
-
-  context-summarizer:
-    description: "Reads cached .toon files and produces ticket summary"
-    model: haiku
-    skills:
-      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-summarizer.md
-
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
   ruly:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
     files:
-      # === WorkAxle Core ===
+    # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
-      # === Framework Standards ===
+    # === Framework Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
@@ -889,127 +1018,36 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
-      # === Testing (RSpec) ===
+    # === Testing (RSpec) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
-      # === Standards ===
+    # === Standards ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
     skills:
-      # === Debugging (inlined as skill, not subagent) ===
+    # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
-
-  # === Frontend Recipes ===
-
-  frontend:
-    description: "WorkAxle frontend dispatcher - routes tasks to specialized subagents"
+  # playwright-cli is available globally via npm — no MCP server needed
+  spike:
+    commands:
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
+    description: "WorkAxle spike investigation and research for Jira tasks"
+    files:
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/
+      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/
+      - /Users/patrick/Projects/ruly/rules/comms/
+    mcp_servers:
+      - atlassian
     omit_command_prefix:
       - comms/github
-      - github
       - comms
-    files:
-      # === Frontend Core (minimal for routing) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
-      # === Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/dispatches/use-frontend-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      - workaxle
     skills:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      # === Skills ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/skills/deploy-pr-branch.md
-    commands:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
-      # === Context Fetching ===
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    subagents:
-      - name: frontend_engineer
-        recipe: frontend-engineer
-      - name: comms_jira
-        recipe: comms-jira
-        model: sonnet
-      - name: comms_teams
-        recipe: comms-teams
-        model: sonnet
-      - name: comms_github
-        recipe: comms-github
-        model: sonnet
-      - name: merger
-        recipe: merger
-      - name: pr_readiness
-        recipe: pr-readiness
-      - name: core_reviewer
-        recipe: core-reviewer
-      - name: context_jira
-        recipe: context-jira
-        model: haiku
-      - name: context_github
-        recipe: context-github
-        model: haiku
-      - name: context_teams
-        recipe: context-teams
-        model: haiku
-      - name: context_summarizer
-        recipe: context-summarizer
-        model: haiku
-
-  frontend-engineer:
-    description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
-    files:
-      # === Superpowers: TDD & Verification ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-      # === Frontend Rules (all 9) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
-    mcp_servers:
-    # playwright-cli is available globally via npm — no MCP server needed
-
-  frontend-reviewer:
-    description: "WorkAxle frontend PR code review - React/TypeScript standards enforcement"
-    omit_command_prefix: github
-    files:
-      # === Superpowers: Code Review ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/requesting-code-review/code-reviewer.md
-      # === Frontend Standards (review lens) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/conventions.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/state-management.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/graphql.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/forms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/styling.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/testing.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
-      # === PR common ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
-      # === Jira statuses (for readiness gates) ===
-      - /Users/patrick/Projects/ruly/rules/comms/jira/statuses.md
-    skills:
-      # === Reviewing skill ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
-    commands:
-      # === PR readiness chart ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/commands/readiness-chart.md
-
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
   # === Startup recipes — Generic Next.js + NestJS + Postgres stack ===
   startup:
     description: "Startup team orchestrator — dispatches to specialized roles"
@@ -1028,122 +1066,46 @@ recipes:
         recipe: startup-uiux
       - name: devops_engineer
         recipe: startup-devops
-      - name: marketing
+      - model: haiku
+        name: marketing
         recipe: startup-marketing
-        model: haiku
-      - name: sales
+      - model: haiku
+        name: sales
         recipe: startup-sales
-        model: haiku
-
-  startup-frontend:
-    description: "Next.js frontend engineer — React 19, Tailwind 4, App Router"
-    files:
-      - /Users/patrick/Projects/ruly/rules/startup/core.md
-      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/
-
   startup-backend:
     description: "NestJS backend engineer — Prisma 7, PostgreSQL, API design"
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/backend/
-
-  startup-uiux:
-    description: "UI/UX designer — design systems, visual testing, cutting-edge UI"
-    files:
-      - /Users/patrick/Projects/ruly/rules/startup/core.md
-      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/tailwind-patterns.md
-    # UI/UX Pro Max is loaded automatically via Claude Code plugin
-    # playwright-cli is available globally via npm — no MCP server needed
-
+  # UI/UX Pro Max is loaded automatically via Claude Code plugin
+  # playwright-cli is available globally via npm — no MCP server needed
   startup-devops:
     description: "DevOps engineer — CI/CD, Docker, deployment"
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/devops/
-
+  startup-frontend:
+    description: "Next.js frontend engineer — React 19, Tailwind 4, App Router"
+    files:
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/
   startup-marketing:
     description: "Marketing — landing pages, SEO, blog posts, social content"
-    model: haiku
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/content/marketing-patterns.md
-
+    model: haiku
   startup-sales:
     description: "Sales — product descriptions, pitch content, outreach"
-    model: haiku
     files:
       - /Users/patrick/Projects/ruly/rules/startup/core.md
       - /Users/patrick/Projects/ruly/rules/startup/core/content/sales-patterns.md
-
-  bounce-investigator:
-    description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
-    omit_command_prefix:
-      - comms/github
-      - github
-      - comms
+    model: haiku
+  startup-uiux:
+    description: "UI/UX designer — design systems, visual testing, cutting-edge UI"
     files:
-      # === Branch Lock (main worktree stays on main) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
-      # === Reference (high-level codebase understanding) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
-      # === Dispatch Rules ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
-      # === SDD Review Loop (spec compliance + code quality after engineer dispatches) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
-    hooks:
-      WorktreeCreate:
-        - hooks:
-            - type: command
-              command: .claude/scripts/worktree-create.sh
-              timeout: 120
-    skills:
-      # === PR Operations ===
-      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-      - /Users/patrick/Projects/ruly/rules/home/skills/bounce-investigator.md
-    commands:
-      # === Context Fetching (orchestrator handles context) ===
-      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    subagents:
-      - name: core_engineer
-        recipe: core-engineer
-        model: opus
-      - name: context_jira
-        recipe: context-jira
-        model: haiku
-      - name: context_github
-        recipe: context-github
-        model: haiku
-      - name: context_teams
-        recipe: context-teams
-        model: haiku
-      - name: context_summarizer
-        recipe: context-summarizer
-        model: haiku
-      - name: comms_jira
-        recipe: comms-jira
-        model: sonnet
-      - name: comms_teams
-        recipe: comms-teams
-        model: sonnet
-      - name: comms_github
-        recipe: comms-github
-        model: sonnet
-    mcp_servers:
-      - atlassian
-      - teams
+      - /Users/patrick/Projects/ruly/rules/startup/core.md
+      - /Users/patrick/Projects/ruly/rules/startup/core/frontend/tailwind-patterns.md
 
-  # === Corporate Advisor — workplace strategy and communication ===
-  corporate-advisor:
-    description: "Corporate strategy advisor — appeal planning, narrative building, and organizational navigation"
-    skills:
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/appeal-strategy-advisor.md
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/counter-argument-stress-tester.md
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/culture-reader.md
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/narrative-builder.md
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/outcome-planner.md
-      - /Users/patrick/Projects/ruly/rules/corporate-advisor/skills/relationship-mapper.md
+# Global default tier (can be overridden per recipe or in user config)
+tier: claude_pro

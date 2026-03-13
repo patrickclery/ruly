@@ -19,4 +19,5 @@ group :development, :test do
   gem 'rubocop-rspec'
   gem 'sevencop'
   gem 'webmock', '~> 3.0'
+  gem 'yalphabetize', require: false
 end

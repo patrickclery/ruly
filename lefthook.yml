@@ -14,6 +14,11 @@ pre-commit:
       run: npx prettier --write {staged_files} && npx markdown-table-prettify {staged_files}
       stage_fixed: true
 
+    yalphabetize:
+      glob: "recipes.yml"
+      run: RUBYOPT="-Eutf-8" bundle exec yalphabetize -a {staged_files}
+      stage_fixed: true
+
     rubocop:
       glob: "*.{rb,rake}"
       run: bundle exec rubocop --autocorrect-all --force-exclusion {staged_files}
