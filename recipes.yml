@@ -324,6 +324,127 @@ recipes:
         recipe: qa
       - name: pr_creator
         recipe: pr-creator
+  core-solo:
+    commands:
+    # === Context Fetching ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
+    # === Bug Investigation ===
+      - /Users/patrick/Projects/ruly/rules/bug/commands/diagnose.md
+    description: "WorkAxle hands-on engineer with full domain knowledge + support subagents"
+    files:
+    # === WorkAxle Core ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core.md
+    # === Essential (ALL) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/common.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/development-commands.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/feature-flags.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+    # === Reference ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+    # === Frameworks ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/ruby-practices.md
+    # === Framework Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/_common-ruby-language-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/code-style-guidelines.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/constants-configuration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/duck-typing-polymorphism.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/error-handling.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/guard-clauses-early-returns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/instance-variables-memoization.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/iteration-enumeration.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/method-chaining-fluent-interfaces.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/module-composition.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/standards/ruby-3-features.md
+    # === Testing (RSpec) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-reference.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/rspec-sequel.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/specs.md
+    # === Standards ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/architecture-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/code-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/standards/runtime-concerns.md
+    # === Migrations ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/database-migration-patterns.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/migration-safety.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
+    # === Bug Investigation ===
+      - /Users/patrick/Projects/ruly/rules/bug/policies.md
+      - /Users/patrick/Projects/ruly/rules/bug/rspec-debugging-guide.md
+    # === Dispatch Rules (support subagents only — no core-engineer/debugger dispatch) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-comms.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-reviewer.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-review-loop.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-qa.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-pr-creator.md
+    hooks:
+      WorktreeCreate:
+        - hooks:
+            - command: .claude/scripts/worktree-create.sh
+              timeout: 120
+              type: command
+    model: opus
+    omit_command_prefix:
+      - comms/github
+      - github
+      - comms
+    skills:
+    # === Superpowers (on-demand) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
+    # === Debugging ===
+      - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
+    # === PR Operations ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
+    subagents:
+    # === Context Fetching ===
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
+      - model: haiku
+        name: context_teams
+        recipe: context-teams
+      - model: haiku
+        name: context_summarizer
+        recipe: context-summarizer
+    # === Communications ===
+      - model: sonnet
+        name: comms_jira
+        recipe: comms-jira
+      - model: sonnet
+        name: comms_teams
+        recipe: comms-teams
+      - model: sonnet
+        name: comms_github
+        recipe: comms-github
+    # === PR & Merge ===
+      - name: merger
+        recipe: merger
+      - name: pr_readiness
+        recipe: pr-readiness
+      - name: core_reviewer
+        recipe: core-reviewer
+      - name: pr_review_loop
+        recipe: pr-review-loop
+      - name: pr_creator
+        recipe: pr-creator
+    # === QA ===
+      - name: qa_tester
+        recipe: qa
   core-debugger:
     commands:
     # === Commands ===
@@ -347,10 +468,6 @@ recipes:
   core-engineer:
     description: "WorkAxle feature development subagent - TDD, full standards, testing, and migrations"
     files:
-    # === Superpowers: TDD & Verification (core tenets) ===
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
-      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
     # === WorkAxle Core ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
     # === Essential (ALL — features need feature-flags and outbox) ===
@@ -391,6 +508,10 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/migrations/schema-vs-data-migrations.md
     model: opus
     skills:
+    # === Superpowers (on-demand, not inlined) ===
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
+      - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
     # === Debugging (inlined as skill, not subagent) ===
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
   core-engineer-skilled:
