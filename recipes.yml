@@ -109,11 +109,11 @@ recipes:
     description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
     files:
     # === Branch Lock (main worktree stays on main) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/essential/branch-lock.md
     # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/reference/worktree-setup.md
     # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
@@ -215,11 +215,11 @@ recipes:
     description: "WorkAxle development dispatcher - routes tasks to specialized subagents"
     files:
     # === Branch Lock (main worktree stays on main) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/essential/branch-lock.md
     # === Reference (high-level codebase understanding) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/reference/worktree-setup.md
     # === Dispatch Rules ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-debugger.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-core-engineer.md
@@ -298,11 +298,11 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/outbox.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/sequel-patterns.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/soft-delete-pattern.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/essential/branch-lock.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/essential/branch-lock.md
     # === Reference ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/service-overview.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/technology-stack.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/reference/worktree-setup.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/reference/worktree-setup.md
     # === Frameworks ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/sequel.md
       - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/monads.md
@@ -650,6 +650,9 @@ recipes:
   frontend-engineer:
     description: "WorkAxle frontend feature development and architecture - React/TypeScript with TDD"
     files:
+    # === Branch Lock & Worktree (must use EnterWorktree, not manual git worktree add) ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/essential/branch-lock.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/reference/worktree-setup.md
     # === Superpowers: TDD & Verification ===
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
@@ -875,9 +878,9 @@ recipes:
     description: "WorkAxle multi-service dispatcher - routes directly to specialized subagents"
     files:
     # === Branch Lock (submodule repos stay on main) ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/essential/branch-lock.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/essential/branch-lock.md
     # === Worktree Setup ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/reference/worktree-setup.md
+      - /Users/patrick/Projects/ruly/rules/workaxle/reference/worktree-setup.md
     # === Orchestrator Dispatch ===
       - /Users/patrick/Projects/ruly/rules/workaxle/orchestrator/dispatch.md
     # === WorkAxle Core Context (for understanding routing signals) ===
