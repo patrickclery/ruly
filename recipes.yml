@@ -811,6 +811,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/skills/neko-virtual-browser.md
       - /Users/patrick/Projects/ruly/rules/home/skills/openclaw-tower-financial-advisor.md
       - /Users/patrick/Projects/ruly/rules/home/skills/workaxle-local.md
+      - /Users/patrick/Projects/ruly/rules/home/skills/deploy-workaxle-local-branch.md
       - /Users/patrick/Projects/ruly/rules/home/skills/raid-luks-install.md
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
