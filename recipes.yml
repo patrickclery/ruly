@@ -667,7 +667,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/typescript.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/performance.md
       - /Users/patrick/Projects/ruly/rules/workaxle/frontend/architecture.md
-    mcp_servers: 
+    mcp_servers:
   # playwright-cli is available globally via npm — no MCP server needed
   frontend-reviewer:
     commands:
@@ -732,7 +732,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/workaxle/gateway/
     # === Shared NestJS Patterns (TypeORM, gRPC, RabbitMQ, Jest) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/nestjs/common.md
-    mcp_servers: 
+    mcp_servers:
     omit_command_prefix:
       - comms/github
       - github
@@ -799,7 +799,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/use-linux-sysadmin.md
     # Awesomer GitHub Pages deploy
       - /Users/patrick/Projects/ruly/rules/home/awesomer-github-pages-deploy.md
-    mcp_servers: 
+    mcp_servers:
     skills:
       - /Users/patrick/Projects/ruly/rules/home/skills/network-structure.md
       - /Users/patrick/Projects/ruly/rules/home/skills/plane-synology-setup.md
@@ -812,7 +812,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/home/skills/openclaw-tower-financial-advisor.md
       - /Users/patrick/Projects/ruly/rules/home/skills/workaxle-local.md
       - /Users/patrick/Projects/ruly/rules/home/skills/deploy-workaxle-local-branch.md
-      - /Users/patrick/Projects/ruly/rules/home/skills/raid-luks-install.md
+      - /Users/patrick/Projects/ruly/rules/linux-sysadmin/skills/raid-luks-install.md
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: media_stack
