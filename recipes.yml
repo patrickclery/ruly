@@ -982,6 +982,9 @@ recipes:
         recipe: core-reviewer
       - name: qa_tester
         recipe: qa
+      # === QA Reporting ===
+      - name: qa_reporter
+        recipe: qa-reporter
   playwright:
     description: "WorkAxle Playwright E2E testing and browser automation"
     files:
@@ -1034,6 +1037,16 @@ recipes:
     skills:
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/run-acceptance-test.md
       - /Users/patrick/Projects/ruly/rules/workaxle/skills/sync-qa-repo.md
+  qa-reporter:
+    description: "Upload QA test videos to Jira and post ADF comment with inline playable media"
+    files:
+    # === QA Report Workflow ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/qa/qa-report.md
+    # === Jira Comms (accounts, ADF, draft preview) ===
+      - /Users/patrick/Projects/ruly/rules/comms/accounts.md
+      - /Users/patrick/Projects/ruly/rules/comms/jira/preview-common.md
+    # === Health Checks ===
+      - /Users/patrick/Projects/ruly/rules/workaxle/health-checks-common.md
   refactor:
     commands:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
