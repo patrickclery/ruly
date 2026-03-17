@@ -463,9 +463,19 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-develop.md
       - /Users/patrick/Projects/ruly/rules/github/pr/commands/create-dual.md
+    # === Merge Operations (formerly merger subagent) ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/squash-and-merge.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/merge-main-to-develop.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/update-branches.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/commands/verify-develop-mergability.md
     # === Context ===
       - /Users/patrick/Projects/ruly/rules/comms/commands/refresh-context.md
-    description: "WorkAxle engineer with on-demand skills for reviewing, debugging, and fixing"
+    # === Comms Commands (formerly comms subagent) ===
+      - /Users/patrick/Projects/ruly/rules/comms/commands/request-review.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/commands/dm.md
+    description: "Self-contained WorkAxle engineer — all skills inline, zero subagents"
     files:
     # === Core (always loaded) ===
       - /Users/patrick/Projects/ruly/rules/workaxle/core.md
@@ -481,9 +491,13 @@ recipes:
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/SKILL.md
       - /Users/patrick/Projects/ruly/superpowers/skills/test-driven-development/testing-anti-patterns.md
       - /Users/patrick/Projects/ruly/superpowers/skills/verification-before-completion/SKILL.md
-    # === Dispatch rules for agents that remain agents ===
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-merger.md
-      - /Users/patrick/Projects/ruly/rules/workaxle/core/dispatches/use-context-grabber.md
+    # === PR & Merge Reference (formerly merger subagent) ===
+      - /Users/patrick/Projects/ruly/rules/github/pr/common.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
+    # === Context Support ===
+      - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+    mcp_servers:
+      - teams
     model: sonnet
     omit_command_prefix:
       - comms/github
@@ -497,25 +511,20 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/bug/skills/debugging.md
     # === PR Operations ===
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
-    subagents:
-    # Only agents that genuinely need fresh context / isolation
-      - model: sonnet
-        name: comms
-        recipe: comms
-      - name: merger
-        recipe: merger
-      - model: haiku
-        name: context_jira
-        recipe: context-jira
-      - model: haiku
-        name: context_github
-        recipe: context-github
-      - model: haiku
-        name: context_teams
-        recipe: context-teams
-      - model: haiku
-        name: context_summarizer
-        recipe: context-summarizer
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/verify-pr-readiness.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/reviewing-prs.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/creating-prs.md
+    # === Merge & Deploy (formerly merger subagent) ===
+      - /Users/patrick/Projects/ruly/rules/skills/deploy-to-production.md
+      - /Users/patrick/Projects/ruly/rules/git/skills/rebase-and-squash.md
+      - /Users/patrick/Projects/ruly/rules/github/pr/skills/verifying-merge-compatibility.md
+    # === Context Fetching (formerly 4 context subagents) ===
+      - /Users/patrick/Projects/ruly/rules/comms/context/skills/context-fetch.md
+    # === Comms (formerly comms subagent) ===
+      - /Users/patrick/Projects/ruly/rules/comms/skills/jira-comment.md
+      - /Users/patrick/Projects/ruly/rules/comms/skills/jira-ready-for-qa.md
+      - /Users/patrick/Projects/ruly/rules/comms/skills/jira-bug-report.md
+      - /Users/patrick/Projects/ruly/rules/comms/skills/ms-teams-dm.md
     # playwright-cli is available globally via npm — no MCP server needed
   core-reviewer:
     commands:
