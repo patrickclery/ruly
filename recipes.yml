@@ -1026,6 +1026,8 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/skills/pr-review-loop.md
   # playwright-cli is available globally via npm — no MCP server needed
   qa:
+    commands:
+      - rules/comms/commands/qa-report.md
     description: "WorkAxle QA acceptance testing — write and run specs in automation-test-qa against dev.workaxle.com"
     files:
     # === QA Testing Workflow (repo layout, patterns, env) ===
