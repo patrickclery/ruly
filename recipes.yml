@@ -493,6 +493,7 @@ recipes:
       - /Users/patrick/Projects/ruly/rules/github/pr/merge-common.md
     # === Context Support ===
       - /Users/patrick/Projects/ruly/rules/comms/ticket-summary-template.md
+    isolate: true
     mcp_servers:
       - teams
     model: sonnet
