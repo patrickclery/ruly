@@ -157,6 +157,22 @@ recipes:
       - model: sonnet
         name: comms
         recipe: comms
+  portfolio:
+    isolate: true
+    description: "Extract accomplishments from WorkAxle Jira + GitHub PRs and generate resume/LinkedIn/portfolio content"
+    model: sonnet
+    skills:
+      - /Users/patrick/Projects/ruly/rules/portfolio/skills/accomplishment-harvester.md
+      - /Users/patrick/Projects/ruly/rules/portfolio/skills/linkedin-formatter.md
+      - /Users/patrick/Projects/ruly/rules/portfolio/skills/portfolio-updater.md
+      - /Users/patrick/Projects/ruly/rules/portfolio/skills/resume-generator.md
+    subagents:
+      - model: haiku
+        name: context_jira
+        recipe: context-jira
+      - model: haiku
+        name: context_github
+        recipe: context-github
   comms:
     commands:
       - /Users/patrick/Projects/ruly/rules/comms/commands/
