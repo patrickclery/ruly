@@ -47,7 +47,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 Deferred to future release. Tracked but not in current roadmap.
 
-(None yet — blank slate)
+(None yet -- blank slate)
 
 ## Out of Scope
 
@@ -63,33 +63,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SQSH-01 | — | Complete (existing) |
-| SQSH-02 | — | Complete (existing) |
-| SQSH-03 | — | Complete (existing) |
-| SQSH-04 | — | Complete (existing) |
-| SQSH-05 | — | Complete (existing) |
-| SQSH-06 | — | Complete (existing) |
-| RCPE-01 | — | Complete (existing) |
-| RCPE-02 | — | Complete (existing) |
-| RCPE-03 | — | Complete (existing) |
-| RCPE-04 | — | Complete (existing) |
-| AGNT-01 | — | Complete (existing) |
-| AGNT-02 | — | Complete (existing) |
-| AGNT-03 | — | Complete (existing) |
-| GHUB-01 | — | Complete (existing) |
-| GHUB-02 | — | Complete (existing) |
-| CLI-01 | — | Complete (existing) |
-| CLI-02 | — | Complete (existing) |
-| CLI-03 | — | Complete (existing) |
-| CLI-04 | — | Complete (existing) |
-| CLI-05 | — | Complete (existing) |
-| CLI-06 | — | Complete (existing) |
+| SQSH-01 | Phase 1 | Complete |
+| SQSH-02 | Phase 1 | Complete |
+| SQSH-03 | Phase 1 | Complete |
+| SQSH-04 | Phase 1 | Complete |
+| SQSH-05 | Phase 1 | Complete |
+| SQSH-06 | Phase 1 | Complete |
+| RCPE-01 | Phase 1 | Complete |
+| RCPE-02 | Phase 1 | Complete |
+| RCPE-03 | Phase 1 | Complete |
+| RCPE-04 | Phase 1 | Complete |
+| AGNT-01 | Phase 1 | Complete |
+| AGNT-02 | Phase 1 | Complete |
+| AGNT-03 | Phase 1 | Complete |
+| GHUB-01 | Phase 1 | Complete |
+| GHUB-02 | Phase 1 | Complete |
+| CLI-01 | Phase 1 | Complete |
+| CLI-02 | Phase 1 | Complete |
+| CLI-03 | Phase 1 | Complete |
+| CLI-04 | Phase 1 | Complete |
+| CLI-05 | Phase 1 | Complete |
+| CLI-06 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0 (all existing/complete)
-- Unmapped: 0 ✓
+- Mapped to phases: 21/21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after initial definition*
+*Last updated: 2026-03-22 after roadmap creation*
