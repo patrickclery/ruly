@@ -45,14 +45,15 @@ module Ruly
         [sources, recipe]
       end
 
-      # Validates that a recipes.yml file exists.
+      # Validates that at least one recipes.yml file exists (base or user config).
       #
       # @param gem_root [String]
-      # @raise [SystemExit] if recipes.yml not found
+      # @raise [SystemExit] if no recipes.yml found anywhere
       def validate_recipes_file!(gem_root:)
         return if File.exist?(recipes_file_path(gem_root))
+        return if File.exist?(user_recipes_file)
 
-        puts "\u274C recipes.yml not found"
+        puts "\u274C recipes.yml not found (checked #{recipes_file_path(gem_root)} and #{user_recipes_file})"
         exit 1
       end
 

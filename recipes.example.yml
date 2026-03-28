@@ -1,0 +1,22 @@
+# Ruly Recipes Configuration
+# Copy this file to ~/.config/ruly/recipes.yml and customize for your project.
+#
+# Each recipe defines a set of rule files, skills, commands, and MCP servers
+# that get compiled into agent instruction documents via `ruly squash <recipe>`.
+#
+# See https://github.com/patrickclery/ruly for full documentation.
+
+recipes:
+  my-project:
+    description: "My project orchestrator"
+    files:
+      - /path/to/your/rules/core.md
+    # skills:
+    #   - /path/to/your/rules/skills/
+    # commands:
+    #   - /path/to/your/rules/commands/
+    # mcp_servers:
+    #   - teams
+    # subagents:
+    #   - name: frontend
+    #     recipe: my-project-frontend
