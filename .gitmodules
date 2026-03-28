@@ -2,7 +2,3 @@
 	path = rules
 	url = https://github.com/patrickclery/rules
 	ignore = all
-[submodule "superpowers"]
-	path = superpowers
-	url = https://github.com/obra/superpowers.git
-	ignore = all
