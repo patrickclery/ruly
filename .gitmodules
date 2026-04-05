@@ -1,4 +1,0 @@
-[submodule "rules"]
-	path = rules
-	url = https://github.com/patrickclery/rules
-	ignore = all
