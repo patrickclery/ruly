@@ -127,6 +127,11 @@ module Ruly
         files = recipe.is_a?(Array) ? recipe : recipe['files']
 
         files&.each do |file|
+          if remote_url?(file)
+            sources << {path: file, type: 'remote'}
+            next
+          end
+
           full_path = find_rule_file(file, gem_root:)
 
           if full_path
@@ -171,6 +176,11 @@ module Ruly
         return if recipe.is_a?(Array)
 
         recipe[key]&.each do |file|
+          if remote_url?(file)
+            sources << {category:, path: file, type: 'remote'}
+            next
+          end
+
           full_path = find_rule_file(file, gem_root:)
           if full_path
             if File.directory?(full_path)
@@ -472,6 +482,14 @@ module Ruly
         end
 
         nil
+      end
+
+      # Whether a recipe entry is a remote URL (fetched via gh) rather than a local path.
+      #
+      # @param file [Object] recipe files/skills/commands entry
+      # @return [Boolean]
+      def remote_url?(file)
+        file.is_a?(String) && (file.start_with?('http://') || file.start_with?('https://'))
       end
 
       # Finds all .md files recursively in a directory.

@@ -807,39 +807,34 @@ recipes:
       - teams
   linux-sysadmin:
     description: "Linux system administration subagent - Arch/CachyOS, RAID, LUKS, btrfs, GRUB, NVIDIA"
-    sources:
-      - github: patrickclery/rules
-        branch: main
-        rules:
-          - home/skills/network-structure.md
-          - linux-sysadmin/skills/raid-luks-install.md
+    files:
+      - https://github.com/patrickclery/rules/blob/main/home/skills/network-structure.md
+    skills:
+      - https://github.com/patrickclery/rules/blob/main/linux-sysadmin/skills/raid-luks-install.md
   # For Teams DM notifications
   local:
     description: "Local development dispatcher - routes media/sysadmin tasks to subagents"
+    files:
+      # Dispatch rules
+      - https://github.com/patrickclery/rules/blob/main/home/use-media-stack.md
+      - https://github.com/patrickclery/rules/blob/main/home/use-linux-sysadmin.md
+      # Awesomer GitHub Pages deploy
+      - https://github.com/patrickclery/rules/blob/main/home/awesomer-github-pages-deploy.md
     mcp_servers:
-    sources:
-      - github: patrickclery/rules
-        branch: main
-        rules:
-          # Dispatch rules
-          - home/use-media-stack.md
-          - home/use-linux-sysadmin.md
-          # Awesomer GitHub Pages deploy
-          - home/awesomer-github-pages-deploy.md
-          # Skills
-          - home/skills/network-structure.md
-          - home/skills/plane-setup.md
-          - home/skills/sso-authelia-traefik-synology.md
-          - home/skills/immich-synology-setup.md
-          - home/skills/claude-proxy.md
-          - home/skills/claude-proxy-context.md
-          - home/skills/llmux-tools-setup.md
-          - home/skills/neko-virtual-browser.md
-          - home/skills/openclaw-tower-financial-advisor.md
-          - home/skills/workaxle-local.md
-          - home/skills/deploy-workaxle-local-branch.md
-          - home/skills/water-cooling.md
-          - linux-sysadmin/skills/raid-luks-install.md
+    skills:
+      - https://github.com/patrickclery/rules/blob/main/home/skills/network-structure.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/plane-setup.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/sso-authelia-traefik-synology.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/immich-synology-setup.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/claude-proxy.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/claude-proxy-context.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/llmux-tools-setup.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/neko-virtual-browser.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/openclaw-tower-financial-advisor.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/workaxle-local.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/deploy-workaxle-local-branch.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/water-cooling.md
+      - https://github.com/patrickclery/rules/blob/main/linux-sysadmin/skills/raid-luks-install.md
     # playwright-cli is available globally via npm — no MCP server needed
     subagents:
       - name: media_stack
@@ -848,16 +843,13 @@ recipes:
         recipe: linux-sysadmin
   media-stack:
     description: "Synology *arr stack, qBittorrent, and media monitoring (subagent)"
-    sources:
-      - github: patrickclery/rules
-        branch: main
-        rules:
-          - home/agents/media-stack.md
-          - home/synology-arr-stack.md
-          - home/syn-qbittorrent-management.md
-          - home/lidarr-music-import.md
-          - home/synology-monitoring-stack.md
-          - home/skills/network-structure.md
+    files:
+      - https://github.com/patrickclery/rules/blob/main/home/agents/media-stack.md
+      - https://github.com/patrickclery/rules/blob/main/home/synology-arr-stack.md
+      - https://github.com/patrickclery/rules/blob/main/home/syn-qbittorrent-management.md
+      - https://github.com/patrickclery/rules/blob/main/home/lidarr-music-import.md
+      - https://github.com/patrickclery/rules/blob/main/home/synology-monitoring-stack.md
+      - https://github.com/patrickclery/rules/blob/main/home/skills/network-structure.md
   # Plane project management
   # playwright-cli is available globally via npm — no MCP server needed
   merger:
