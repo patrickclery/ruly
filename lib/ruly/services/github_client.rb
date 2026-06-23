@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'English'
 require 'json'
 require 'net/http'
 require 'uri'
