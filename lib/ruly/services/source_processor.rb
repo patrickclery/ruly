@@ -10,6 +10,46 @@ module Ruly
     module SourceProcessor # rubocop:disable Metrics/ModuleLength
       module_function
 
+      # --- Fetch-failure tracking -------------------------------------------
+      # Sources that could not be read or fetched during the current run.
+      # Reset once per squash by the CLI; deliberately accumulates ACROSS
+      # subagent recipes so a parent squash sees its children's failures.
+      # Each entry: {path:, type:, from_requires:, reason:}
+      #
+      # Rationale: a source listed explicitly in a recipe is an assertion that
+      # it must exist. Dropping it silently yields a subtly degraded artifact
+      # with a zero exit code -- the worst failure mode. Transitive
+      # (`requires:`) sources stay lenient unless --strict is passed.
+
+      # @return [Array<Hash>] failures recorded so far
+      def failed_sources
+        @failed_sources ||= []
+      end
+
+      # Clear the accumulator. Called once per squash invocation.
+      # @return [Array] the (now empty) accumulator
+      def reset_failed_sources!
+        @failed_sources = []
+      end
+
+      # Record a source that could not be read/fetched.
+      # @param source [Hash] the source entry that failed
+      # @param reason [String] human-readable reason
+      # @return [void]
+      def record_failed_source(source, reason)
+        failed_sources << {
+          from_requires: source[:from_requires] ? true : false,
+          path: source[:path],
+          reason:,
+          type: source[:type]
+        }
+      end
+
+      # @return [Array<Hash>] failures for sources listed explicitly in a recipe
+      def explicit_failed_sources
+        failed_sources.reject { |f| f[:from_requires] }
+      end
+
       # Main processing loop: prefetch remote files, iterate sources, deduplicate.
       # @param sources [Array<Hash>] source entries with :type and :path
       # @param agent [String] target agent name (e.g. 'claude')
@@ -198,6 +238,7 @@ module Ruly
 
         unless file_path
           verbose ? puts(' \u{274C} not found') : warn("  \u{26A0}\u{FE0F}  File not found: #{source[:path]}")
+          record_failed_source(source, 'file not found')
           return nil
         end
 
@@ -278,6 +319,7 @@ module Ruly
 
         unless content
           verbose ? puts(' \u{274C} failed') : warn("  \u{26A0}\u{FE0F}  Failed to fetch: #{source[:path]}")
+          record_failed_source(source, 'fetch failed')
           return nil
         end
 
