@@ -232,6 +232,71 @@ recipes:
       - https://github.com/thoughtbot/guides/blob/main/ruby/README.md
 ```
 
+### Sharing Recipes Across Machines
+
+Machine-specific absolute paths in `recipes.yml` are the main reason two machines end up squashing different file lists. Ruly solves this by mirroring a shared recipes file, together with every rule file it references, into a fixed local directory that looks the same on every machine.
+
+**1. Put a `recipes.yml` in your rules repository**, using paths relative to the repo root:
+
+```yaml
+# patrickclery/rules → recipes.yml
+recipes:
+  homelab:
+    description: "Local development dispatcher"
+    files:
+      - home/use-media-stack.md
+    skills:
+      - home/skills/        # directories expand to every .md file inside
+    subagents:
+      - name: media_stack
+        recipe: media-stack
+```
+
+**2. Declare it as a remote** in `~/.config/ruly/recipes.yml` on each machine:
+
+```yaml
+remotes:
+  - github: patrickclery/rules
+    path: recipes.yml   # default
+    branch: main        # default
+```
+
+**3. Mirror it** with `--sync`:
+
+```bash
+ruly squash homelab --sync
+```
+
+`--sync` fetches the remote `recipes.yml` and the closure of files it needs — every entry under `files:`, `skills:`, `commands:` and `scripts:`, directory contents, and everything those files pull in through `requires:` and `skills:` frontmatter — into `~/.config/ruly/remotes/<owner>/<repo>/`, preserving repo-relative paths. The mirror is replaced atomically; if any referenced file cannot be fetched the sync aborts, lists the missing paths, and leaves the previous mirror untouched. If the recipes file itself cannot be fetched (offline), an existing mirror is kept with a warning.
+
+Without `--sync`, Ruly makes no network calls for recipes and reads the mirror as-is.
+
+**Where recipes come from (first hit wins):**
+
+1. `~/.config/ruly/remotes/<owner>/<repo>/recipes.yml` — mirrored remotes
+2. `./.recipes.yml` — a project-local recipes file in the current directory
+3. `~/.config/ruly/recipes.yml` — the user config
+
+Entries in a mirrored file are rebased onto the mirror directory; absolute paths, `~` paths and `http(s)` URLs are left untouched. `ruly list-recipes` shows which source won and where each recipe came from.
+
+**Per-machine tweaks with `overrides:`**
+
+`remotes:` and `overrides:` are settings, so they are read from both `~/.config/ruly/recipes.yml` and `./.recipes.yml` whichever source wins. An override adds to a shared recipe instead of restating it — arrays are unioned, scalars replaced, subagents merged by name:
+
+```yaml
+# ~/.config/ruly/recipes.yml
+remotes:
+  - github: patrickclery/rules
+overrides:
+  homelab:
+    files:
+      - ~/notes/this-machine-only.md   # appended to the shared list
+    mcp_servers:
+      - grafana
+```
+
+Overriding a recipe that is not loaded is an error. The `recipes:` block in the user config still works as before and is used only when nothing higher in the chain exists; relative paths under a mirrored recipe (including in overrides) resolve inside the mirror.
+
 ### Option 3: Quick Start with Init
 
 After installing Ruly, you can quickly get started with a basic configuration:
@@ -692,7 +757,7 @@ ruly squash -r minimal
 
 #### Available Recipes
 
-Recipes depend on having access to rule files. If you cloned with the default rules submodule, you'll have access to the recipes defined in `recipes.yml`. Otherwise, create your own recipes in `~/.config/ruly/recipes.yml` pointing to your rule sources.
+Recipes depend on having access to rule files. The recommended setup is a `recipes.yml` at the root of your rules repository, declared under `remotes:` and mirrored with `ruly squash --sync` (see [Sharing Recipes Across Machines](#sharing-recipes-across-machines)). Alternatively, define recipes directly in `./.recipes.yml` or `~/.config/ruly/recipes.yml`.
 
 - **qa** — WorkAxle QA acceptance testing. Write and run Playwright specs in the automation-test-qa repo against dev.workaxle.com. Includes skills for running acceptance tests and syncing the QA repo.
 
@@ -908,6 +973,7 @@ After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.js
   Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
   Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
   Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
+  Use `--sync` to mirror every `remotes:` entry (its `recipes.yml` plus all referenced rule files) into `~/.config/ruly/remotes/<owner>/<repo>/` before squashing. See [Sharing Recipes Across Machines](#sharing-recipes-across-machines).
 
 - **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
   detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.
@@ -921,8 +987,9 @@ After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.js
   files, and displays their resolved paths. Useful for understanding file dependencies and debugging
   the requires system. If no file path is provided, it will look for a file in the current directory.
 
-- **List Recipes** (`list-recipes`): Shows all available recipes with file counts and cache
-  indicators.
+- **List Recipes** (`list-recipes`): Shows all available recipes, which source in the lookup chain
+  they came from (mirrored remote, `./.recipes.yml`, or `~/.config/ruly/recipes.yml`) and whether an
+  `overrides:` block was applied. Accepts `--sync` like `squash`.
 
 - **Version** (`version`): Shows the current Ruly version.
 
@@ -971,6 +1038,9 @@ ruly squash -r rails -a cursor -o CURSOR.md
 # Generate with remote sources (command files go to .claude/commands/)
 ruly squash -r example_mixed
 
+# Mirror shared recipes from `remotes:` first, then squash from the mirror
+ruly squash homelab --sync
+
 # Use cached version (if recipe has cache: true)
 ruly squash rails
 
@@ -1011,7 +1081,7 @@ ruly help introspect
 
 Ruly will automatically:
 
-- Load recipes from both `recipes.yml` and `~/.config/ruly/recipes.yml`
+- Load recipes from the first of: mirrored remotes (`~/.config/ruly/remotes/`), `./.recipes.yml`, `~/.config/ruly/recipes.yml`
 - Support glob patterns in recipe definitions
 - Create parent directories if using custom output paths
 - Display file count and output size

@@ -54,8 +54,8 @@ RSpec.describe Ruly::Services::RecipeLoader, '.resolve_extends!' do
       File.write(File.join(test_dir, 'recipes.yml'), recipes_yml)
 
       recipes = described_class.load_all_recipes(
-        base_recipes_file: File.join(test_dir, 'recipes.yml'),
-        gem_root: test_dir
+        project_recipes_file: File.join(test_dir, '.recipes.yml'),
+        user_recipes_file: File.join(test_dir, 'recipes.yml')
       )
 
       expect(recipes['child']['files']).to eq(['rules/base.md', 'rules/child.md'])
@@ -277,8 +277,8 @@ RSpec.describe Ruly::CLI, 'squash with extends', type: :cli do
     # rubocop:disable RSpec/AnyInstance
     allow_any_instance_of(described_class).to receive(:load_all_recipes).and_return(
       Ruly::Services::RecipeLoader.load_all_recipes(
-        base_recipes_file: File.join(test_dir, 'recipes.yml'),
-        gem_root: test_dir
+        project_recipes_file: File.join(test_dir, '.recipes.yml'),
+        user_recipes_file: File.join(test_dir, 'recipes.yml')
       )
     )
     # rubocop:enable RSpec/AnyInstance

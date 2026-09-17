@@ -116,9 +116,10 @@ module Ruly
 
       # --- Recipe listing ---
 
-      def recipe_listing(name, config)
+      def recipe_listing(name, config, origin: nil)
         puts "\n📦 #{name}"
-        puts "   #{config['description']}" if config['description']
+        puts "   #{config['description']}" if config.is_a?(Hash) && config['description']
+        puts "   📍 #{origin}" if origin
         puts
 
         all_files = collect_recipe_display_files(config)
@@ -188,13 +189,33 @@ module Ruly
 
       def starter_config_yaml
         <<~YAML
-          # Ruly Configuration
-          # Add your own recipes and rule sources here
+          # Ruly Configuration (~/.config/ruly/recipes.yml)
+          #
+          # Recipes are looked up in this order (first hit wins):
+          #   1. ~/.config/ruly/remotes/<owner>/<repo>/recipes.yml  (mirrored with `ruly squash --sync`)
+          #   2. ./.recipes.yml                                    (project-local)
+          #   3. this file
+          #
+          # `remotes:` and `overrides:` below are always applied, whichever source wins.
+
+          # Shared recipes files to mirror. Paths inside them are relative to the repo root.
+          # remotes:
+          #   - github: yourusername/rules
+          #     path: recipes.yml   # default
+          #     branch: main        # default
+
+          # Additive, per-machine tweaks to shared recipes (never restate the whole recipe).
+          # overrides:
+          #   my-shared-recipe:
+          #     files:
+          #       - ~/notes/this-machine-only.md
+          #     mcp_servers:
+          #       - grafana
 
           recipes:
             starter:
               description: "Basic starter recipe - uncomment and customize the sources below"
-          #{'    '}
+
               # Example: Add rules from GitHub repositories
               # sources:
               #   - github: patrickclery/rules
@@ -202,13 +223,7 @@ module Ruly
               #     rules:
               #       - ruby/common.md
               #       - testing/common.md
-              ##{'   '}
-              #   # Add rules from your own repository:
-              #   - github: yourusername/your-rules
-              #     branch: main
-              #     rules:
-              #       - path/to/your/rules.md
-          #{'    '}
+
               # Example: Add local rule files
               # files:
               #   - /path/to/local/rules.md
