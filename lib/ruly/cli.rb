@@ -34,8 +34,11 @@ module Ruly
     option :front_matter, default: false, type: :boolean
     option :home_override, default: false, type: :boolean
     option :verbose, aliases: '-v', default: false, type: :boolean
+    option :strict, default: false,
+                    desc: 'Also fail if a transitive (requires:) source is missing', type: :boolean
     def squash(recipe_name = nil) # rubocop:disable Metrics/MethodLength
       guard_home_directory!
+      Services::SourceProcessor.reset_failed_sources!
       invoke_clean_if_requested(recipe_name)
       agent = normalize_agent(options[:agent])
 
@@ -63,6 +66,7 @@ module Ruly
         if options[:dry_run]
           Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
                                            output_file, agent, recipe_name, recipe_config, options)
+          report_source_failures!
           return
         end
 
@@ -74,6 +78,7 @@ module Ruly
       Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, cache_used,
                                        cache_used ? nil : local_sources, cache_used ? nil : command_files,
                                        cache_used ? nil : skill_files)
+      report_source_failures!
     end
 
     desc 'import RECIPE', 'Import a recipe and copy its scripts to ~/.claude/scripts/'
@@ -244,6 +249,37 @@ module Ruly
 
       say_error "ERROR: Running 'ruly squash' in $HOME is dangerous and may delete ~/.claude/"
       say_error 'Use --home-override if you really want to do this.'
+      exit 1
+    end
+
+    # Report any sources that could not be read/fetched during this squash.
+    #
+    # A source listed explicitly in a recipe is an assertion that it must
+    # exist, so a missing one is an error: without this, squash exits 0 while
+    # silently producing an incomplete artifact. Transitive (`requires:`)
+    # sources remain warnings unless --strict is passed.
+    #
+    # @return [void]
+    # @raise [SystemExit] exits 1 when a fatal source failure occurred
+    def report_source_failures!
+      failures = Services::SourceProcessor.failed_sources
+      return if failures.empty?
+
+      fatal = options[:strict] ? failures : Services::SourceProcessor.explicit_failed_sources
+
+      warn "\n\u{26A0}\u{FE0F}  #{failures.length} source(s) could not be read:"
+      failures.each do |f|
+        origin = f[:from_requires] ? 'via requires:' : 'explicitly listed'
+        warn "     \u{2717} #{f[:path]} (#{origin} - #{f[:reason]})"
+      end
+
+      if fatal.empty?
+        warn "   All failures were transitive (requires:); continuing. Use --strict to fail on these.\n"
+        return
+      end
+
+      warn "\n\u{274C} squash failed: #{fatal.length} required source(s) missing - output is INCOMPLETE."
+      warn "   Fix the recipe paths (or remove the entries) and re-run.\n"
       exit 1
     end
 
