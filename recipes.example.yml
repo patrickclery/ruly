@@ -1,0 +1,40 @@
+# Ruly Recipes Configuration
+# Copy this file to ~/.config/ruly/recipes.yml and customize for your project.
+#
+# Recipes are looked up in this order (first hit wins):
+#   1. ~/.config/ruly/remotes/<owner>/<repo>/recipes.yml  (mirrored with `ruly squash --sync`)
+#   2. ./.recipes.yml                                    (project-local)
+#   3. ~/.config/ruly/recipes.yml                        (this file)
+#
+# `remotes:` and `overrides:` are always applied, whichever source wins.
+# See https://github.com/patrickclery/ruly for full documentation.
+
+# Shared recipes files to mirror. Paths inside them are relative to the repo root.
+remotes:
+  - github: yourusername/rules
+    # path: recipes.yml   # default
+    # branch: main        # default
+
+# Additive, per-machine tweaks to shared recipes (never restate the whole recipe).
+# overrides:
+#   my-project:
+#     files:
+#       - ~/notes/this-machine-only.md
+#     mcp_servers:
+#       - teams
+
+# Recipes defined here are used only when no mirror and no ./.recipes.yml exist.
+recipes:
+  my-project:
+    description: "My project orchestrator"
+    files:
+      - /path/to/your/rules/core.md
+    # skills:
+    #   - /path/to/your/rules/skills/
+    # commands:
+    #   - /path/to/your/rules/commands/
+    # mcp_servers:
+    #   - teams
+    # subagents:
+    #   - name: frontend
+    #     recipe: my-project-frontend

@@ -34,11 +34,11 @@ module Ruly
       end
 
       # @param recipe_name [String, nil] Name of recipe to analyze (nil for all)
-      # @param recipes_file [String] Path to recipes.yml
+      # @param recipes_file [String] Path to the user recipes.yml (~/.config/ruly/recipes.yml)
       # @param gem_root [String] Root path of the gem
       # @param tier_override [String, nil] Override pricing tier (from CLI --tier option)
       # @param analyze_all [Boolean] Whether to analyze all recipes
-      def initialize(gem_root:, recipes_file:, analyze_all: false, tier_override: nil, recipe_name: nil)
+      def initialize(gem_root:, recipes_file:, analyze_all: false, recipe_name: nil, tier_override: nil)
         super()
         @recipe_name = recipe_name
         @recipes_file = recipes_file
@@ -72,7 +72,7 @@ module Ruly
       end
 
       def analyze_all_recipes
-        recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+        recipes = Services::RecipeLoader.load_all_recipes(user_recipes_file: recipes_file)
 
         puts '📊 Token Analysis for All Recipes'
         puts '=' * 60
@@ -111,7 +111,7 @@ module Ruly
       end
 
       def load_recipe_sources_for(name, recipes = nil)
-        recipes ||= Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+        recipes ||= Services::RecipeLoader.load_all_recipes(user_recipes_file: recipes_file)
         recipe = Services::RecipeLoader.validate_recipe!(name, recipes)
 
         sources = []
@@ -133,20 +133,15 @@ module Ruly
         return tier_override if tier_override
 
         # Load recipe config
-        recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
+        recipes = Services::RecipeLoader.load_all_recipes(user_recipes_file: recipes_file)
         recipe = recipes[name]
         return recipe['tier'] if recipe.is_a?(Hash) && recipe['tier']
 
-        # Check user config
-        user_config_file = File.expand_path('~/.config/ruly/recipes.yml')
-        if File.exist?(user_config_file)
-          user_config = YAML.safe_load_file(user_config_file, aliases: true) || {}
-          return user_config['tier'] if user_config['tier']
+        # Check global default in the user config
+        if recipes_file && File.exist?(recipes_file)
+          recipes_config = YAML.safe_load_file(recipes_file, aliases: true) || {}
+          return recipes_config['tier'] if recipes_config['tier']
         end
-
-        # Check global default in recipes.yml
-        recipes_config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-        return recipes_config['tier'] if recipes_config['tier']
 
         # Default fallback
         'claude_pro'
@@ -252,8 +247,8 @@ module Ruly
             context_limit:,
             file_count:,
             file_details:,
-            tier:,
             recipe_name: name,
+            tier:,
             token_count:
           },
           success: true

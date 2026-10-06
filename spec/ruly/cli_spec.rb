@@ -196,6 +196,9 @@ RSpec.describe Ruly::CLI do
       allow(cli).to receive_messages(load_all_recipes: recipes['recipes'],
                                      recipes_file: File.join(test_dir,
                                                              'recipes.yml'))
+      # `invoke` builds a fresh CLI instance, so point the loader itself at the test file
+      allow(Ruly::Services::RecipeLoader).to receive(:user_recipes_file)
+        .and_return(File.join(test_dir, 'recipes.yml'))
 
       # Suppress output to avoid cluttering test output
       allow(cli).to receive(:puts)
@@ -728,10 +731,12 @@ RSpec.describe Ruly::CLI do
   end
 
   describe '#introspect preserving custom keys' do
-    let(:user_recipes_file) { File.join(Dir.home, '.config', 'ruly', 'recipes.yml') }
+    # Never touch the real ~/.config/ruly/recipes.yml: introspect writes to (and this
+    # spec deletes) whatever user_recipes_file returns.
+    let(:user_recipes_file) { File.join(test_dir, 'config', 'recipes.yml') }
 
     before do
-      # Ensure the config directory exists
+      allow(Ruly::Services::RecipeLoader).to receive(:user_recipes_file).and_return(user_recipes_file)
       FileUtils.mkdir_p(File.dirname(user_recipes_file))
 
       # Create initial recipe with custom keys

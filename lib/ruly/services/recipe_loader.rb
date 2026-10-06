@@ -11,15 +11,14 @@ module Ruly
       # Returns [sources_array, recipe_config].
       #
       # @param recipe_name [String]
-      # @param gem_root [String] root directory of the gem/project
+      # @param gem_root [String] root directory of the gem/project (used to resolve relative rule paths)
+      # @param recipes [Hash, nil] already-loaded recipes (loaded via the config chain when nil)
       # @param scan_files_for_recipe_tags [Proc, nil] optional callback for tag scanning
+      # @param user_recipes_file [String, nil] override for ~/.config/ruly/recipes.yml
       # @return [Array<(Array<Hash>, Hash)>]
-      def load_recipe_sources(recipe_name, gem_root:, base_recipes_file: nil,
-                              recipes: nil, scan_files_for_recipe_tags: nil)
-        recipes ||= begin
-          validate_recipes_file!(gem_root:)
-          load_all_recipes(base_recipes_file:, gem_root:)
-        end
+      def load_recipe_sources(recipe_name, gem_root:, recipes: nil, scan_files_for_recipe_tags: nil,
+                              user_recipes_file: nil)
+        recipes ||= load_all_recipes(user_recipes_file:)
         recipe = validate_recipe!(recipe_name, recipes)
 
         sources = []
@@ -45,24 +44,8 @@ module Ruly
         [sources, recipe]
       end
 
-      # Validates that a recipes.yml file exists.
-      #
-      # @param gem_root [String]
-      # @raise [SystemExit] if recipes.yml not found
-      def validate_recipes_file!(gem_root:)
-        return if File.exist?(recipes_file_path(gem_root))
-
-        puts "\u274C recipes.yml not found"
-        exit 1
-      end
-
-      # Returns the path to the base recipes.yml file.
-      #
-      # @param gem_root [String]
-      # @return [String]
-      def recipes_file_path(gem_root)
-        File.join(gem_root, 'recipes.yml')
-      end
+      # File name of the project-local recipes file, looked up in the current directory.
+      PROJECT_RECIPES_FILE = '.recipes.yml'
 
       # Returns the path to the user's recipes.yml config file.
       #
@@ -73,32 +56,183 @@ module Ruly
         File.join(config_dir, 'recipes.yml')
       end
 
-      # Loads all recipes from base and user config files, merged.
+      # Returns the path to the project-local recipes file ($CWD/.recipes.yml).
       #
-      # @param gem_root [String]
-      # @param gem_root [String]
-      # @param base_recipes_file [String, nil] override for the base recipes.yml path
-      # @return [Hash]
-      def load_all_recipes(gem_root:, base_recipes_file: nil)
-        recipes = {}
+      # @param cwd [String]
+      # @return [String]
+      def project_recipes_file(cwd = Dir.pwd)
+        File.join(cwd, PROJECT_RECIPES_FILE)
+      end
 
-        # Load base recipes
-        base_file = base_recipes_file || recipes_file_path(gem_root)
-        if File.exist?(base_file)
-          base_config = YAML.safe_load_file(base_file, aliases: true) || {}
-          recipes.merge!(base_config['recipes'] || {})
-        end
+      # Human-readable origin of each loaded recipe (name => origin), set by load_all_recipes.
+      # @return [Hash{String => String}]
+      def recipe_origins
+        @recipe_origins ||= {}
+      end
 
-        # Load user config recipes (highest priority)
-        user_config_file = File.expand_path('~/.config/ruly/recipes.yml')
-        if File.exist?(user_config_file)
-          user_config = YAML.safe_load_file(user_config_file, aliases: true) || {}
-          recipes.merge!(user_config['recipes'] || {})
-        end
+      # Base directory of each mirrored recipe (name => mirror dir), used to rebase override entries.
+      # @return [Hash{String => String}]
+      def recipe_base_dirs
+        @recipe_base_dirs ||= {}
+      end
+
+      # Which source won the fallback chain in the last load: :remotes, :project or :user.
+      # @return [Symbol, nil]
+      def source_origin
+        @source_origin
+      end
+
+      # Loads recipes through the fallback chain, first hit wins:
+      #   1. mirrored remotes  (~/.config/ruly/remotes/<owner>/<repo>/recipes.yml, see RemoteSync)
+      #   2. project file      ($CWD/.recipes.yml)
+      #   3. user config       (~/.config/ruly/recipes.yml)
+      #
+      # `remotes:` and `overrides:` are settings, so they are read from BOTH the user and
+      # project files regardless of which source wins. Overrides merge additively on top
+      # of the winning recipes (arrays union, scalars replaced, subagents by name).
+      #
+      # @param user_recipes_file [String, nil] override for ~/.config/ruly/recipes.yml
+      # @param project_recipes_file [String, nil] override for $CWD/.recipes.yml
+      # @param remotes_dir [String, nil] override for ~/.config/ruly/remotes
+      # @param sync [Boolean] mirror every declared remote before loading
+      # @return [Hash] recipe name => recipe config
+      # @raise [Ruly::Error] when no recipe source exists or an override targets an unknown recipe
+      def load_all_recipes(project_recipes_file: nil, remotes_dir: nil, sync: false, user_recipes_file: nil)
+        user_file = user_recipes_file || self.user_recipes_file
+        project_file = project_recipes_file || self.project_recipes_file
+        remotes_dir ||= RemoteSync.remotes_dir
+        user_config = read_config_file(user_file)
+        project_config = read_config_file(project_file)
+
+        remotes = (Array(user_config['remotes']) + Array(project_config['remotes']))
+                  .map { |r| RemoteSync.normalize_remote(r, remotes_dir:) }
+                  .uniq { |r| r[:github] }
+        RemoteSync.sync_all!(remotes) if sync
+
+        recipes = select_recipe_source(remotes, project_config:, project_file:, remotes_dir:, user_config:, user_file:)
+        apply_overrides!(recipes, user_config['overrides'], origin: user_file)
+        apply_overrides!(recipes, project_config['overrides'], origin: project_file)
 
         resolve_extends!(recipes)
 
         recipes
+      end
+
+      # Parses a YAML config file, returning {} when it does not exist.
+      #
+      # @param path [String, nil]
+      # @return [Hash]
+      def read_config_file(path)
+        return {} unless path && File.exist?(path)
+
+        YAML.safe_load_file(path, aliases: true) || {}
+      end
+
+      # Picks the recipe definitions from the first existing source in the chain.
+      #
+      # @return [Hash] recipes (mutable, origins recorded in recipe_origins)
+      # @raise [Ruly::Error] when nothing in the chain exists
+      def select_recipe_source(remotes, project_config:, project_file:, remotes_dir:, user_config:, user_file:)
+        @recipe_origins = {}
+        @recipe_base_dirs = {}
+
+        mirrored, unmirrored = remotes.partition { |r| RemoteSync.mirrored?(r) }
+        unmirrored.each do |r|
+          warn "\u26A0\uFE0F  Remote #{r[:github]} is not mirrored yet; run `ruly squash --sync` to fetch it"
+        end
+        mirrors = mirrored + RemoteSync.undeclared_mirrors(remotes, remotes_dir:)
+
+        if mirrors.any?
+          @source_origin = :remotes
+          mirrors.each_with_object({}) { |remote, acc| acc.merge!(load_mirror(remote)) }
+        elsif File.exist?(project_file)
+          @source_origin = :project
+          tag_origins(project_config['recipes'] || {}, project_file)
+        elsif File.exist?(user_file)
+          @source_origin = :user
+          tag_origins(user_config['recipes'] || {}, user_file)
+        else
+          looked = remotes.map { |r| RemoteSync.mirror_recipes_file(r) } + [project_file, user_file]
+          raise Ruly::Error,
+                "No recipes found. Looked for:\n#{looked.map { |l| "  - #{l}" }.join("\n")}\n" \
+                'Add `remotes:` to ~/.config/ruly/recipes.yml and run `ruly squash --sync`, or run `ruly init`.'
+        end
+      end
+
+      # Loads a mirrored recipes file, rebasing repo-relative entries onto the mirror dir.
+      #
+      # @param remote [Hash] normalized remote spec
+      # @return [Hash] recipes
+      def load_mirror(remote)
+        recipes = read_config_file(RemoteSync.mirror_recipes_file(remote))['recipes'] || {}
+        recipes.each do |name, recipe|
+          rebase_relative_entries!(recipe, remote[:mirror_dir])
+          recipe_origins[name] = "remote #{remote[:github]}"
+          recipe_base_dirs[name] = remote[:mirror_dir]
+        end
+        recipes
+      end
+
+      # Records the file each recipe came from.
+      #
+      # @param recipes [Hash]
+      # @param file [String]
+      # @return [Hash] the same recipes
+      def tag_origins(recipes, file)
+        recipes.each_key { |name| recipe_origins[name] = file }
+        recipes
+      end
+
+      # Rewrites repo-relative entries (files/skills/commands/scripts) to live under base_dir.
+      # Absolute paths, `~` paths and URLs are left untouched.
+      #
+      # @param recipe [Hash, Array] recipe config (Array for agent recipes)
+      # @param base_dir [String]
+      # @return [Hash, Array] the same recipe, mutated
+      def rebase_relative_entries!(recipe, base_dir)
+        if recipe.is_a?(Array)
+          recipe.map! { |entry| rebase_entry(entry, base_dir) }
+        elsif recipe.is_a?(Hash)
+          RemoteSync::RULE_KEYS.each do |key|
+            next unless recipe[key].is_a?(Array)
+
+            recipe[key] = recipe[key].map { |entry| rebase_entry(entry, base_dir) }
+          end
+        end
+        recipe
+      end
+
+      # @param entry [Object]
+      # @param base_dir [String]
+      # @return [Object]
+      def rebase_entry(entry, base_dir)
+        RemoteSync.relative_entry?(entry) ? File.join(base_dir, entry) : entry
+      end
+
+      # Merges an `overrides:` block additively into already-loaded recipes.
+      #
+      # @param recipes [Hash] loaded recipes (mutated)
+      # @param overrides [Hash, nil] recipe name => partial recipe
+      # @param origin [String] file the overrides came from (for messages)
+      # @raise [Ruly::Error] when an override targets a recipe that is not loaded
+      def apply_overrides!(recipes, overrides, origin:)
+        return unless overrides.is_a?(Hash)
+
+        overrides.each do |name, override|
+          target = recipes[name]
+          unless target.is_a?(Hash) && override.is_a?(Hash)
+            raise Ruly::Error,
+                  "overrides: '#{name}' in #{origin} does not match a loaded recipe " \
+                  "(available: #{recipes.keys.join(', ')})"
+          end
+
+          merged = override.dup
+          rebase_relative_entries!(merged, recipe_base_dirs[name]) if recipe_base_dirs[name]
+          merged['extends'] ||= target['extends'] if target['extends']
+          merge_recipe!(merged, target)
+          target.replace(merged)
+          recipe_origins[name] = "#{recipe_origins[name]} + overrides (#{origin})"
+        end
       end
 
       # Validates that a recipe exists in the loaded config.
@@ -473,6 +607,7 @@ module Ruly
       def find_rule_file(file, gem_root:)
         search_paths = [
           file,                                      # Current directory / absolute
+          File.expand_path(file),                    # ~/... paths
           File.expand_path("~/ruly/#{file}"),        # User home directory
           File.join(gem_root, file) # Gem directory
         ]
@@ -489,7 +624,7 @@ module Ruly
       # @param file [Object] recipe files/skills/commands entry
       # @return [Boolean]
       def remote_url?(file)
-        file.is_a?(String) && (file.start_with?('http://') || file.start_with?('https://'))
+        file.is_a?(String) && file.start_with?('http://', 'https://')
       end
 
       # Finds all .md files recursively in a directory.

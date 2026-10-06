@@ -7,20 +7,21 @@ module Ruly
   module Operations
     # Generate token statistics for rule files
     class Stats < Base
-      attr_reader :sources, :output_file, :recipes_file, :rules_dir
+      attr_reader :sources, :output_file, :recipes, :rules_dir
 
       # State object for DFS cycle detection to reduce parameter count
       DfsState = Struct.new(:visited, :rec_stack, :cycles, keyword_init: true)
 
       # @param sources [Array<Hash>] Array of source hashes with :path and :type keys
       # @param output_file [String] Path to output markdown file
-      # @param recipes_file [String, nil] Path to recipes.yml file for orphan detection
+      # @param recipes [Hash, nil] Loaded recipes (name => config) for orphan detection
+      # @param recipes_file [String, nil] Fallback: a recipes.yml to read `recipes:` from when `recipes` is nil
       # @param rules_dir [String, nil] Path to rules directory for relative path resolution
-      def initialize(sources:, output_file: 'stats.md', recipes_file: nil, rules_dir: nil)
+      def initialize(sources:, output_file: 'stats.md', recipes: nil, recipes_file: nil, rules_dir: nil)
         super()
         @sources = sources
         @output_file = output_file
-        @recipes_file = recipes_file
+        @recipes = recipes || recipes_from_file(recipes_file)
         @rules_dir = rules_dir
       end
 
@@ -63,10 +64,10 @@ module Ruly
           stripped = Services::FrontmatterParser.strip_metadata(content)
           tokens = count_tokens(stripped)
           file_stats << {
+            needs_trailing_newline: !stripped.end_with?("\n"),
             path: file_path,
             size: stripped.bytesize,
-            tokens:,
-            needs_trailing_newline: !stripped.end_with?("\n")
+            tokens:
           }
         end
 
@@ -88,7 +89,7 @@ module Ruly
           abs_path = File.expand_path(path, rules_dir&.sub(%r{/rules$}, ''))
           abs_path if File.exist?(abs_path)
         end
-        return all_files if recipes_file.nil? || !File.exist?(recipes_file)
+        return all_files if recipes.nil? || recipes.empty?
 
         used_files = collect_used_files.map { |f| File.expand_path(f) }
         all_files.reject { |f| used_files.include?(File.expand_path(f)) }
@@ -122,6 +123,13 @@ module Ruly
 
       private
 
+      # Read the `recipes:` block from a recipes.yml, or nil when it does not exist.
+      def recipes_from_file(path)
+        return nil unless path && File.exist?(path)
+
+        (YAML.safe_load_file(path, aliases: true) || {})['recipes']
+      end
+
       def count_tokens(text)
         encoder = Tiktoken.get_encoding('cl100k_base')
         utf8_text = text.encode('UTF-8', invalid: :replace, replace: '?', undef: :replace)
@@ -143,11 +151,8 @@ module Ruly
         used.to_a
       end
 
-      # Parse recipes.yml and collect all referenced files
+      # Collect all files referenced by the loaded recipes
       def collect_recipe_files
-        config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-        recipes = config['recipes'] || {}
-
         files = Set.new
 
         recipes.each_value do |recipe|
@@ -367,7 +372,7 @@ module Ruly
       end
 
       def write_recipe_sections(file, file_stats)
-        return unless recipes_file && File.exist?(recipes_file)
+        return if recipes.nil? || recipes.empty?
 
         recipe_files_map = build_recipe_files_map
         return if recipe_files_map.empty?
@@ -390,10 +395,7 @@ module Ruly
       # If a command/skill is also a requires: dependency of another file,
       # it ends up in CLAUDE.local.md (squash processes requires first).
       def build_recipe_files_map
-        return {} unless recipes_file && File.exist?(recipes_file)
-
-        config = YAML.safe_load_file(recipes_file, aliases: true) || {}
-        recipes = config['recipes'] || {}
+        return {} if recipes.nil? || recipes.empty?
 
         recipe_files_map = {}
 

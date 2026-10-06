@@ -36,6 +36,8 @@ module Ruly
     option :verbose, aliases: '-v', default: false, type: :boolean
     option :strict, default: false,
                     desc: 'Also fail if a transitive (requires:) source is missing', type: :boolean
+    option :sync, default: false,
+                  desc: 'Mirror remote recipes and their rule files into ~/.config/ruly/remotes/ first', type: :boolean
     def squash(recipe_name = nil) # rubocop:disable Metrics/MethodLength
       guard_home_directory!
       Services::SourceProcessor.reset_failed_sources!
@@ -121,10 +123,14 @@ module Ruly
     end
 
     desc 'list-recipes', 'List all available recipes'
+    option :sync, default: false,
+                  desc: 'Mirror remote recipes and their rule files into ~/.config/ruly/remotes/ first', type: :boolean
     def list_recipes
-      recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
-      puts "\n📚 Available Recipes:\n\n#{'=' * 80}"
-      recipes.each { |name, config| Services::Display.recipe_listing(name, config) }
+      recipes = load_all_recipes
+      puts "\n📚 Available Recipes (source: #{Services::RecipeLoader.source_origin}):\n\n#{'=' * 80}"
+      recipes.each do |name, config|
+        Services::Display.recipe_listing(name, config, origin: Services::RecipeLoader.recipe_origins[name])
+      end
       puts
     end
 
@@ -176,8 +182,8 @@ module Ruly
               'Recipe required'
       end
 
-      result = Operations::Analyzer.call(analyze_all: options[:all], gem_root:, tier_override: options[:tier],
-                                         recipe_name:, recipes_file:)
+      result = Operations::Analyzer.call(analyze_all: options[:all], gem_root:, recipe_name:, recipes_file:,
+                                         tier_override: options[:tier])
       return if result[:success]
 
       puts "❌ Error: #{result[:error]}"
@@ -210,7 +216,7 @@ module Ruly
       all_servers = Services::MCPManager.load_mcp_server_definitions
       return unless all_servers
 
-      load_recipes = -> { Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:) }
+      load_recipes = -> { load_all_recipes }
       recipe_servers = Services::MCPManager.collect_recipe_mcp_servers(
         options[:recipe], load_all_recipes: load_recipes
       )
@@ -236,8 +242,8 @@ module Ruly
       puts "📊 Analyzing #{resolved.size} files..."
       out = options[:output]
       out = File.join(rules_dir, out) if out == 'stats.md'
-      Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes_file:, rules_dir:,
-                                                                       sources: resolved))
+      Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes: recipes_for_stats,
+                                                                       rules_dir:, sources: resolved))
     end
 
     private
@@ -313,10 +319,20 @@ module Ruly
     # --- Core helpers ---
 
     def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
-    def load_all_recipes = Services::RecipeLoader.load_all_recipes(base_recipes_file: recipes_file, gem_root:)
 
-    def recipes_file = @recipes_file ||= Services::RecipeLoader.recipes_file_path(gem_root)
+    def load_all_recipes
+      Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
+                                              user_recipes_file: recipes_file)
+    rescue Ruly::Error => e
+      raise Thor::Error, "\u274C #{e.message}"
+    end
+
+    def sync_requested? = options[:sync] ? true : false
+
+    def recipes_file = @recipes_file ||= Services::RecipeLoader.user_recipes_file
+
     def rules_dir = @rules_dir ||= File.join(gem_root, 'rules')
+
     def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
     def cached?(recipe_name, agent, output_file, _recipe_config)
@@ -418,11 +434,29 @@ module Ruly
         Services::SettingsManager.propagate_hooks_to_subdirs(recipe_config, script_files: script_paths)
       end
       Ruly::Checks.run_all(local_sources, command_files,
-                           skill_files: all_skill_files,
                            find_rule_file: method(:find_rule_file),
                            parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                           recipe_paths:)
+                           recipe_paths:,
+                           skill_files: all_skill_files)
     end
+
+    def build_recipe_paths(local_sources)
+      paths = Set.new
+      local_sources.each do |source|
+        full_path = find_rule_file(source[:path])
+        next unless full_path
+
+        canonical = begin
+          File.realpath(full_path)
+        rescue StandardError
+          full_path
+        end
+        paths.add(canonical)
+      end
+      paths
+    end
+
+    def find_rule_file(file) = Services::RecipeLoader.find_rule_file(file, gem_root:)
 
     def update_git_ignores(output_file, agent, command_files)
       return unless options[:git_ignore] || options[:git_exclude]
@@ -441,24 +475,8 @@ module Ruly
     def save_skill_files(skill_files, recipe_paths: Set.new)
       Services::ScriptManager.save_skill_files(skill_files, find_rule_file: method(:find_rule_file),
                                                             parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                                                            strip_metadata: Services::FrontmatterParser.method(:strip_metadata),
-                                                            recipe_paths:)
-    end
-
-    def build_recipe_paths(local_sources)
-      paths = Set.new
-      local_sources.each do |source|
-        full_path = find_rule_file(source[:path])
-        next unless full_path
-
-        canonical = begin
-          File.realpath(full_path)
-        rescue StandardError
-          full_path
-        end
-        paths.add(canonical)
-      end
-      paths
+                                                            recipe_paths:,
+                                                            strip_metadata: Services::FrontmatterParser.method(:strip_metadata))
     end
 
     def merge_mcp_servers(recipe_config, local_sources)
@@ -492,8 +510,9 @@ module Ruly
         load_recipe_sources: ->(name) { load_sources(name) },
         parse_frontmatter: Services::FrontmatterParser.method(:parse),
         process_sources_for_squash: method(:process_sources_for_squash),
-        save_skill_files: method(:save_skill_files), verbose: verbose?,
-        recipe_paths:
+        recipe_paths:,
+        save_skill_files: method(:save_skill_files),
+        verbose: verbose?
       )
     end
 
@@ -531,7 +550,12 @@ module Ruly
       recipe_data
     end
 
-    def find_rule_file(file) = Services::RecipeLoader.find_rule_file(file, gem_root:)
+    # Recipes for stats orphan detection; nil when no recipe source is configured.
+    def recipes_for_stats
+      load_all_recipes
+    rescue Ruly::Error
+      nil
+    end
 
     def process_sources_for_squash(sources, agent, _recipe_config, _options)
       process_squash_sources(sources, agent)

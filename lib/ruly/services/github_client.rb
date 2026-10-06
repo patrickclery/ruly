@@ -52,6 +52,34 @@ module Ruly
         []
       end
 
+      # List repo-relative file paths under a directory using the authenticated gh CLI.
+      # @param owner_repo [String] "owner/repo"
+      # @param branch [String] branch name
+      # @param path [String] directory path within the repository
+      # @param extensions [Array<String>] file extensions to keep (e.g. ['.md'])
+      # @param recursive [Boolean] whether to descend into subdirectories
+      # @return [Array<String>, nil] repo-relative file paths, or nil when the listing failed
+      def list_github_directory(owner_repo, branch, path, extensions: ['.md'], recursive: false)
+        result = `gh api repos/#{owner_repo}/contents/#{path}?ref=#{branch} 2>/dev/null`
+        return nil unless $CHILD_STATUS.success? && !result.empty?
+
+        items = JSON.parse(result)
+        return nil unless items.is_a?(Array)
+
+        items.sort_by { |i| i['path'] }.flat_map do |item|
+          if item['type'] == 'file' && extensions.any? { |ext| item['name'].end_with?(ext) }
+            [item['path']]
+          elsif item['type'] == 'dir' && recursive
+            list_github_directory(owner_repo, branch, item['path'], extensions:, recursive:) || []
+          else
+            []
+          end
+        end
+      rescue StandardError => e
+        puts "\u26a0\ufe0f  Error listing GitHub directory #{path}: #{e.message}" if ENV['DEBUG']
+        nil
+      end
+
       # Normalize GitHub URLs. Converts shorthand github:org/repo/path to full URL.
       # @param url [String] URL or github: shorthand
       # @return [String] Full GitHub URL

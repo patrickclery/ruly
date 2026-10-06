@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir.glob(%w[
     lib/**/*
     rules/**/*.md
-    recipes.yml
+    recipes.example.yml
     bin/*
     LICENSE.txt
     README.md
