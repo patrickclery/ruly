@@ -108,14 +108,23 @@ RSpec.describe Ruly::Services::RemoteSync do
       expect(Dir.glob(File.join(mirror_dir, '**', '*')).grep(/elsewhere/)).to be_empty
     end
 
-    it 'raises listing every missing file and leaves an existing mirror untouched' do
+    it 'warns but does not abort when a file referenced only via requires: is missing' do
+      remote_files.delete('linux/base.md')
+
       described_class.sync!(remote)
-      remote_files['linux/base.md'] = nil # listed but unfetchable
-      remote_files['home/skills/plane.md'] = nil
+
+      expect(described_class).to have_received(:warn).with(/requires:.*not found/)
+      expect(File.exist?(File.join(mirror_dir, 'home/core.md'))).to be(true)
+    end
+
+    it 'raises listing every missing explicitly-listed file and leaves an existing mirror untouched' do
+      described_class.sync!(remote)
+      remote_files['home/core.md'] = nil # listed in recipes.yml but unfetchable
+      remote_files['bin/deploy.sh'] = nil
 
       expect { described_class.sync!(remote) }
-        .to raise_error(Ruly::Error) { |e| expect(e.message).to include('linux/base.md', 'home/skills/plane.md') }
-      expect(File.exist?(File.join(mirror_dir, 'linux/base.md'))).to be(true)
+        .to raise_error(Ruly::Error) { |e| expect(e.message).to include('home/core.md', 'bin/deploy.sh') }
+      expect(File.exist?(File.join(mirror_dir, 'home/core.md'))).to be(true)
     end
 
     it 'raises when the recipes file cannot be fetched and no mirror exists' do

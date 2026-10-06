@@ -267,7 +267,7 @@ remotes:
 ruly squash homelab --sync
 ```
 
-`--sync` fetches the remote `recipes.yml` and the closure of files it needs — every entry under `files:`, `skills:`, `commands:` and `scripts:`, directory contents, and everything those files pull in through `requires:` and `skills:` frontmatter — into `~/.config/ruly/remotes/<owner>/<repo>/`, preserving repo-relative paths. The mirror is replaced atomically; if any referenced file cannot be fetched the sync aborts, lists the missing paths, and leaves the previous mirror untouched. If the recipes file itself cannot be fetched (offline), an existing mirror is kept with a warning.
+`--sync` fetches the remote `recipes.yml` and the closure of files it needs — every entry under `files:`, `skills:`, `commands:` and `scripts:`, directory contents, and everything those files pull in through `requires:` and `skills:` frontmatter — into `~/.config/ruly/remotes/<owner>/<repo>/`, preserving repo-relative paths. The mirror is replaced atomically; if a file a recipe lists directly cannot be fetched the sync aborts, lists the missing paths, and leaves the previous mirror untouched. Files reached only through `requires:`/`skills:` frontmatter are warned about and skipped, matching squash. If the recipes file itself cannot be fetched (offline), an existing mirror is kept with a warning.
 
 Without `--sync`, Ruly makes no network calls for recipes and reads the mirror as-is.
 

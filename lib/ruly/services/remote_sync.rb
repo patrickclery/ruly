@@ -220,11 +220,13 @@ module Ruly
       # @param remote [Hash] normalized remote spec
       # @param seeds [Array<String>] relative paths (files or directories)
       # @return [Hash{String => String}] relative path => content
-      # @raise [Ruly::Error] listing every path that could not be fetched
+      # @raise [Ruly::Error] listing every explicitly-listed path that could not be fetched
       def fetch_closure(remote, seeds, clone: nil)
         files = {}
         missing = []
+        transitive_missing = []
         queue = expand_directories(remote, seeds, missing, clone:)
+        explicit = queue.to_set
 
         until queue.empty?
           batch = queue.shift(BATCH_SIZE).reject { |p| files.key?(p) }
@@ -234,7 +236,7 @@ module Ruly
           batch.each do |path|
             content = fetched[path]
             if content.nil?
-              missing << path
+              (explicit.include?(path) ? missing : transitive_missing) << path
               next
             end
 
@@ -243,8 +245,21 @@ module Ruly
           end
         end
 
+        warn_transitive_missing(transitive_missing)
         raise_missing!(remote, missing) unless missing.empty?
         files
+      end
+
+      # Missing `requires:`/`skills:` targets mirror squash's leniency for transitive
+      # sources: warn, but do not abort the sync.
+      # @param paths [Array<String>]
+      # @return [void]
+      def warn_transitive_missing(paths)
+        return if paths.empty?
+
+        warn "  \u{26A0}\u{FE0F}  #{paths.uniq.size} file(s) referenced only via requires:/skills: were not found " \
+             '(squash will skip them):'
+        paths.uniq.each { |p| warn "     \u{2717} #{p}" }
       end
 
       # Expand directory seeds (no extension) into their file paths via the GitHub API.
