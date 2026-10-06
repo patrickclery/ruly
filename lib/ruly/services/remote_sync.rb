@@ -19,6 +19,7 @@ module Ruly
       DEFAULT_PATH = 'recipes.yml'
       DEFAULT_BRANCH = 'main'
       BATCH_SIZE = 50
+      RULE_EXTENSIONS = %w[.md .mdc .sh].freeze
 
       # Root directory that holds one mirror per owner/repo.
       # @return [String]
@@ -113,23 +114,71 @@ module Ruly
         label = "#{remote[:github]}/#{remote[:path]}@#{remote[:branch]}"
         puts "\u{1F504} Syncing #{label}..."
 
-        yaml = GitHubClient.fetch_remote_content(blob_url(remote, remote[:path]))
+        # Prefer gh; fall back to a shallow git clone when gh cannot authenticate
+        # (e.g. its token lives in a macOS keychain that is locked over SSH) or cannot fetch.
+        clone = nil
+        yaml = gh_available? ? read_remote_file(remote, remote[:path], clone: nil) : nil
+        if yaml.nil?
+          clone = clone_repo(remote)
+          yaml = read_remote_file(remote, remote[:path], clone:) if clone
+        end
         unless yaml
           if mirrored?(remote)
             warn "  \u{26A0}\u{FE0F}  Could not fetch #{label}; keeping existing mirror at #{remote[:mirror_dir]}"
             return nil
           end
-          raise Ruly::Error, "Could not fetch #{label} (check `gh auth status` and the repo/branch/path)"
+          raise Ruly::Error,
+                "Could not fetch #{label} (check `gh auth status`, or that `git clone` of the repo works)"
         end
 
         config = YAML.safe_load(yaml, aliases: true) || {}
         seeds = collect_seed_paths(config)
-        files = fetch_closure(remote, seeds)
+        files = fetch_closure(remote, seeds, clone:)
         files[remote[:path]] = yaml
         write_mirror(remote, files)
 
-        puts "  \u{2705} Mirrored #{files.size} files to #{remote[:mirror_dir]}"
+        puts "  \u{2705} Mirrored #{files.size} files to #{remote[:mirror_dir]}" \
+             "#{' (via git clone)' if clone}"
         {count: files.size, mirror_dir: remote[:mirror_dir]}
+      ensure
+        FileUtils.rm_rf(clone) if clone
+      end
+
+      # Whether the gh CLI can authenticate (its token may live in a keychain that is
+      # unavailable over SSH, or be expired).
+      # @return [Boolean]
+      def gh_available?
+        system('gh auth token', err: File::NULL, out: File::NULL) ? true : false
+      end
+
+      # Shallow-clone the remote into a temp dir, trying SSH then HTTPS.
+      # @param remote [Hash]
+      # @return [String, nil] clone directory, or nil when every attempt failed
+      def clone_repo(remote)
+        dir = Dir.mktmpdir('ruly-sync-clone-')
+        urls = ["git@github.com:#{remote[:github]}.git", "https://github.com/#{remote[:github]}.git"]
+        urls.each do |url|
+          FileUtils.rm_rf(dir)
+          ok = system('git', 'clone', '--quiet', '--depth', '1', '--branch', remote[:branch], '--single-branch',
+                      url, dir, err: File::NULL, out: File::NULL)
+          if ok
+            puts "  \u{1F4E6} Cloned #{url} (gh unavailable)"
+            return dir
+          end
+        end
+        FileUtils.rm_rf(dir)
+        nil
+      end
+
+      # Read one repo-relative file from the clone or via gh.
+      # @return [String, nil]
+      def read_remote_file(remote, path, clone:)
+        if clone
+          full = File.join(clone, path)
+          File.file?(full) ? File.read(full, encoding: 'UTF-8') : nil
+        else
+          GitHubClient.fetch_remote_content(blob_url(remote, path))
+        end
       end
 
       # Every repo-relative path named directly by a recipe in the config.
@@ -172,16 +221,16 @@ module Ruly
       # @param seeds [Array<String>] relative paths (files or directories)
       # @return [Hash{String => String}] relative path => content
       # @raise [Ruly::Error] listing every path that could not be fetched
-      def fetch_closure(remote, seeds)
+      def fetch_closure(remote, seeds, clone: nil)
         files = {}
         missing = []
-        queue = expand_directories(remote, seeds, missing)
+        queue = expand_directories(remote, seeds, missing, clone:)
 
         until queue.empty?
           batch = queue.shift(BATCH_SIZE).reject { |p| files.key?(p) }
           next if batch.empty?
 
-          fetched = fetch_batch(remote, batch)
+          fetched = fetch_batch(remote, batch, clone:)
           batch.each do |path|
             content = fetched[path]
             if content.nil?
@@ -203,12 +252,11 @@ module Ruly
       # @param seeds [Array<String>]
       # @param missing [Array<String>] accumulator for directories that could not be listed
       # @return [Array<String>] file paths
-      def expand_directories(remote, seeds, missing)
+      def expand_directories(remote, seeds, missing, clone: nil)
         seeds.flat_map do |path|
           next [path] if /\.\w+\z/.match?(path)
 
-          listed = GitHubClient.list_github_directory(remote[:github], remote[:branch], path,
-                                                      extensions: %w[.md .mdc .sh], recursive: true)
+          listed = list_remote_directory(remote, path, clone:)
           if listed.nil?
             missing << "#{path}/ (directory listing failed)"
             []
@@ -218,11 +266,28 @@ module Ruly
         end.uniq
       end
 
-      # Fetch a batch of files, GraphQL first, then one-by-one for any misses.
+      # Repo-relative file paths under a directory (files with rule extensions, recursive).
+      # @return [Array<String>, nil] nil when the listing failed
+      def list_remote_directory(remote, path, clone: nil)
+        unless clone
+          return GitHubClient.list_github_directory(remote[:github], remote[:branch], path,
+                                                    extensions: RULE_EXTENSIONS, recursive: true)
+        end
+
+        base = File.join(clone, path)
+        return nil unless File.directory?(base)
+
+        Dir.glob(File.join(base, '**', '*')).select { |f| File.file?(f) && RULE_EXTENSIONS.any? { |e| f.end_with?(e) } }
+           .map { |f| f.delete_prefix("#{clone}/") }
+      end
+
+      # Fetch a batch of files: from the clone, or GraphQL first then one-by-one for misses.
       # @param remote [Hash]
       # @param paths [Array<String>]
       # @return [Hash{String => String}] relative path => content (misses omitted)
-      def fetch_batch(remote, paths)
+      def fetch_batch(remote, paths, clone: nil)
+        return paths.to_h { |p| [p, read_remote_file(remote, p, clone:)] }.compact if clone
+
         sources = paths.map { |p| {path: blob_url(remote, p)} }
         by_url = GitHubClient.fetch_github_files_graphql(remote[:github], sources) || {}
 

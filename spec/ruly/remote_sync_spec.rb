@@ -52,6 +52,7 @@ RSpec.describe Ruly::Services::RemoteSync do
     end
     allow(described_class).to receive(:puts)
     allow(described_class).to receive(:warn)
+    allow(described_class).to receive(:gh_available?).and_return(true)
   end
 
   after { FileUtils.rm_rf(remotes_dir) }
@@ -141,6 +142,46 @@ RSpec.describe Ruly::Services::RemoteSync do
 
       expect(File.exist?(File.join(mirror_dir, 'linux/base.md'))).to be(true)
       expect(File.exist?(File.join(mirror_dir, 'home/core.md'))).to be(false)
+    end
+  end
+
+  describe '.sync! via git clone' do
+    let(:clone_dir) { Dir.mktmpdir('ruly-clone') }
+
+    before do
+      remote_files.each do |rel, content|
+        FileUtils.mkdir_p(File.join(clone_dir, File.dirname(rel)))
+        File.write(File.join(clone_dir, rel), content)
+      end
+      allow(described_class).to receive(:clone_repo).and_return(clone_dir)
+    end
+
+    it 'falls back to a shallow clone when gh is unavailable and never calls the GitHub API' do
+      allow(described_class).to receive(:gh_available?).and_return(false)
+
+      described_class.sync!(remote)
+
+      expect(described_class).to have_received(:clone_repo).with(remote)
+      expect(Ruly::Services::GitHubClient).not_to have_received(:fetch_remote_content)
+      %w[recipes.yml home/core.md home/shared.md linux/base.md home/skills/plane.md bin/deploy.sh].each do |rel|
+        expect(File.exist?(File.join(mirror_dir, rel))).to be(true), "expected #{rel} to be mirrored"
+      end
+      expect(Dir.exist?(clone_dir)).to be(false)
+    end
+
+    it 'falls back to a clone when gh is present but cannot fetch the recipes file' do
+      allow(Ruly::Services::GitHubClient).to receive(:fetch_remote_content).and_return(nil)
+
+      described_class.sync!(remote)
+
+      expect(described_class).to have_received(:clone_repo)
+      expect(File.exist?(File.join(mirror_dir, 'home/core.md'))).to be(true)
+    end
+
+    it 'raises when neither gh nor git can fetch' do
+      allow(described_class).to receive_messages(clone_repo: nil, gh_available?: false)
+
+      expect { described_class.sync!(remote) }.to raise_error(Ruly::Error, /Could not fetch/)
     end
   end
 
