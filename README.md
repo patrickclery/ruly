@@ -719,7 +719,8 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   features, so they are skipped. Squash prints one line naming what it skipped
   (`AGENTS.md target skips Claude-only parts: commands (2), subagents (1), ...`).
 - Squash refuses to overwrite an `AGENTS.md` whose first line is not the ruly header (move it aside
-  or pass `-o PATH`). `ruly clean -a agents` removes `AGENTS.md` only when it has that header and
+  or pass `-o PATH`). The check runs before `--clean`/`--deepclean`, so a refused squash deletes
+  nothing. `ruly clean -a agents` removes `AGENTS.md` only when it has that header and
   leaves `.claude/`, `.mcp.json` and `CLAUDE.local.md` alone; `--deepclean` still removes only Claude
   artifacts. Adding the header to a hand-written file hands that file to ruly.
 - `-i`/`-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`. `AGENTS.md` is usually committed,

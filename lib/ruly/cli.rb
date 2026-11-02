@@ -54,7 +54,6 @@ module Ruly
     def squash(recipe_name = nil) # rubocop:disable Metrics/MethodLength
       guard_home_directory!
       Services::SourceProcessor.reset_failed_sources!
-      invoke_clean_if_requested(recipe_name)
       agent = normalize_agent(options[:agent])
 
       sources, recipe_config = load_sources(recipe_name)
@@ -66,6 +65,8 @@ module Ruly
                       requested
                     end
       guard_agents_md_output!(output_file, agent)
+      # Clean only after the guard, so a refused squash deletes nothing.
+      invoke_clean_if_requested(recipe_name)
       script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
                                                                           find_rule_file: method(:find_rule_file))
       script_mappings = Services::ScriptManager.build_script_mappings(script_files)
