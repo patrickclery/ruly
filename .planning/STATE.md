@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Emphasize Core Advantages
 status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-11-02T11:47:52.937Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-11-02T11:51:46.023Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 7 complete, transitioned to Phase 3
-state_head: 3a12d50e4e9ab6333811395218fbc3a3d53cec3f
+state_head: e0103d33d432a151165f4f3c9f1beecd47484b13
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 57
 ---
 
@@ -71,6 +71,7 @@ Progress: [██████░░░░] 57% (existing work)
 | Phase 05 P03 | 4 min | 2 tasks | 3 files |
 | Phase 06 P01 | 10min | 3 tasks | 47 files |
 | Phase 06 P02 | 10min | 2 tasks | 15 files |
+| Phase 06 P03 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,7 @@ Recent decisions affecting current work:
 - [Phase 06]: Fixture token benchmark: median ruly reduction 76.9% vs load-all, 68.4% vs native floor, 74.3% vs native ceiling (synthetic corpus, 5 recipes)
 - [Phase 06]: bench/ harness runs real bin/ruly squash with isolated HOME/RULY_HOME; non-fixture corpora write only to git-ignored bench/results/local
 - [Phase 06]: Compliance harness: dry run default; --live runs claude -p (claude-sonnet-5-5) with per-call budget cap; OutputDir guard shared with TokensCLI
+- [Phase 06]: Benchmark docs publish the fixture median (76.9% vs load-all, 68.4% vs native floor), always labeled fixture-based; compliance marked pending a paid live run
 
 ### Pending Todos
 
@@ -130,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-02T11:47:52.795Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-11-02T11:51:45.847Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
