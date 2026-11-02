@@ -164,6 +164,18 @@ RSpec.describe Ruly::Services::AgentsMd do
       expect(described_class.generated?(path)).to be(true)
     end
 
+    it 'is true for a header behind a UTF-8 BOM' do
+      path = File.join(dir, 'AGENTS.md')
+      File.binwrite(path, "\xEF\xBB\xBF#{described_class.header('demo')}\n\nbody\n".b)
+      expect(described_class.generated?(path)).to be(true)
+    end
+
+    it 'is false for a hand-written file behind a UTF-8 BOM' do
+      path = File.join(dir, 'AGENTS.md')
+      File.binwrite(path, "\xEF\xBB\xBF# Team notes\n".b)
+      expect(described_class.generated?(path)).to be(false)
+    end
+
     it 'is false for an empty file' do
       path = File.join(dir, 'AGENTS.md')
       File.write(path, '')

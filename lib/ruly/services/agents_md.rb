@@ -32,13 +32,13 @@ module Ruly
       end
 
       # Whether a file was written by ruly (line 1 starts with the ruly marker).
-      # Reads only the first line.
+      # Reads only the first line; a leading UTF-8 BOM (an editor re-save) is ignored.
       # @param path [String] file path
       # @return [Boolean]
       def generated?(path)
         return false unless File.file?(path)
 
-        File.open(path, &:gets).to_s.start_with?(MARKER)
+        File.open(path, 'r:BOM|UTF-8', &:gets).to_s.start_with?(MARKER)
       rescue SystemCallError
         false
       end
