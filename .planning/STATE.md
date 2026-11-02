@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Rules get squashed correctly into agent instruction files every time
-**Current focus:** Awaiting new feature phases
+**Current focus:** Phase 03 — Emphasize Core Advantages
 
 ## Current Position
 
@@ -90,7 +90,10 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- ⚠️ [Phase 2] `.planning/codebase/*` maps are stale (still describe Analyzer, cache, shell_gpt) — run /gsd-map-codebase
+- ⚠️ [Phase 2] patrickclery/rules `core-debugger` recipe uses misspelled `omitCommandPrefix` (now warns); top-level `tier:` in ~/.config/ruly/recipes.yml is inert (now warns)
+- ⚠️ [Phase 2] Installed `ruly` binary not refreshed with 0.2.0 changes (per CLAUDE.md: update after changes)
+- ⚠️ [Phase 2] Pre-existing: 15 baseline rspec failures; `ruly stats` writes stats.md into gem rules/ dir regardless of cwd
 
 ## Session Continuity
 
