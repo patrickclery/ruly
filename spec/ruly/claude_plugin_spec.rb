@@ -305,4 +305,151 @@ RSpec.describe Ruly::Services::ClaudePlugin do
         .to output(/both map to plugin skill 'a-b'/).to_stderr
     end
   end
+
+  describe '.hook_command' do
+    let(:root) { '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"' }
+
+    before do
+      FileUtils.mkdir_p('plug/scripts')
+      File.write('plug/scripts/notify.sh', "#!/bin/sh\n")
+    end
+
+    it 'rewrites a copied script to the quoted plugin-root path' do
+      expect(described_class.hook_command('.claude/scripts/notify.sh', 'plug')).to eq(root)
+    end
+
+    it 'quotes an already double-quoted reference once' do
+      expect(described_class.hook_command('"./x" ".claude/scripts/notify.sh"', 'plug')).to eq("\"./x\" #{root}")
+    end
+
+    it 'keeps the prefix and suffix' do
+      expect(described_class.hook_command('bash .claude/scripts/notify.sh --flag', 'plug')).to eq("bash #{root} --flag")
+    end
+
+    it 'leaves a home-dir script path alone' do
+      expect(described_class.hook_command('~/.claude/scripts/x.sh', 'plug')).to eq('~/.claude/scripts/x.sh')
+    end
+
+    it 'keeps and warns about a script that is not a recipe script' do
+      expect { expect(described_class.hook_command('.claude/scripts/other.sh', 'plug')).to eq('.claude/scripts/other.sh') }
+        .to output(/\.claude\/scripts\/other\.sh, which is not a recipe script; left unchanged/).to_stderr
+    end
+  end
+
+  describe '.write_hooks' do
+    let(:hooks) { {'Stop' => [{'hooks' => [{'command' => '.claude/scripts/notify.sh', 'type' => 'command'}]}]} }
+
+    before do
+      FileUtils.mkdir_p('plug/scripts')
+      File.write('plug/scripts/notify.sh', "#!/bin/sh\n")
+    end
+
+    it 'writes the hooks under a top-level hooks key with rewritten commands' do
+      described_class.write_hooks('plug', {'hooks' => hooks})
+      expect(JSON.parse(File.read('plug/hooks/hooks.json')))
+        .to eq('hooks' => {'Stop' => [{'hooks' => [{'command' => '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"',
+                                                    'type' => 'command'}]}]})
+    end
+
+    it 'leaves the recipe hooks unchanged' do
+      described_class.write_hooks('plug', {'hooks' => hooks})
+      expect(hooks.dig('Stop', 0, 'hooks', 0, 'command')).to eq('.claude/scripts/notify.sh')
+    end
+
+    it 'writes nothing for empty or missing hooks' do
+      described_class.write_hooks('plug', {'hooks' => {}})
+      described_class.write_hooks('plug', {})
+      expect(File.exist?('plug/hooks')).to be(false)
+    end
+  end
+
+  describe '.literal_secret_servers' do
+    it 'names servers with a literal env value only' do
+      servers = {'a' => {'env' => {'K' => 'v'}}, 'b' => {'env' => {'K' => '${K}'}}, 'c' => {'command' => 'x'}}
+      expect(described_class.literal_secret_servers(servers)).to eq(['a'])
+    end
+
+    it 'names servers with a literal headers value' do
+      servers = {'h' => {'headers' => {'Authorization' => 'Bearer abc'}}, 'e' => {'env' => {'K' => ''}}}
+      expect(described_class.literal_secret_servers(servers)).to eq(['h'])
+    end
+  end
+
+  describe '.write_mcp' do
+    def stub_servers(servers)
+      allow(Ruly::Services::MCPManager).to receive(:load_mcp_servers_from_config).and_return(servers)
+    end
+
+    it 'writes the servers to DIR/.mcp.json' do
+      stub_servers('grafana' => {'command' => 'mcp-grafana', 'env' => {'URL' => '${URL}'}})
+      described_class.write_mcp('plug', ['grafana'])
+      expect(JSON.parse(File.read('plug/.mcp.json')).dig('mcpServers', 'grafana', 'command')).to eq('mcp-grafana')
+    end
+
+    it 'names literal-secret servers on stderr without printing the value' do
+      stub_servers('grafana' => {'command' => 'mcp-grafana', 'env' => {'KEY' => 'stub-secret-value'}})
+      expect { described_class.write_mcp('plug', ['grafana']) }
+        .to output(a_string_including('literal env/headers values for: grafana')
+          .and(satisfy { |err| !err.include?('stub-secret-value') })).to_stderr
+    end
+
+    it 'does not warn for ${...} values' do
+      stub_servers('grafana' => {'command' => 'mcp-grafana', 'env' => {'URL' => '${URL}'}})
+      expect { described_class.write_mcp('plug', ['grafana']) }.not_to output.to_stderr
+    end
+
+    it 'writes nothing when no server resolves' do
+      stub_servers(nil)
+      described_class.write_mcp('plug', [])
+      stub_servers({})
+      described_class.write_mcp('plug', ['missing'])
+      expect(File.exist?('plug/.mcp.json')).to be(false)
+    end
+  end
+
+  describe '.rewrite_script_paths' do
+    before do
+      FileUtils.mkdir_p(%w[plug/scripts plug/skills/a plug/commands plug/agents plug/other])
+      File.write('plug/scripts/notify.sh', "#!/bin/sh\n")
+      text = "run .claude/scripts/notify.sh and .claude/scripts/other.sh\n"
+      %w[plug/skills/a/SKILL.md plug/commands/c.md plug/agents/g.md plug/other/x.md].each { |f| File.write(f, text) }
+      described_class.rewrite_script_paths('plug')
+    end
+
+    it 'rewrites copied scripts in skills, commands and agents' do
+      expect(%w[skills/a/SKILL.md commands/c.md agents/g.md].map { |f| File.read("plug/#{f}") }.uniq)
+        .to eq(["run ${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh and .claude/scripts/other.sh\n"])
+    end
+
+    it 'leaves files outside those dirs alone' do
+      expect(File.read('plug/other/x.md')).to include('.claude/scripts/notify.sh')
+    end
+  end
+
+  describe '.skipped_parts' do
+    it 'names all four parts in order' do
+      config = {'isolate' => true, 'model' => 'opus',
+                'subagents' => [{'append' => true, 'cwd' => 'x', 'name' => 'a', 'recipe' => 'a'}]}
+      expect(described_class.skipped_parts(config))
+        .to eq(['model', 'isolate', 'subagent permissionMode', 'subagent cwd hooks'])
+    end
+
+    it 'names only subagent permissionMode for plain subagents' do
+      expect(described_class.skipped_parts({'subagents' => [{'name' => 'a', 'recipe' => 'a'}]}))
+        .to eq(['subagent permissionMode'])
+    end
+
+    it 'is empty for an empty recipe' do
+      expect(described_class.skipped_parts({})).to eq([])
+    end
+
+    it 'adds the skipped notice to notices' do
+      expect(described_class.notices('demo', {'subagents' => [{'name' => 'a'}]}).last)
+        .to eq("ℹ️  claude-plugin target skips: subagent permissionMode")
+    end
+
+    it 'adds no skipped notice when nothing is skipped' do
+      expect(described_class.notices('demo', {}).size).to eq(1)
+    end
+  end
 end

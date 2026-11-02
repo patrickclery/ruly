@@ -140,6 +140,51 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
   end
 
+  context 'with hooks, MCP servers and scripts' do
+    let(:servers) do
+      {'grafana' => {'command' => 'mcp-grafana', 'env' => {'KEY' => 'fixture-secret-value', 'URL' => '${URL}'}}}
+    end
+    let(:stderr) { StringIO.new }
+    let!(:stdout) do
+      allow(Ruly::Services::MCPManager).to receive(:load_mcp_servers_from_config).with(['grafana']).and_return(servers)
+      original = $stderr
+      $stderr = stderr
+      capture_stdout { described_class.start(%w[squash demo -a claude-plugin]) }
+    ensure
+      $stderr = original
+    end
+
+    it 'writes hooks/hooks.json with the quoted plugin-root command' do
+      hooks = JSON.parse(read_utf8(File.join(plugin_dir, 'hooks/hooks.json')))
+      expect(hooks.dig('hooks', 'Stop', 0, 'hooks', 0, 'command')).to eq('"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"')
+    end
+
+    it 'writes .mcp.json with the recipe servers' do
+      expect(JSON.parse(read_utf8(File.join(plugin_dir, '.mcp.json'))).dig('mcpServers', 'grafana', 'command'))
+        .to eq('mcp-grafana')
+    end
+
+    it 'names the literal-secret server and never prints the value' do
+      expect([stderr.string.include?('literal env/headers values for: grafana'),
+              "#{stdout}#{stderr.string}".include?('fixture-secret-value')]).to eq([true, false])
+    end
+
+    it 'rewrites script references in the rules skill, skills and commands' do
+      texts = %w[skills/demo-rules/SKILL.md skills/deploy/SKILL.md commands/ship.md]
+              .map { |f| read_utf8(File.join(plugin_dir, f)) }
+      expect(texts.map { |t| [t.include?('${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh'), t.include?('.claude/scripts/notify.sh')] })
+        .to all(eq([true, false]))
+    end
+
+    it 'prints the skipped notice once' do
+      expect(stdout.scan('claude-plugin target skips: subagent permissionMode').size).to eq(1)
+    end
+
+    it 'writes nothing into the project' do
+      expect(%w[.claude .mcp.json CLAUDE.local.md].map { |f| File.exist?(f) }).to eq([false, false, false])
+    end
+  end
+
   context 'with a recipe skill named like the rules skill' do
     before do
       File.write('rules/skills/demo-rules.md', "---\ndescription: Clash\n---\n# Clash\n")
