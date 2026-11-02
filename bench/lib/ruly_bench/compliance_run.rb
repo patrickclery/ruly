@@ -11,6 +11,7 @@ module RulyBench
       'ruly' => ['CLAUDE.local.md', '.claude/skills/**/*', '.claude/commands/**/*']
     }.freeze
     WORKSPACE_ENTRIES = %w[.claude CLAUDE.local.md].freeze
+    JOURNAL = 'compliance.partial.jsonl'
     FIXTURE_NOTICE = '> These numbers come from the synthetic fixture corpus in `bench/fixtures/corpus`. ' \
                      'They are not a measurement of any real rules repository.'
     EXTERNAL_NOTICE = '> Local run on an external corpus. Not for committing: keep it in the git-ignored ' \
@@ -51,7 +52,9 @@ module RulyBench
     end
 
     # Run every task under both conditions through the executor, score the replies and write
-    # compliance.json and compliance.md to output_dir.
+    # compliance.json and compliance.md to output_dir. Each cell is appended to compliance.partial.jsonl as soon as
+    # it completes; if the run stops early (Ctrl-C or any error), the tasks finished so far are written with
+    # `complete: false` and the journal is kept, so no paid reply is lost.
     # @param output_dir [String]
     # @return [Integer] 0 after writing the results, 1 when the suite is invalid (nothing is run)
     def live_run(output_dir:)
@@ -60,9 +63,11 @@ module RulyBench
 
       list = tasks.tasks
       out.puts live_header(list.size)
-      rows = with_workspaces(list) { |workspaces| list.map { |task| live_task(task, workspaces) } }
-      result = live_result(rows)
+      journal = start_journal(output_dir)
+      rows = run_tasks(list, journal, output_dir)
+      result = live_result(rows, complete: true)
       write_results(result, output_dir)
+      File.delete(journal)
       out.puts summary_line(result)
       out.puts "wrote #{File.join(output_dir, 'compliance.json')} and compliance.md"
       0
@@ -168,20 +173,44 @@ module RulyBench
              worst: calls * @max_budget_usd)
     end
 
-    def live_task(task, workspaces)
+    # @return [String] the path of an empty journal in output_dir
+    def start_journal(output_dir)
+      FileUtils.mkdir_p(output_dir)
+      journal = File.join(output_dir, JOURNAL)
+      File.write(journal, '')
+      journal
+    end
+
+    # Runs the tasks, collecting finished rows; on an interrupt or error, writes what was collected and re-raises.
+    def run_tasks(list, journal, output_dir)
+      rows = []
+      with_workspaces(list) { |workspaces| list.each { |task| rows << live_task(task, workspaces, journal) } }
+      rows
+    rescue Interrupt, StandardError
+      write_results(live_result(rows, complete: false), output_dir)
+      out.puts "run stopped after #{rows.size} of #{list.size} tasks; wrote the finished tasks to " \
+               "#{File.join(output_dir, 'compliance.json')} and every finished call to #{journal}"
+      raise
+    end
+
+    def live_task(task, workspaces, journal)
       cells = CONDITIONS.to_h do |condition|
         cell = live_cell(task, workspace(workspaces, task, condition))
+        append_journal(journal, task, condition, cell)
         out.puts "#{task['id']} #{condition}: #{cell_label(cell)} ($#{format('%.4f', cell['cost_usd'])})"
         [condition, cell]
       end
       {'id' => task['id'], 'native' => cells['native'], 'recipe' => task['recipe'], 'ruly' => cells['ruly']}
     end
 
+    # One call; any StandardError (a failed spawn, an odd reply) becomes an error cell so it cannot sink the run.
     def live_cell(task, dir)
       stdout, _stderr, status = executor.call(env, @argv, chdir: dir, stdin_data: task['prompt'])
       parse_cell(stdout, status, task['checks'])
     rescue SystemCallError => e
       error_cell("could not run claude: #{e.class.name.split('::').last}")
+    rescue StandardError => e
+      error_cell("harness error: #{e.class.name}")
     end
 
     # Reads claude's JSON output (`result`, `total_cost_usd`, `is_error`) and scores the reply.
@@ -193,7 +222,7 @@ module RulyBench
       return error_cell("claude reported an error (#{data['subtype']})", cost) if data['is_error']
       return error_cell('no result in claude output', cost) unless data['result'].is_a?(String)
 
-      reply = data['result']
+      reply = data['result'].scrub
       score = Scorer.score(reply, checks)
       {'cost_usd' => cost, 'error' => nil, 'failed' => score[:failed], 'pass' => score[:pass], 'reply' => reply}
     end
@@ -208,26 +237,15 @@ module RulyBench
       {'cost_usd' => cost, 'error' => message, 'failed' => [], 'pass' => false, 'reply' => nil}
     end
 
+    def append_journal(journal, task, condition, cell)
+      line = JSON.generate({'cell' => cell, 'condition' => condition, 'id' => task['id'], 'recipe' => task['recipe']})
+      File.open(journal, 'a') { |f| f.puts(line) }
+    end
+
     def cell_label(cell)
       return 'error' if cell['error']
 
       cell['pass'] ? 'pass' : 'fail'
-    end
-
-    def live_result(rows)
-      {
-        'conditions' => CONDITIONS.sort.to_h { |c| [c, condition_totals(rows, c)] },
-        'corpus' => corpus.fixture? ? TokenBenchmark::FIXTURE_CORPUS_LABEL : 'external',
-        'model' => @model,
-        'schema' => 1,
-        'tasks' => rows,
-        'total_cost_usd' => rows.sum { |row| CONDITIONS.sum { |c| row[c]['cost_usd'] } }.round(6)
-      }
-    end
-
-    def condition_totals(rows, condition)
-      cells = rows.map { |row| row[condition] }
-      {'errors' => cells.count { _1['error'] }, 'passed' => cells.count { _1['pass'] }, 'total' => cells.size}
     end
 
     def write_results(result, output_dir)
@@ -240,10 +258,18 @@ module RulyBench
       lines = ["# Compliance benchmark: #{result['model']}", '',
                result['corpus'] == TokenBenchmark::FIXTURE_CORPUS_LABEL ? FIXTURE_NOTICE : EXTERNAL_NOTICE, '',
                'One sample per task and condition: these counts are not statistically significant.', '',
+               *incomplete_lines(result),
                *conditions_lines, *results_lines(result), *failure_lines(result),
                '## Totals', '', *CONDITIONS.map { |c| "- #{totals_text(c, result['conditions'][c])}" }, '',
                "Total cost: $#{format('%.4f', result['total_cost_usd'])} (model `#{result['model']}`).", '']
       lines.join("\n")
+    end
+
+    def incomplete_lines(result)
+      return [] if result['complete']
+
+      ['**Incomplete run:** it stopped early, so only the tasks finished under both conditions are listed. Every ' \
+       "finished call, including a task's first condition, is in `#{JOURNAL}`.", '']
     end
 
     def conditions_lines
@@ -278,6 +304,23 @@ module RulyBench
 
     def totals_text(condition, totals)
       "#{condition}: #{totals['passed']}/#{totals['total']} passed, #{totals['errors']} errors"
+    end
+
+    def live_result(rows, complete:)
+      {
+        'complete' => complete,
+        'conditions' => CONDITIONS.sort.to_h { |c| [c, condition_totals(rows, c)] },
+        'corpus' => corpus.fixture? ? TokenBenchmark::FIXTURE_CORPUS_LABEL : 'external',
+        'model' => @model,
+        'schema' => 2,
+        'tasks' => rows,
+        'total_cost_usd' => rows.sum { |row| CONDITIONS.sum { |c| row[c]['cost_usd'] } }.round(6)
+      }
+    end
+
+    def condition_totals(rows, condition)
+      cells = rows.map { |row| row[condition] }
+      {'errors' => cells.count { _1['error'] }, 'passed' => cells.count { _1['pass'] }, 'total' => cells.size}
     end
 
     def summary_line(result)

@@ -87,7 +87,7 @@ Eight tasks, defined in [`bench/compliance/tasks.yml`](../bench/compliance/tasks
 
 Each reply is scored by deterministic regex checks: `forbid` (the pattern must not match) or `require` (it must match), over the whole reply, the fenced code blocks, or the first line. Each task carries a canned passing reply and a canned failing reply, and the dry run proves every check against both without an API call.
 
-The default model is `claude-sonnet-5-5`; pass `--model ID` to use another. A live run writes `compliance.json` and `compliance.md` with per-condition pass counts, each reply and its cost, and the failed checks.
+The default model is `claude-sonnet-5-5`; pass `--model ID` to use another. A live run writes `compliance.json` and `compliance.md` with per-condition pass counts, each reply and its cost, and the failed checks. Each finished call is also appended to `compliance.partial.jsonl` as it completes. If the run stops early (Ctrl-C or an error), the tasks finished so far are written with `"complete": false` and the journal is kept, so no paid reply is lost; a run that finishes deletes the journal. An error in a single call is recorded as an error cell and the run goes on.
 
 ### How to run it
 

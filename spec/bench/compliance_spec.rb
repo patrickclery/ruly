@@ -250,7 +250,8 @@ RSpec.describe RulyBench do
         cli(argv, executor:)
         result = JSON.parse(File.read(File.join(output_dir, 'compliance.json')))
 
-        expect(result.keys).to eq(%w[conditions corpus model schema tasks total_cost_usd])
+        expect(result.keys).to eq(%w[complete conditions corpus model schema tasks total_cost_usd])
+        expect(result['complete']).to be(true)
         expect(result['conditions']).to eq('native' => {'errors' => 1, 'passed' => 0, 'total' => 2},
                                            'ruly' => {'errors' => 1, 'passed' => 1, 'total' => 2})
         hello, bye = result['tasks']
@@ -260,7 +261,7 @@ RSpec.describe RulyBench do
         expect(bye['native']['error']).to include('exited 1')
         expect(result['total_cost_usd']).to eq(0.52)
         expect(result['corpus']).to eq('external')
-        expect(result['schema']).to eq(1)
+        expect(result['schema']).to eq(2)
       end
 
       it 'writes compliance.md with the title, totals and the significance caveat' do
@@ -283,6 +284,36 @@ RSpec.describe RulyBench do
         calls.each { |call| expect(call[:env].values).not_to include(key) }
         written = Dir.glob('**/*', base: output_dir).map { File.read(File.join(output_dir, _1)) }.join
         expect(out.string + err.string + written).not_to include(key)
+      end
+
+      it 'turns any StandardError of one call into an error cell and finishes the run' do
+        raising = lambda do |*args, **kwargs|
+          raise ArgumentError, 'odd reply' if kwargs[:stdin_data] == 'Say bye.'
+
+          executor.call(*args, **kwargs)
+        end
+        expect(cli(argv, executor: raising)).to eq(0)
+        result = JSON.parse(File.read(File.join(output_dir, 'compliance.json')))
+
+        expect(result['tasks'].last['ruly']['error']).to eq('harness error: ArgumentError')
+        expect(File).not_to exist(File.join(output_dir, 'compliance.partial.jsonl'))
+      end
+
+      it 'keeps every finished call and writes the finished tasks when the run is interrupted' do
+        interrupting = lambda do |*args, **kwargs|
+          raise Interrupt if calls.size == 3
+
+          executor.call(*args, **kwargs)
+        end
+        expect { cli(argv, executor: interrupting) }.to raise_error(Interrupt)
+        result = JSON.parse(File.read(File.join(output_dir, 'compliance.json')))
+        journal = File.readlines(File.join(output_dir, 'compliance.partial.jsonl')).map { JSON.parse(_1) }
+
+        expect(result['complete']).to be(false)
+        expect(result['tasks'].map { _1['id'] }).to eq(%w[no-shout])
+        expect(journal.map { [_1['id'], _1['condition']] }).to eq([%w[no-shout ruly], %w[no-shout native],
+                                                                    %w[no-shout-bye ruly]])
+        expect(File.read(File.join(output_dir, 'compliance.md'))).to include('**Incomplete run:**')
       end
 
       it 'runs only the tasks named by --only' do
