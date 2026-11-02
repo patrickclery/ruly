@@ -145,8 +145,8 @@ module Ruly
         nil
       end
 
-      # Empty the plugin directory and write the ownership marker at once, so a run that
-      # fails later leaves a directory ruly still owns (re-runnable, cleanable).
+      # Empty the plugin directory and write the ownership marker at once, so a run killed
+      # mid-build leaves a directory ruly still owns (re-runnable, cleanable).
       # @param dir [String] plugin directory
       def reset_dir(dir)
         guard_dir!(dir)
@@ -248,10 +248,14 @@ module Ruly
       # @return [Boolean] whether NAME is a single safe path segment (NAME_PATTERN, no '..')
       def safe_name?(name) = name.match?(NAME_PATTERN) && !name.include?('..')
 
-      # Write the plugin: manifest, rules skill and commands. Never writes a CLAUDE.md, a
-      # SessionStart hook or an output style (plugins cannot carry always-on instructions),
-      # and never adds component keys to plugin.json (the default directory scan stays in effect).
-      # @param dir [String] plugin directory (already reset)
+      # Write the plugin: manifest, rules skill, commands, scripts, hooks and MCP servers, then the
+      # block's parts (recipe skills and subagents), then the plugin-root script paths. Never writes
+      # a CLAUDE.md, a SessionStart hook or an output style (plugins cannot carry always-on
+      # instructions), and never adds component keys to plugin.json (the default directory scan
+      # stays in effect). The skill and command paths are checked before anything is written, and
+      # the build runs in replace_dir, so a failed build keeps the previous plugin.
+      # @param dir [String] plugin directory (already guarded)
+      # @param bin_files [Array<Hash>] recipe `scripts:` files, copied to DIR/scripts
       # @param command_files [Array<Hash, String>] recipe commands
       # @param gem_root [String, nil] gem root (import-mode command paths)
       # @param local_sources [Array<Hash>] processed rule sources
@@ -261,22 +265,73 @@ module Ruly
       # @param script_files [Hash] frontmatter scripts `{local: [...], remote: [...]}`, copied to DIR/scripts
       # @param skill_files [Array<Hash>] recipe skills (checked here, written by the caller)
       # @param toc [Boolean] whether to write a table of contents
-      def write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:, script_files:,
-                script_mappings:, skill_files:, toc:)
+      # @yield writes the recipe skills and subagents into DIR
+      # @return [Object] the block's value
+      # @raise [Ruly::Error] see check_paths!, and any Ruly::Error from the block
+      def write(dir, bin_files:, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:,
+                script_files:, script_mappings:, skill_files:, toc:)
         check_paths!(dir, command_files:, recipe_config:, recipe_name:, skill_files:)
-        FileUtils.mkdir_p(File.join(dir, File.dirname(MANIFEST)))
-        File.write(File.join(dir, MANIFEST),
-                   "#{JSON.pretty_generate(manifest(recipe_name, recipe_config, author: git_author))}\n")
-        write_rules_skill(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
+        replace_dir(dir) do
+          File.write(File.join(dir, MANIFEST),
+                     "#{JSON.pretty_generate(manifest(recipe_name, recipe_config, author: git_author))}\n")
+          write_rules_skill(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
+          write_components(dir, bin_files:, command_files:, gem_root:, recipe_config:, script_files:)
+          result = yield
+          rewrite_script_paths(dir)
+          result
+        end
+      end
+
+      # Write the recipe commands, scripts, hooks and MCP servers into DIR.
+      def write_components(dir, bin_files:, command_files:, gem_root:, recipe_config:, script_files:)
         unless command_files.empty?
           ScriptManager.save_command_files(command_files, recipe_config, commands_dir: File.join(dir, 'commands'),
                                                                          gem_root:)
         end
+        ScriptManager.copy_script_files(bin_files, scripts_dir: File.join(dir, 'scripts')) unless bin_files.empty?
         if Array(script_files[:local]).any? || Array(script_files[:remote]).any?
           ScriptManager.copy_scripts(script_files, File.join(dir, 'scripts'))
         end
         write_hooks(dir, recipe_config)
         write_mcp(dir, Array(recipe_config['mcp_servers']))
+      end
+
+      # Run the block with DIR emptied down to the ownership marker (see reset_dir). A previous
+      # plugin in DIR is moved aside to a hidden sibling first: it is deleted when the block
+      # returns, and put back when the block raises or the run is interrupted.
+      # @param dir [String] plugin directory
+      # @return [Object] the block's value
+      def replace_dir(dir)
+        guard_dir!(dir)
+        previous = move_aside(dir)
+        built = false
+        begin
+          reset_dir(dir)
+          result = yield
+          built = true
+          result
+        ensure
+          if built
+            FileUtils.rm_rf(previous) if previous
+          else
+            restore_dir(dir, previous)
+          end
+        end
+      end
+
+      # @return [String, nil] where DIR was moved, nil when DIR did not exist
+      def move_aside(dir)
+        return unless File.exist?(dir) || File.symlink?(dir)
+
+        previous = File.join(File.dirname(dir), ".#{File.basename(dir)}.ruly-previous-#{Process.pid}-#{Time.now.to_i}")
+        File.rename(dir, previous)
+        previous
+      end
+
+      # Drop a failed build and put the previous plugin back.
+      def restore_dir(dir, previous)
+        FileUtils.rm_rf(dir)
+        File.rename(previous, dir) if previous
       end
 
       # Write `DIR/hooks/hooks.json`: the recipe `hooks:` under a top-level `hooks` key, each

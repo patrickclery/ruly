@@ -52,6 +52,14 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end.to output(stderr).to_stderr
   end
 
+  # Every path under DIR with the file's content (false for a directory).
+  def snapshot(dir)
+    Dir.glob('**/*', File::FNM_DOTMATCH, base: dir).sort.to_h do |path|
+      full = File.join(dir, path)
+      [path, File.file?(full) && read_utf8(full)]
+    end
+  end
+
   # Body of a SKILL.md after its closing frontmatter line.
   def skill_body(path) = read_utf8(path).split(/^---$\n/, 3)[2]
 
@@ -200,11 +208,32 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
       expect_refusal(%w[squash demo -a claude-plugin], /collides with the generated rules skill/)
     end
 
-    it 'leaves a dir ruly owns, so a re-run without the skill succeeds' do
+    it 'writes nothing on a first run' do
       expect_refusal(%w[squash demo -a claude-plugin], /collides/)
-      File.write('.recipes.yml', read_utf8('.recipes.yml').sub("      - rules/skills/demo-rules.md\n", ''))
+      expect(Dir.glob('*ruly-plugin-demo*', File::FNM_DOTMATCH)).to be_empty
+    end
+
+    it 'keeps the previous plugin untouched' do
+      recipe = read_utf8('.recipes.yml')
+      File.write('.recipes.yml', recipe.sub("      - rules/skills/demo-rules.md\n", ''))
       run_cli('squash', 'demo', '-a', 'claude-plugin')
-      expect(File.file?(rules_skill_path)).to be(true)
+      before = snapshot(plugin_dir)
+      File.write('.recipes.yml', recipe)
+      expect_refusal(%w[squash demo -a claude-plugin], /collides/)
+      expect([snapshot(plugin_dir), Dir.glob('.ruly-plugin-demo*')]).to eq([before, []])
+    end
+  end
+
+  context 'when a subagent fails the build' do
+    it 'keeps the previous plugin and leaves no backup behind' do
+      run_cli('squash', 'demo', '-a', 'claude-plugin')
+      manifest = read_utf8(manifest_path)
+      File.write('rules/skills/demo-rules.md', "---\ndescription: Clash\n---\n# Clash\n")
+      line = "      - rules/skills/review.md\n"
+      File.write('.recipes.yml', read_utf8('.recipes.yml').sub(line, "#{line}      - rules/skills/demo-rules.md\n"))
+      expect_refusal(%w[squash demo -a claude-plugin], /collides/)
+      expect([read_utf8(manifest_path), read_utf8(rules_skill_path).include?('# Clash'),
+              Dir.glob('.ruly-plugin-demo*')]).to eq([manifest, false, []])
     end
   end
 

@@ -256,6 +256,28 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     end
   end
 
+  describe '.replace_dir' do
+    before do
+      write_manifest('plug', {'metadata' => {'generator' => 'ruly'}})
+      File.write('plug/old.txt', "old\n")
+    end
+
+    it 'builds into an emptied dir and drops the previous plugin on success' do
+      expect(described_class.replace_dir('plug') { Dir.children('plug') }).to eq(['.claude-plugin'])
+      expect([File.exist?('plug/old.txt'), Dir.children('.')]).to eq([false, ['plug']])
+    end
+
+    it 'puts the previous plugin back when the build raises' do
+      expect { described_class.replace_dir('plug') { raise Ruly::Error, 'boom' } }.to raise_error(Ruly::Error, 'boom')
+      expect([File.read('plug/old.txt'), Dir.children('.')]).to eq(["old\n", ['plug']])
+    end
+
+    it 'removes a failed first build' do
+      expect { described_class.replace_dir('fresh') { raise Ruly::Error, 'boom' } }.to raise_error(Ruly::Error)
+      expect(File.exist?('fresh')).to be(false)
+    end
+  end
+
   describe '.rules_skill_description' do
     it 'names the recipe and its description' do
       expect(described_class.rules_skill_description('demo', {'description' => 'Team rules'}))

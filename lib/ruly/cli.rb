@@ -78,8 +78,7 @@ module Ruly
       prepare_output(output_file, agent) unless options[:dry_run]
       sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
       plugin = agent == Services::ClaudePlugin::AGENT
-      local_sources, command_files, bin_files, skill_files =
-        process_squash_sources(sources, agent, scripts_dir: (File.join(output_file, 'scripts') if plugin))
+      local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
       validate_squash_dispatches(local_sources, recipe_config, recipe_name)
       announce_agents_md_skips(recipe_config, command_files, local_sources) if agent == Services::AgentsMd::AGENT
       Services::ClaudePlugin.notices(recipe_name, recipe_config).each { |line| puts line } if plugin
@@ -95,7 +94,7 @@ module Ruly
         write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
                                      skill_files:)
       elsif plugin
-        write_claude_plugin(output_file, command_files:, local_sources:, recipe_config:, recipe_name:,
+        write_claude_plugin(output_file, bin_files:, command_files:, local_sources:, recipe_config:, recipe_name:,
                                          script_files:, script_mappings:, skill_files:)
       else
         write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
@@ -343,8 +342,9 @@ module Ruly
 
     def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
+    # The plugin dir is replaced by ClaudePlugin.write, after its checks pass.
     def prepare_output(output_file, agent)
-      return Services::ClaudePlugin.reset_dir(output_file) if agent == Services::ClaudePlugin::AGENT
+      return if agent == Services::ClaudePlugin::AGENT
 
       Services::ScriptManager.ensure_parent_directory(output_file)
       FileUtils.rm_f(output_file)
@@ -356,9 +356,11 @@ module Ruly
       filtered
     end
 
+    # Plugin bin files are not copied here: ClaudePlugin.write copies them once the plugin dir is replaced.
     def process_squash_sources(sources, agent, scripts_dir: nil)
       Services::SourceProcessor.process_for_squash(
-        sources, agent, dry_run: options[:dry_run], find_rule_file: method(:find_rule_file),
+        sources, agent, dry_run: options[:dry_run] || agent == Services::ClaudePlugin::AGENT,
+                        find_rule_file: method(:find_rule_file),
                         gem_root:, keep_frontmatter: options[:front_matter], scripts_dir:, verbose: verbose?
       )
     end
@@ -489,16 +491,17 @@ module Ruly
     end
 
     # Write the Claude Code plugin dir; never writes into the project (.claude/, CLAUDE.local.md, .mcp.json).
-    def write_claude_plugin(dir, command_files:, local_sources:, recipe_config:, recipe_name:, script_files:,
-                            script_mappings:, skill_files:)
+    # A failed build keeps the previous plugin (see ClaudePlugin.write).
+    def write_claude_plugin(dir, bin_files:, command_files:, local_sources:, recipe_config:, recipe_name:,
+                            script_files:, script_mappings:, skill_files:)
       recipe_paths = build_recipe_paths(local_sources)
       recipe_config = merge_mcp_servers(recipe_config, local_sources)
-      Services::ClaudePlugin.write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:,
-                                        script_files:, script_mappings:, skill_files:, toc: options[:toc])
-      save_skill_files(skill_files, recipe_paths:, skills_dir: File.join(dir, 'skills'))
-      subagent_skills = process_subagents(recipe_config, recipe_name, plugin_dir: dir, plugin_skills: skill_files,
-                                                                      recipe_paths:)
-      Services::ClaudePlugin.rewrite_script_paths(dir)
+      subagent_skills = Services::ClaudePlugin.write(dir, bin_files:, command_files:, gem_root:, local_sources:,
+                                                          recipe_config:, recipe_name:, script_files:, script_mappings:,
+                                                          skill_files:, toc: options[:toc]) do
+        save_skill_files(skill_files, recipe_paths:, skills_dir: File.join(dir, 'skills'))
+        process_subagents(recipe_config, recipe_name, plugin_dir: dir, plugin_skills: skill_files, recipe_paths:)
+      end
       update_git_ignores("#{dir}/", Services::ClaudePlugin::AGENT, [])
       run_checks(local_sources, command_files, recipe_paths, skill_files + Array(subagent_skills))
       puts "\u2705 Wrote Claude Code plugin to #{dir}", "   Load it with: claude --plugin-dir #{dir}"
