@@ -181,6 +181,20 @@ RSpec.describe RulyBench do
       end
     end
 
+    it 'ignores a stale .claude/ and CLAUDE.local.md left in an external corpus' do
+      allow(Open3).to receive(:capture2e).and_call_original
+      write_small_corpus
+      write('recipes.yml', "recipes:\n  plain:\n    files:\n      - core/a.md\n")
+      write('.claude/skills/stale/SKILL.md', "---\nname: stale\ndescription: Leftover skill.\n---\n# Stale\n")
+      write('.claude/commands/old.md', "---\ndescription: Leftover command.\n---\n# Old\n")
+      write('CLAUDE.local.md', "# Stale output\n\nLeftover text.\n")
+      result = described_class.run(corpus_dir: dir, recipe: 'plain') { |out| out.except('workdir') }
+
+      expect(result['descriptors']).to eq([])
+      expect(result['claude_local_md']).not_to include('Leftover')
+      expect(result['claude_local_md']).to include('Prefer small, reviewable changes')
+    end
+
     it 'raises SquashFailed with the exit status when squash fails' do
       write_small_corpus
       failed = instance_double(Process::Status, exitstatus: 4, success?: false)

@@ -37,10 +37,12 @@ module RulyBench
       end
     end
 
+    # Copies the corpus without dot entries (.git, a stale .claude/ from an earlier squash, ...) or a stale
+    # CLAUDE.local.md: Corpus#files never counts those, so the ruly side must not see them either.
     def prepare_workspace(corpus_dir, home, work)
       FileUtils.mkdir_p([home, work])
       Dir.children(corpus_dir).sort.each do |entry|
-        next if entry == '.git'
+        next if entry.start_with?('.') || entry == 'CLAUDE.local.md'
 
         FileUtils.cp_r(File.join(corpus_dir, entry), work)
       end
