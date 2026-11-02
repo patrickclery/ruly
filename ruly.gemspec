@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative 'lib/ruly/version'
+
 Gem::Specification.new do |spec|
   spec.name          = 'ruly'
-  spec.version       = '0.1.0'
+  spec.version       = Ruly::VERSION
   spec.authors       = ['Patrick Clery']
   spec.email         = ['patrick@example.com']
 
