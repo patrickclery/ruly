@@ -121,6 +121,7 @@ None yet.
 | Phase | State | Resume |
 |-------|-------|--------|
 | 03 | verification_deferred_human | /gsd-verify-work 03 |
+| 05 | verification_deferred_human | /gsd-verify-work 05 |
 
 ## Session Continuity
 
