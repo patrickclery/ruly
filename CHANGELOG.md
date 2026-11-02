@@ -16,18 +16,33 @@ share.
   or the directory given with `-o`) with `.claude-plugin/plugin.json`, the squashed rules as the
   skill `RECIPE-rules`, the recipe's skills (nested names flattened), commands, subagents as plugin
   agents, `hooks/hooks.json`, `scripts/` and `.mcp.json`. Script references are rewritten to
-  `${CLAUDE_PLUGIN_ROOT}/scripts/`.
+  `${CLAUDE_PLUGIN_ROOT}/scripts/`; in hook commands the rewrite respects shell quoting and also
+  covers `./.claude/scripts/` and `$CLAUDE_PROJECT_DIR/.claude/scripts/`, and any other
+  `.claude/scripts/` reference left in a hook is named on stderr.
 - The `claude-plugin` target prints a notice that plugins cannot carry always-on rules, so the rules
   ship as skill `/RECIPE:RECIPE-rules` and `ruly squash RECIPE` (CLAUDE.local.md) is still needed for
   always-on rules.
 - The `claude-plugin` target prints one line naming what it skipped (`model`, `isolate`, subagent
   `permissionMode`, subagent cwd hooks).
-- Squash warns when `.mcp.json` servers have literal `env` / `headers` values, naming the servers
-  only, never the values.
+- Squash warns when `.mcp.json` servers have literal `env` / `headers` values or secret-looking
+  `args` / `url` values, naming the servers only, never the values.
 - `ruly squash -a claude-plugin` refuses a directory ruly did not generate, the working directory,
-  its parents and `$HOME`. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated plugin
-  directory and never `.claude/`.
+  its parents and `$HOME` (symlinks resolved), and a `-o` path starting with `~`. A failed build keeps
+  the previous plugin. Recipe and subagent skill names are checked before they are written.
+  `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated plugin directory and never
+  `.claude/`.
 - `-i` / `-I` add the plugin directory to `.gitignore` / `.git/info/exclude`.
+
+### Changed
+
+- Squash refuses a subagent name that is not letters, digits, `.`, `_` and `-` (or holds `..`)
+  before writing anything, for every target that writes subagents. Such a name could write the agent
+  file outside `.claude/agents/`.
+
+### Known limitations
+
+- The `claude-plugin` manifest `version` is always the ruly version, so re-squashed rules do not
+  reach marketplace or git installs until the version changes. See the README.
 
 ## [0.3.0] - 2026-11-02
 

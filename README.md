@@ -797,9 +797,12 @@ ruly-plugin-RECIPE/
 - **Manifest**: `name` is the recipe name (kebab-case recommended; `claude plugin validate` warns
   otherwise, and names Claude Code reserves, such as `claude-*`, are refused), `version` is the ruly
   version, `description` is the recipe description, `author` is `git config user.name` when set, and
-  `metadata.generator: ruly` marks ruly's ownership. A set `version` pins marketplace installs until
-  it changes, so rules re-squashed under the same ruly version reach only `--plugin-dir` and
-  local-path installs, which load in place.
+  `metadata.generator: ruly` marks ruly's ownership.
+- **Known limitation: `version`.** `version` is always the ruly version, whatever the rules hold.
+  Claude Code caches marketplace and git installs by version, so rules re-squashed under the same
+  ruly version reach only `--plugin-dir` and local-path installs, which load in place. Before you
+  publish updated rules, raise `version` in the generated `plugin.json` by hand (the next squash
+  resets it).
 - **Rules are not always-on.** Plugins cannot carry always-on instructions: a plugin-root
   `CLAUDE.md` is not loaded (the docs say to ship instructions as a skill), a SessionStart hook's
   added context is capped at 10,000 characters, a forced plugin output style replaces the user's own
@@ -808,20 +811,32 @@ ruly-plugin-RECIPE/
   For always-on rules keep using `ruly squash RECIPE` (CLAUDE.local.md). If you want a nudge, add
   your own SessionStart hook that tells Claude to invoke that skill; ruly does not generate one.
 - **Skills and subagents**: nested skill paths are flattened (`skills/tdd/SKILL.md` becomes
-  `skills/tdd/`, `git/commit` becomes `git-commit`), and a recipe skill named `RECIPE-rules` is
-  refused. Subagent `model:` is kept. `permissionMode`, `hooks` and `mcpServers` are left out of
+  `skills/tdd/`, `git/commit` becomes `git-commit`). Recipe and subagent skills are checked before
+  they are written: a skill named `RECIPE-rules`, or one whose flattened name is not letters, digits,
+  `.`, `_` and `-` (or holds `..`), is refused, and two skill files with the same flattened name get
+  a warning (the last one wins). Subagent `model:` is kept. `permissionMode`, `hooks` and `mcpServers` are left out of
   plugin agents because Claude Code ignores them there; the recipe's hooks and MCP servers (subagent
   servers included) go to `hooks/hooks.json` and `.mcp.json` instead. Preloaded skills are listed as
   `RECIPE:skill`. Squash names what it left out, for example
   `claude-plugin target skips: model, isolate, subagent permissionMode, subagent cwd hooks`.
-- **Scripts** are copied to `scripts/`, and references in skills, commands, agents and hook commands
-  are rewritten to `${CLAUDE_PLUGIN_ROOT}/scripts/...` (quoted in hooks).
+- **Scripts** (the recipe's and its subagents') are copied to `scripts/`, and references in skills,
+  commands, agents and hook commands are rewritten to `${CLAUDE_PLUGIN_ROOT}/scripts/...`. In hook
+  commands `.claude/scripts/X`, `./.claude/scripts/X` and `$CLAUDE_PROJECT_DIR/.claude/scripts/X`
+  (quoted or with braces) are rewritten; the result is double-quoted unless the reference already
+  sits inside a quoted string (`bash -c "..."`, `sh -c '...'`). Squash names any other
+  `.claude/scripts/` reference it leaves in a hook, such as `~/.claude/scripts/X`.
 - **MCP secrets**: `.mcp.json` copies server definitions from `~/.config/ruly/mcp.json`. Squash names
-  (never prints) the servers whose `env` or `headers` hold literal values; replace those values with
-  `${VAR}` references before sharing the plugin.
+  (never prints) the servers with literal values that may be secrets: any `env` or `headers` value,
+  `args` such as `--token VALUE`, `--api-key=VALUE`, `KEY=VALUE` or a token-shaped value, and a `url`
+  with `user:password@` or a credential query parameter. Replace those values with `${VAR}`
+  references before sharing the plugin.
 - **Safety**: squash refuses a directory ruly did not generate (no ruly metadata in
-  `.claude-plugin/plugin.json`), the working directory, its parents and `$HOME`, and wipes and
-  rewrites a ruly-generated one. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated
+  `.claude-plugin/plugin.json`), the working directory, its parents and `$HOME` (compared after
+  resolving symlinks, so a symlinked path or `//` is caught too), and a `-o` path starting with `~`
+  (ruly does not expand it). A ruly-generated directory is replaced only when the whole build
+  succeeds: the previous plugin is moved to a hidden `.DIR.ruly-previous-*` sibling during the build
+  and put back if the build fails. Subagent names must be letters, digits, `.`, `_` and `-` (no
+  `/` or `..`) for every target that writes subagents. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated
   plugin directory and never `.claude/`; `--deepclean` keeps its meaning. Adding the marker to a
   hand-made `plugin.json` hands that directory to ruly. `-i`/`-I` add the directory to `.gitignore` /
   `.git/info/exclude`.
