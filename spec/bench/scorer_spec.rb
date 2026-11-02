@@ -92,4 +92,29 @@ RSpec.describe RulyBench::Scorer do
       end
     end
   end
+
+  describe 'the committed react-named-export checks' do
+    tasks = YAML.safe_load_file(RulyBench::ComplianceCLI::DEFAULT_TASKS)['tasks']
+    checks = tasks.find { _1['id'] == 'react-named-export' }['checks']
+
+    {
+      'an export list' => "function UserBadge() { return null; }\nexport { UserBadge };",
+      'export const' => 'export const UserBadge = () => null;',
+      'export function' => 'export function UserBadge() { return null; }'
+    }.each do |name, code|
+      it "passes #{name}" do
+        expect(described_class.score("```tsx\n#{code}\n```\n", checks)[:pass]).to be(true)
+      end
+    end
+
+    {
+      'an export list renaming to default' => "function UserBadge() { return null; }\nexport { UserBadge as default };",
+      'export default' => 'export default function UserBadge() { return null; }',
+      'no export' => 'function UserBadge() { return null; }'
+    }.each do |name, code|
+      it "fails #{name}" do
+        expect(described_class.score("```tsx\n#{code}\n```\n", checks)[:pass]).to be(false)
+      end
+    end
+  end
 end

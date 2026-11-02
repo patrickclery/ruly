@@ -232,12 +232,14 @@ tasks:
       Write a TypeScript React function component UserBadge that shows a user's avatar and display name.
       Reply with one fenced tsx code block and nothing else. Do not create or edit files.
     checks:
+      # A default export, written either way.
       - type: forbid
         scope: code
-        pattern: '\bexport\s+default\b'
+        pattern: '\bexport\s+default\b|\bas\s+default\b'
+      # A named export: export function/const UserBadge, or UserBadge in an export { ... } list.
       - type: require
         scope: code
-        pattern: '\bexport\s+(?:function|const)\s+UserBadge\b'
+        pattern: '\bexport\s+(?:(?:function|const)\s+UserBadge\b|\{[^}]*\bUserBadge\b)'
     example_pass: |
       ```tsx
       type UserBadgeProps = { avatarUrl: string; displayName: string };

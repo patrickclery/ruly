@@ -80,7 +80,7 @@ Eight tasks, defined in [`bench/compliance/tasks.yml`](../bench/compliance/tasks
 | `rspec-expect` | testing | Write RSpec expectations with expect(...); never use the should syntax. | path-scoped | no `should`, and at least one `expect` |
 | `commit-subject` | pr-review | Commit subjects follow type(scope): summary, in lower case, at most 72 characters. | always | the first line is a lower-case `type(scope): summary` of at most 72 characters |
 | `migration-up-down` | ruby-feature | Every migration defines up and down methods; never define change. | path-scoped | no `def change`, and both `def up` and `def down` |
-| `react-named-export` | frontend | React components use named exports; never export default. | path-scoped | no `export default`, and a named `UserBadge` export |
+| `react-named-export` | frontend | React components use named exports; never export default. | path-scoped | no default export (`export default` or `as default`), and a named `UserBadge` export (`export function`, `export const` or an `export { }` list) |
 | `bug-root-cause` | bug | The first line of every bug summary is Root cause: followed by one sentence. | skill | the first line starts with `Root cause:` |
 
 ### Scoring
