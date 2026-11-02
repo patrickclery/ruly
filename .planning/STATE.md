@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Emphasize Core Advantages
 status: verifying
-stopped_at: Phase 7 complete, ready to verify Phase 3
-last_updated: "2026-11-02T10:36:46.520Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-11-02T10:39:53.766Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 7 complete, transitioned to Phase 3
-state_head: d844414395233cc4e495ca8df0fd157827aa773d
+state_head: 1dd716d46526322dc9cea68b51be53cb9ea57e37
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 7
+  completed_plans: 8
   percent: 57
 ---
 
@@ -66,6 +66,7 @@ Progress: [██████░░░░] 57% (existing work)
 | Phase 04 P01 | 5min | 3 tasks | 12 files |
 | Phase 04 P02 | 6min | 2 tasks | 4 files |
 | Phase 07 P01 | 6min | 3 tasks | 3 files |
+| Phase 05 P01 | 8 min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Fixture rules/ files force-added because .gitignore rules/ matches any rules dir
 - [Phase 04]: ruly.gemspec reads Ruly::VERSION; 0.3.0 gem install deferred to post-merge
 - [Phase 07]: Phase 7 audit: neither Ruler nor rulesync has profiles, includes or include-cycle detection; README concedes per-subagent model, shared sources, partial checks and agent counts
+- [Phase 05]: 05-01: claude-plugin ownership marker is plugin.json metadata.generator=ruly; reset_dir writes it first so failed runs stay re-runnable
+- [Phase 05]: 05-01: rules ship as skill RECIPE-rules plus always-on notice (D-09); no CLAUDE.md/SessionStart/output style in plugins
 
 ### Pending Todos
 
@@ -116,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-02T10:34:15.985Z
-Stopped at: Phase 7 complete, ready to verify Phase 3
+Last session: 2026-11-02T10:39:53.654Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

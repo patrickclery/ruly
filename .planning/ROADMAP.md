@@ -47,7 +47,7 @@ Phases execute in numeric order.
 | 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
 | 3. Emphasize Core Advantages | 1/1 | In Progress | - |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
-| 5. Claude Code Plugin Packaging | 0 | Not started | - |
+| 5. Claude Code Plugin Packaging | 1/3 | In Progress | - |
 | 6. Token and Compliance Benchmark | 0 | Not started | - |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
 
@@ -98,11 +98,11 @@ Plans:
 **Goal:** Package squashed recipe output as a Claude Code plugin (skills/, commands/, agents/, hooks, .mcp.json) so distribution uses the native format instead of ruly-specific file writing; resolve whether plugins can carry always-on instructions.
 **Requirements**: TBD
 **Depends on:** Phase 4
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 05-01-PLAN.md — `-a claude-plugin` writes a strict-valid plugin dir: manifest + `<recipe>-rules` skill + scripts (tracer), ownership marker, guards, marker-gated clean, `-i`/`-I`, dry run
+- [x] 05-01-PLAN.md — `-a claude-plugin` writes a strict-valid plugin dir: manifest + `<recipe>-rules` skill + scripts (tracer), ownership marker, guards, marker-gated clean, `-i`/`-I`, dry run
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 05-02-PLAN.md — Skills, commands, subagents (plugin frontmatter), hooks/hooks.json, .mcp.json with literal-secret warning, `${CLAUDE_PLUGIN_ROOT}` script paths, skipped-parts notice
