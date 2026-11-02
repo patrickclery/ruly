@@ -45,7 +45,7 @@ Phases execute in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Core Platform | N/A | Complete | Pre-existing |
 | 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
-| 3. Emphasize Core Advantages | 0 | Not started | - |
+| 3. Emphasize Core Advantages | 1/1 | In Progress | - |
 | 4. AGENTS.md Output Target | 0 | Not started | - |
 | 5. Claude Code Plugin Packaging | 0 | Not started | - |
 | 6. Token and Compliance Benchmark | 0 | Not started | - |
@@ -73,11 +73,11 @@ Plans:
 **Goal:** Make ruly's verified advantages the headline: task-scoped recipe composition, `requires:` dependency resolution with cycle detection, per-subagent recipe/model selection, multi-machine `--sync` with per-machine overrides, and post-squash checks. Rewrite README/site positioning against native `.claude/rules/` (path-only scoping), `@imports` (no token savings), and symlink sharing limits.
 **Requirements**: TBD
 **Depends on:** Phase 2
-**Plans:** 1 plan
+**Plans:** 1/1 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Why ruly + cited Ruly vs. native Claude Code table in README, site hero/cards copy (tracer), soften 85%, move Subagents reference below the fold, fix 0.2.0 command examples
+- [x] 03-01-PLAN.md — Why ruly + cited Ruly vs. native Claude Code table in README, site hero/cards copy (tracer), soften 85%, move Subagents reference below the fold, fix 0.2.0 command examples
 
 ### Phase 4: AGENTS.md Output Target
 
