@@ -3,6 +3,7 @@
 require 'spec_helper'
 require 'tmpdir'
 require 'fileutils'
+require 'json'
 
 RSpec.describe Ruly::CLI, '.start' do
   let(:test_dir) { Dir.mktmpdir }
@@ -62,6 +63,31 @@ RSpec.describe Ruly::CLI, '.start' do
     it 'never lists .taskmaster/ in clean --deepclean --dry-run' do
       expect { described_class.start(%w[clean --deepclean --dry-run]) }
         .to output(a_string_including('.claude/').and(satisfy { |out| !out.include?('.taskmaster') })).to_stdout
+    end
+  end
+
+  context 'with the removed shell_gpt agent' do
+    let(:cli) { described_class.new }
+
+    before do
+      FileUtils.mkdir_p('rules')
+      File.write('rules/demo.md', "# Demo Rule\n\nBody text.\n")
+      allow(cli).to receive_messages(gem_root: test_dir, recipes_file: File.join(test_dir, 'recipes.yml'))
+    end
+
+    %w[sgpt shell_gpt].each do |agent|
+      it "writes plain markdown for -a #{agent}" do
+        cli.options = {agent:, output_file: 'role.json'}
+        expect { cli.squash }.to output.to_stdout
+
+        content = File.read('role.json')
+        expect(content).to start_with('# Demo Rule')
+        expect { JSON.parse(content) }.to raise_error(JSON::ParserError)
+      end
+    end
+
+    it 'still normalizes claudecode to claude' do
+      expect(cli.send(:normalize_agent, 'claudecode')).to eq('claude')
     end
   end
 
