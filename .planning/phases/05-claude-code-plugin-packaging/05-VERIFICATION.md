@@ -1,7 +1,7 @@
 ---
 phase: 05-claude-code-plugin-packaging
-verified: 2026-11-02T05:45:00Z
-status: human_needed
+verified: 2026-11-02T18:20:00Z
+status: passed
 score: 17/17 must-haves verified
 covered_files:
   - .planning/phases/05-claude-code-plugin-packaging/05-01-PLAN.md
@@ -24,27 +24,23 @@ covered_files:
   - spec/ruly/claude_plugin_spec.rb
   - spec/ruly/cli_claude_plugin_spec.rb
   - spec/ruly/subagent_plugin_mode_spec.rb
-covered_digest: "v3:sha256:f57fb803519388159d0140e80b76c6cdf6979dfce6334992afbd8d7df2ee46e9"
+covered_digest: "v3:sha256:3ebc245f71eea63191751daeb5bb8468469bdce892127cbbee279b848932529b"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "Load the generated plugin in a live session (`claude --plugin-dir <plugin>`) and spawn a subagent whose `skills:` lists `demo:review`"
-    expected: "The preloaded skill resolves under the namespaced name `<plugin>:<skill>` and its content is present in the subagent (research assumption A3)"
-    why_human: "Namespaced preloaded-skill resolution can only be confirmed in a live Claude session; `claude plugin validate` does not exercise it, and I was told not to start sessions"
-  - test: "Review the hook rewrite inside `sh -c '...'` (WR-03 trade-off)"
-    expected: "Accept that a bare `${CLAUDE_PLUGIN_ROOT}` inside a single-quoted string is word-split by the inner shell when the plugin root contains spaces"
-    why_human: "Design trade-off flagged by 05-REVIEW-FIX.md for developer sign-off; not a defect against any must-have"
-  - test: "Review the MCP secret heuristics (WR-04 false positives)"
-    expected: "Accept possible false positives (e.g. `--no-auth` followed by a literal value) on the warning, which only names servers"
-    why_human: "Heuristic tuning decision flagged by 05-REVIEW-FIX.md"
+re_verification:
+  previous_status: human_needed
+  previous_score: 17/17
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 5: Claude Code Plugin Packaging Verification Report
 
 **Phase Goal:** Package squashed recipe output as a Claude Code plugin (skills/, commands/, agents/, hooks, .mcp.json) so distribution uses the native format instead of ruly-specific file writing; resolve whether plugins can carry always-on instructions.
 **Verified:** 2026-11-02
-**Status:** human_needed (all automated checks pass; one live-session assumption and two flagged trade-offs need a human)
-**Re-verification:** No, initial verification
+**Status:** passed (all automated checks pass; human UAT 3/3 passed, see 05-UAT.md)
+**Re-verification:** Yes. The prior report was stale because phase 06 commits (e.g. 36fc981) edited README.md (one table row, benchmark figures)
 
 ## Goal Achievement
 
@@ -65,7 +61,7 @@ Verified by running the real CLI (`bin/ruly`) in scratch dirs with an isolated H
 | 9 | `claude plugin validate --strict` passes on the full fixture plugin | VERIFIED | Read-only run: "Validation passed" |
 | 10 | claude, cursor, claude `-t`, agents output byte-identical to the pre-phase base (c0895d7^) | VERIFIED | Differential on the agents_md fixture and claude on claude_plugin, 5 runs. Only `-t` anchors differ, because they embed the scratch dir name (d_old vs d_new). Timestamps excluded |
 | 11 | Skills (nested flattened), commands, subagents (model kept; subagent skills in `skills/`) | VERIFIED | `skills/{deploy,review,tdd,demo-rules}`, `commands/ship.md`, `agents/helper.md` has `model: haiku` |
-| 12 | Plugin agent frontmatter has no permissionMode/hooks/mcpServers; skills as `PLUGIN:skill` list | VERIFIED | helper.md has `skills: - demo:review`. Runtime resolution of that name is assumption A3, see Human Verification |
+| 12 | Plugin agent frontmatter has no permissionMode/hooks/mcpServers; skills as `PLUGIN:skill` list | VERIFIED | helper.md has `skills: - demo:review`. Runtime resolution confirmed in a live `claude --plugin-dir` session (05-UAT.md test 1: helper reported `demo:review` preloaded, "# Review Skill") |
 | 13 | Skill/command escape and `RECIPE-rules` collision stop with exit 1 before writing | VERIFIED | Subagent skill `demo-rules.md` gave "collides with the generated rules skill", exit 1, previous plugin byte-identical, no `.ruly-previous` leftover (CR-02, WR-01). Unsafe subagent name `../../esc` refused for plugin and claude targets (WR-06) |
 | 14 | `hooks/hooks.json` has top-level `hooks` and the script ref rewritten to `"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"` | VERIFIED | hooks.json inspected |
 | 15 | `.mcp.json` from `~/.config/ruly/mcp.json`; literal secrets named (not printed) on stderr, also under `-W0` | VERIFIED | Warning names `grafana`; the `glsa_` token value is not in any output. Notice present under `RUBYOPT=-W0` |
@@ -73,6 +69,8 @@ Verified by running the real CLI (`bin/ruly`) in scratch dirs with an isolated H
 | 17 | Phase gates: no new rspec failures; no new RuboCop offenses | VERIFIED | rspec 773 examples, 15 failures, 1 pending. Failure descriptions are a subset of the baseline (nothing new). RuboCop on the touched files: 1 offense, the pre-existing `Obsession/MethodOrder` in cli.rb. spec/bench did not interfere |
 
 **Score:** 17/17 truths verified (0 behavior-unverified).
+
+**Re-verification evidence (2026-11-02):** `git diff 4163185 HEAD -- README.md lib spec CHANGELOG.md` shows the only change to covered files is one README table row (benchmark figures in the "Token cost of includes" row); `lib/` and the phase 05 specs are unchanged. The README "Claude Code Plugin Output" section (line 778) is intact, including "Rules are not always-on. Plugins cannot carry always-on instructions" with its four reasons. `bundle exec rspec` on the three plugin specs: 196 examples, 0 failures. A fresh e2e `squash demo -a claude-plugin -o out` wrote plugin.json (name demo, version 0.4.0, metadata.generator ruly) and `skills/demo-rules/SKILL.md`, printed the always-on notice, wrote nothing outside `out/`, and `claude plugin validate out --strict` passed.
 
 ### Prohibitions
 
@@ -100,9 +98,7 @@ No unreferenced TBD/FIXME/XXX debt markers or stubs found in the touched lib fil
 
 ### Human Verification Required
 
-1. **Namespaced preloaded skills (A3, [ASSUMED]).** Test: `claude --plugin-dir <generated plugin>`, spawn the `helper` subagent. Expected: `demo:review` resolves and loads. Why human: needs a live Claude session.
-2. **WR-03 trade-off.** Inside `sh -c '...'` the hook rewrite is a bare `${CLAUDE_PLUGIN_ROOT}`. A plugin root containing spaces would word-split. Confirm this is acceptable.
-3. **WR-04 heuristics.** Confirm possible false positives on the MCP secret warning are acceptable (warning only, names only).
+None outstanding. 05-UAT.md (3/3 passed, 2026-11-02): (1) A3, namespaced skill preloading works in a live session; (2) WR-03 trade-off accepted by the user; (3) WR-04 heuristic false positives accepted by the user.
 
 ### Gaps Summary
 
@@ -110,5 +106,5 @@ No gaps. The goal is achieved: `-a claude-plugin` produces a strict-valid native
 
 ---
 
-_Verified: 2026-11-02T05:45:00Z_
+_Verified: 2026-11-02T18:20:00Z_
 _Verifier: Claude (gsd-verifier)_
