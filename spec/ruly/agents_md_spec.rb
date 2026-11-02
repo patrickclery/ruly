@@ -105,6 +105,17 @@ RSpec.describe Ruly::Services::AgentsMd do
     end
   end
 
+  describe '.script_ignore_patterns' do
+    it 'lists each local and remote script under .claude/scripts/ once' do
+      scripts = {local: [{relative_path: 'a.sh'}, {relative_path: 'a.sh'}], remote: [{filename: 'b.sh'}]}
+      expect(described_class.script_ignore_patterns(scripts)).to eq(%w[.claude/scripts/a.sh .claude/scripts/b.sh])
+    end
+
+    it 'is empty without scripts' do
+      expect(described_class.script_ignore_patterns({local: [], remote: []})).to eq([])
+    end
+  end
+
   describe '.skipped_notice' do
     it 'is nil for no parts' do
       expect(described_class.skipped_notice([])).to be_nil

@@ -727,6 +727,9 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   so if the recipe pulls rules from a private repository, use `-i` or `-I`. New entries are merged
   into the existing `# Ruly generated files` section, so running `-i` for one target keeps the other
   target's entries (`CLAUDE.local.md`, `.claude/commands/`) ignored.
+- Recipe `scripts:` are copied to `.claude/scripts/` for both targets, and `AGENTS.md` refers to them
+  there. `-i`/`-I` also add each copied script (`.claude/scripts/NAME`). `ruly clean -a agents`
+  keeps them; `ruly clean --deepclean` removes them.
 - Post-squash checks (such as ambiguous links) run over the whole `AGENTS.md`, inlined skills
   included.
 - `-a cursor` is unchanged.

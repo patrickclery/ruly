@@ -250,6 +250,45 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
     end
   end
 
+  context 'when a rule declares scripts:' do
+    before do
+      FileUtils.mkdir_p('rules/bin')
+      File.write('rules/bin/hello.sh', "#!/bin/sh\necho hello\n")
+      File.write('rules/demo.md', <<~MD)
+        ---
+        requires:
+          - ./base.md
+        scripts:
+          - rules/bin/hello.sh
+        ---
+        # Demo Rule
+
+        Run rules/bin/hello.sh. See [Base Rule](#base-rule).
+      MD
+    end
+
+    it 'copies the script to .claude/scripts/ and points AGENTS.md at it' do
+      run_cli('squash', 'demo', '-a', 'agents')
+      expect(File.executable?('.claude/scripts/hello.sh')).to be(true)
+      expect(read_utf8('AGENTS.md')).to include('Run .claude/scripts/hello.sh.')
+    end
+
+    {'-I' => '.git/info/exclude', '-i' => '.gitignore'}.each do |flag, path|
+      it "adds the copied script to #{path} with #{flag}" do
+        FileUtils.mkdir_p('.git/info')
+        run_cli('squash', 'demo', '-a', 'agents', flag)
+        expect(File.read(path).lines.map(&:chomp)).to include('AGENTS.md', '.claude/scripts/hello.sh')
+      end
+    end
+
+    it 'keeps the copied script on clean -a agents' do
+      run_cli('squash', 'demo', '-a', 'agents')
+      run_cli('clean', '-a', 'agents')
+      expect(File.exist?('AGENTS.md')).to be(false)
+      expect(File.exist?('.claude/scripts/hello.sh')).to be(true)
+    end
+  end
+
   context 'when both targets run with -i or -I' do
     before do
       FileUtils.mkdir_p('.git/info')

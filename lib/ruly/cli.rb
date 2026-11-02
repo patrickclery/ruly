@@ -370,12 +370,14 @@ module Ruly
     end
 
     # Write the AGENTS.md target: squashed rules only, no Claude-only artifacts (commands,
-    # subagents, hooks, MCP config, settings). Scripts are still copied for rewritten references.
+    # subagents, hooks, MCP config, settings). Scripts are still copied to .claude/scripts/ for
+    # rewritten references, and -i/-I ignore each copied script.
     def write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
                         skill_files:)
       Services::AgentsMd.write(output_file, local_sources:, recipe_name:, script_mappings:, skill_files:,
                                             toc: options[:toc])
-      update_git_ignores(output_file, Services::AgentsMd::AGENT, [])
+      update_git_ignores(output_file, Services::AgentsMd::AGENT, [],
+                         extra_patterns: Services::AgentsMd.script_ignore_patterns(script_files))
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
       Ruly::Checks.run_all(local_sources + skill_files, [],
                            find_rule_file: method(:find_rule_file),
@@ -433,10 +435,11 @@ module Ruly
 
     def find_rule_file(file) = Services::RecipeLoader.find_rule_file(file, gem_root:)
 
-    def update_git_ignores(output_file, agent, command_files)
+    def update_git_ignores(output_file, agent, command_files, extra_patterns: [])
       return unless options[:git_ignore] || options[:git_exclude]
 
-      patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files)
+      patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files) +
+                 extra_patterns
       Services::GitIgnoreManager.update_gitignore(patterns) if options[:git_ignore]
       Services::GitIgnoreManager.update_git_exclude(patterns) if options[:git_exclude]
     end

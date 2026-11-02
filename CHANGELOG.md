@@ -22,7 +22,8 @@ than Claude Code can read the same rules.
   `.claude/`, `.mcp.json` and `CLAUDE.local.md` alone.
 - `ruly squash -a agents` refuses to overwrite an `AGENTS.md` that does not start with the ruly
   header. The check runs before `--clean` / `--deepclean`, so a refused squash deletes nothing.
-- `-i` / `-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`.
+- `-i` / `-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`, plus each recipe script the
+  `agents` target copies to `.claude/scripts/` (where `AGENTS.md` refers to it).
 
 ### Changed
 
