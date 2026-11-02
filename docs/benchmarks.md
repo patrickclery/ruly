@@ -4,18 +4,18 @@ Ruly's case rests on two claims: a recipe-scoped `CLAUDE.local.md` costs fewer t
 
 ## Token benchmark
 
-Measured on ruly's synthetic fixture corpus, the squashed recipe output (plus the descriptions of the skills and commands it writes) was a median of 76.9% smaller than loading every rule file (range 72.8% to 85.4% across five recipes). Against a native Claude Code layout of the same rules, it was a median of 68.4% smaller than the native floor (range 62.8% to 80.0%) and 74.3% smaller than the native ceiling (range 69.8% to 83.8%).
+Measured on ruly's synthetic fixture corpus, the squashed recipe output (plus the descriptions of the skills and commands it writes) was a median of 74.3% smaller than loading every rule (range 69.8% to 83.8% across five recipes). Against a native Claude Code layout of the same rules, it was a median of 68.4% smaller than the native floor (range 62.8% to 80.0%) and 74.3% smaller than the native ceiling (range 69.8% to 83.8%).
 
 These numbers describe the fixture corpus in `bench/fixtures/corpus`, not any real rules repository. A repository whose rules are mostly needed by every task would see a smaller reduction; see [Limitations](#limitations).
 
 ### Conditions
 
 - **ruly**: the CLAUDE.local.md written by a real `ruly squash RECIPE`, plus the `name: description` line of each skill and command it wrote (Claude Code loads those descriptions up front).
-- **load-all**: every markdown file of the corpus, frontmatter stripped, concatenated.
+- **load-all**: every rule of the corpus (always-loaded and path-scoped), frontmatter stripped, concatenated, plus the `name: description` line of every skill and command.
 - **native floor**: a native Claude Code layout of the same corpus at session start: every rule without `paths:` frontmatter, plus the `name: description` line of every skill and command.
 - **native ceiling**: the native floor plus every path-scoped rule (`paths:` frontmatter), i.e. after files matching every path rule have been opened.
 
-Skill and command bodies are not counted in any condition.
+Skill and command bodies are not counted in any condition: every condition counts a skill or command by its `name: description` line, which is what Claude Code loads up front. Counted this way, load-all equals the native ceiling by construction: both hold every rule body and every description. The two columns are kept because they model different setups (one file holding every rule, versus a native layout after every path-scoped rule has triggered), not because they measure different text.
 
 ### Corpus
 
@@ -25,17 +25,17 @@ The fixture corpus has 30 markdown files: 19 always-loaded rules, 5 path-scoped 
 
 | Recipe | ruly | load-all | native floor | native ceiling | vs load-all | vs native floor | vs native ceiling |
 |---|--:|--:|--:|--:|--:|--:|--:|
-| bug | 2,677 | 11,083 | 8,098 | 9,972 | 75.8% | 66.9% | 73.2% |
-| frontend | 1,620 | 11,083 | 8,098 | 9,972 | 85.4% | 80.0% | 83.8% |
-| pr-review | 2,562 | 11,083 | 8,098 | 9,972 | 76.9% | 68.4% | 74.3% |
-| ruby-feature | 3,015 | 11,083 | 8,098 | 9,972 | 72.8% | 62.8% | 69.8% |
-| testing | 2,085 | 11,083 | 8,098 | 9,972 | 81.2% | 74.3% | 79.1% |
+| bug | 2,677 | 9,972 | 8,098 | 9,972 | 73.2% | 66.9% | 73.2% |
+| frontend | 1,620 | 9,972 | 8,098 | 9,972 | 83.8% | 80.0% | 83.8% |
+| pr-review | 2,562 | 9,972 | 8,098 | 9,972 | 74.3% | 68.4% | 74.3% |
+| ruby-feature | 3,015 | 9,972 | 8,098 | 9,972 | 69.8% | 62.8% | 69.8% |
+| testing | 2,085 | 9,972 | 8,098 | 9,972 | 79.1% | 74.3% | 79.1% |
 
 Token counts are `cl100k_base` tokens. Percentages are reductions of ruly against each baseline; a negative value would mean the ruly output is larger.
 
 | Baseline | Median | Min | Max |
 |---|--:|--:|--:|
-| vs load-all | 76.9% | 72.8% | 85.4% |
+| vs load-all | 74.3% | 69.8% | 83.8% |
 | vs native floor | 68.4% | 62.8% | 80.0% |
 | vs native ceiling | 74.3% | 69.8% | 83.8% |
 
@@ -96,7 +96,7 @@ How each condition is built:
 
 - **ruly** is the output of a real `bin/ruly squash RECIPE`, run on a copy of the corpus in an isolated temp workspace with `HOME` and `RULY_HOME` redirected, so no user config or cache leaks in.
 - **load-all**, **native floor** and **native ceiling** are built from the same corpus files. Rule bodies are stripped of frontmatter with the same frontmatter function squash uses, so both sides count the same text.
-- Skills and commands are counted by their `name: description` line on both sides, because that is what Claude Code loads up front; their bodies load on demand and are not counted.
+- Skills and commands are counted by their `name: description` line in every condition (ruly, load-all and both native baselines), because that is what Claude Code loads up front; their bodies load on demand and are not counted anywhere.
 - Tokens are counted with tiktoken's `cl100k_base` encoding.
 
 The fixture corpus is synthetic. It was written for this benchmark: five recipes over 24 rule files on Ruby, testing, databases, git, code review, security, bugs and frontend code, holding the eight rule sentences the compliance tasks test. To keep the corpus from being trivially small, it was sized to a floor of 10,000 tokens: when the first draft came in just above that floor, 19 of the rule files were each padded with one extra section, bringing the corpus to 11,091 tokens. The percentages depend on that makeup.

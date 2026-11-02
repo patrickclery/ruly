@@ -111,12 +111,14 @@ module RulyBench
       }
     end
 
+    # Every condition counts a skill or command by its descriptor, never its body, so load-all and the native
+    # ceiling hold the same text: every rule body plus every descriptor.
     def baselines
-      @baselines ||= {
-        'load_all' => TokenCounter.count(corpus.concat(corpus.files.map { |f| corpus.body(f) })),
-        'native_ceiling' => body_tokens(%i[rule path_rule]) + descriptor_tokens,
-        'native_floor' => body_tokens(%i[rule]) + descriptor_tokens
-      }
+      @baselines ||= begin
+        every_rule = body_tokens(%i[rule path_rule]) + descriptor_tokens
+        floor = body_tokens(%i[rule]) + descriptor_tokens
+        {'load_all' => every_rule, 'native_ceiling' => every_rule, 'native_floor' => floor}
+      end
     end
 
     def body_tokens(kinds)
@@ -179,13 +181,16 @@ module RulyBench
         '',
         '- **ruly**: the CLAUDE.local.md written by a real `ruly squash RECIPE`, plus the `name: description` ' \
         'line of each skill and command it wrote (Claude Code loads those descriptions up front).',
-        '- **load-all**: every markdown file of the corpus, frontmatter stripped, concatenated.',
+        '- **load-all**: every rule of the corpus (always-loaded and path-scoped), frontmatter stripped, ' \
+        'concatenated, plus the `name: description` line of every skill and command.',
         '- **native floor**: a native Claude Code layout of the same corpus at session start: every rule ' \
         'without `paths:` frontmatter, plus the `name: description` line of every skill and command.',
         '- **native ceiling**: the native floor plus every path-scoped rule (`paths:` frontmatter), i.e. ' \
         'after files matching every path rule have been opened.',
         '',
-        'Skill and command bodies are not counted in any condition.',
+        'Skill and command bodies are not counted in any condition: every condition counts a skill or command ' \
+        'by its `name: description` line, which is what Claude Code loads up front. Counted this way, ' \
+        'load-all equals the native ceiling by construction: both hold every rule body and every description.',
         ''
       ]
     end

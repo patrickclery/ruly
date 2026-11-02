@@ -40,7 +40,7 @@ RSpec.describe RulyBench do
 
         expect(row['name']).to eq('demo')
         expect(row['native_ceiling']).to be > row['native_floor']
-        expect(row['load_all']).to be > row['native_ceiling']
+        expect(row['load_all']).to eq(row['native_ceiling'])
         expect(row['ruly_descriptors']).to be > 0
         expect(row['ruly_total']).to eq(row['ruly_body'] + row['ruly_descriptors'])
         %w[load_all native_floor native_ceiling].each do |base|
@@ -50,6 +50,18 @@ RSpec.describe RulyBench do
         expect(benchmark.result['corpus']).to eq('external')
         expect(benchmark.result['skipped']).to eq([])
       end
+    end
+
+    it 'counts skills and commands by descriptor in load-all, never by body' do
+      write_small_corpus
+      stub_squash(fake_output)
+      corpus = RulyBench::Corpus.new(dir)
+      row = described_class.new(corpus:, label: 'spec').result['recipes'].first
+      bodies = %w[core/a.md core/b.md web/view.md].map { corpus.body(_1) }
+      rule_bodies = RulyBench::TokenCounter.count(corpus.concat(bodies))
+      descriptor = RulyBench::TokenCounter.count('helper: Help out.')
+
+      expect(row['load_all']).to eq(rule_bodies + descriptor)
     end
 
     it 'gives native_ceiling == native_floor when the corpus has no path rule' do
