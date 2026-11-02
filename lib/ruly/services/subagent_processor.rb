@@ -25,17 +25,19 @@ module Ruly
       # @param parse_frontmatter [Proc] callable(content) returning [frontmatter, body]
       # @param save_skill_files [Proc] callable(skill_files)
       # @param verbose [Boolean] whether to output verbose messages
+      # @param plugin_dir [String, nil] Claude Code plugin dir: agents, skills and scripts go under it
+      #   and agent frontmatter uses the plugin form (see write_agent_frontmatter); nil writes `.claude/`
       def process_subagents(
         recipe_config, parent_recipe_name,
         find_rule_file:, load_all_recipes:, load_recipe_sources:,
         parse_frontmatter:, process_sources_for_squash:, save_skill_files:,
-        top_level: true, verbose: false, visited: Set.new, recipe_paths: Set.new
+        plugin_dir: nil, top_level: true, verbose: false, visited: Set.new, recipe_paths: Set.new
       )
         return [] unless recipe_config['subagents'].is_a?(Array)
 
         puts "\n\u{1F916} Processing subagents..." if top_level
 
-        FileUtils.mkdir_p('.claude/agents')
+        FileUtils.mkdir_p(agents_dir(plugin_dir))
 
         deps = {
           all_skill_files: [],
@@ -43,6 +45,7 @@ module Ruly
           load_all_recipes:,
           load_recipe_sources:,
           parse_frontmatter:,
+          plugin_dir:,
           process_sources_for_squash:,
           recipe_paths:,
           save_skill_files:,
@@ -61,6 +64,10 @@ module Ruly
         puts "\u{26A0}\u{FE0F}  Warning: Could not process subagents: #{e.message}"
         []
       end
+
+      # @param plugin_dir [String, nil] Claude Code plugin dir, nil for the claude target
+      # @return [String] directory the agent files are written to
+      def agents_dir(plugin_dir) = plugin_dir ? File.join(plugin_dir, 'agents') : '.claude/agents'
 
       # Process a single subagent: load, validate, and generate its agent file.
       # @param subagent [Hash] subagent config with 'name' and 'recipe' keys
@@ -178,20 +185,19 @@ module Ruly
         agent_name, recipe_name, recipe_config, parent_recipe_name,
         parent_recipe_config: {}, subagent_config: {}, **deps
       )
-        agent_file = ".claude/agents/#{agent_name}.md"
+        plugin_dir = deps[:plugin_dir]
+        agent_file = File.join(agents_dir(plugin_dir), "#{agent_name}.md")
         local_sources, command_files, skill_files = load_agent_sources(
           recipe_name, recipe_config,
           load_recipe_sources: deps[:load_recipe_sources],
-          process_sources_for_squash: deps[:process_sources_for_squash]
+          process_sources_for_squash: deps[:process_sources_for_squash],
+          scripts_dir: (File.join(plugin_dir, 'scripts') if plugin_dir)
         )
 
         mcp_servers = Services::MCPManager.collect_agent_mcp_servers(recipe_config, local_sources)
 
-        skill_names = extract_skill_names(skill_files)
-        unless skill_files.empty?
-          deps[:save_skill_files].call(skill_files, recipe_paths: deps[:recipe_paths])
-          deps[:all_skill_files].concat(skill_files)
-        end
+        skill_names = extract_skill_names(skill_files, plugin_name: (parent_recipe_name if plugin_dir))
+        save_agent_skills(skill_files, **deps)
 
         repo_content = ''
         hooks = collect_hooks(parent_recipe_config)
@@ -210,9 +216,20 @@ module Ruly
           mcp_servers:, parent_recipe_config:, skill_names:, subagent_config:,
           hooks:, repo_content:
         )
+        context[:plugin] = true if plugin_dir
         write_agent_file(agent_file, context)
       rescue StandardError => e
         puts "    \u{26A0}\u{FE0F}  Warning: Could not generate agent file '#{agent_name}': #{e.message}"
+      end
+
+      # Save a subagent's skills (into `DIR/skills` in plugin mode) and remember them for the checks.
+      # @param skill_files [Array<Hash>] the subagent's skill files
+      def save_agent_skills(skill_files, **deps)
+        return if skill_files.empty?
+
+        skill_opts = deps[:plugin_dir] ? {skills_dir: File.join(deps[:plugin_dir], 'skills')} : {}
+        deps[:save_skill_files].call(skill_files, recipe_paths: deps[:recipe_paths], **skill_opts)
+        deps[:all_skill_files].concat(skill_files)
       end
 
       # Load sources for an agent recipe.
@@ -220,20 +237,27 @@ module Ruly
       # @param recipe_config [Hash] recipe configuration
       # @param load_recipe_sources [Proc] callable(recipe_name) returning [sources, ...]
       # @param process_sources_for_squash [Proc] callable(sources, agent, config, opts)
+      # @param scripts_dir [String, nil] where frontmatter scripts are copied (plugin mode); nil keeps the default
       # @return [Array] [local_sources, command_files, skill_files]
-      def load_agent_sources(recipe_name, recipe_config, load_recipe_sources:, process_sources_for_squash:)
+      def load_agent_sources(recipe_name, recipe_config, load_recipe_sources:, process_sources_for_squash:,
+                             scripts_dir: nil)
         sources, = load_recipe_sources.call(recipe_name)
         local_sources, command_files, _bin_files, skill_files = process_sources_for_squash.call(
-          sources, 'claude', recipe_config, {}
+          sources, 'claude', recipe_config, scripts_dir ? {scripts_dir:} : {}
         )
         [local_sources, command_files, skill_files]
       end
 
       # Extract skill names from skill file paths.
       # @param skill_files [Array<Hash>] array of skill file hashes with :path
+      # @param plugin_name [String, nil] plugin name: names become `PLUGIN:<flat_skill_name>`
       # @return [Array<String>] skill names
-      def extract_skill_names(skill_files)
-        skill_files.map { |file| Services::ScriptManager.derive_skill_name(file[:path]) }
+      def extract_skill_names(skill_files, plugin_name: nil)
+        skill_files.map do |file|
+          next Services::ScriptManager.derive_skill_name(file[:path]) unless plugin_name
+
+          "#{plugin_name}:#{Services::ScriptManager.flat_skill_name(file[:path])}"
+        end
       end
 
       # Build the context hash used for writing an agent file.
@@ -292,6 +316,9 @@ module Ruly
       end
 
       # Write YAML frontmatter to agent file.
+      # With `context[:plugin]` (Claude Code plugin agents) skills are a YAML list and the
+      # permissionMode, hooks and mcpServers keys are omitted: Claude Code ignores them for plugin
+      # agents, and the parent's hooks and MCP servers ship in hooks/hooks.json and .mcp.json.
       # @param output [IO] output stream
       # @param context [Hash] agent context data
       def write_agent_frontmatter(output, context)
@@ -301,6 +328,11 @@ module Ruly
           'tools' => 'Bash, Read, Write, Edit, Glob, Grep',
           'model' => context[:model]
         }
+
+        if context[:plugin]
+          frontmatter['skills'] = context[:skill_names] if context[:skill_names]&.any?
+          return write_frontmatter_block(output, frontmatter, context)
+        end
 
         if context[:skill_names]&.any?
           frontmatter['skills'] = "[#{context[:skill_names].join(', ')}]"
@@ -314,6 +346,11 @@ module Ruly
           frontmatter['hooks'] = context[:hooks]
         end
 
+        write_frontmatter_block(output, frontmatter, context)
+      end
+
+      # Write the frontmatter Hash between '---' lines, with the regenerate comments.
+      def write_frontmatter_block(output, frontmatter, context)
         output.puts '---'
         output.puts YAML.dump(frontmatter).sub(/\A---\n/, '').chomp
         output.puts "# Auto-generated from recipe: #{context[:recipe_name]}"

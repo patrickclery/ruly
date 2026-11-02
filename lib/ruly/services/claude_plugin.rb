@@ -27,6 +27,7 @@ module Ruly
       RESERVED_NAMES = %w[anthropic anthropics claude claude-code claude-mods].freeze
       RESERVED_PREFIXES = %w[anthropic- anthropics- cc-plugin- claude-].freeze
       DESCRIPTION_LIMIT = 1536
+      UNSAFE_SKILL_NAMES = %w[. ..].freeze
 
       # Resolve the plugin directory.
       # @param requested [String, nil] the -o value (Thor default 'CLAUDE.local.md')
@@ -156,19 +157,72 @@ module Ruly
       # @return [String] name of the skill carrying the squashed rules
       def rules_skill_name(recipe_name) = "#{recipe_name}-rules"
 
-      # Write the plugin: manifest and the rules skill. Never writes a CLAUDE.md, a
-      # SessionStart hook or an output style (plugins cannot carry always-on instructions).
+      # Refuse skill and command paths that would clobber the rules skill or leave the plugin dir.
+      # Runs before any of those files is written.
+      # @param dir [String] plugin directory
+      # @param command_files [Array<Hash, String>] recipe commands
+      # @param recipe_config [Hash] recipe configuration (omit_command_prefix)
+      # @param recipe_name [String] recipe name
+      # @param skill_files [Array<Hash>] recipe skills
+      # @raise [Ruly::Error] a skill named RECIPE-rules, an empty/'.'/'..' skill name, or a command
+      #   whose target is not under DIR/commands/
+      def check_paths!(dir, command_files:, recipe_config:, recipe_name:, skill_files:)
+        check_skill_names!(skill_files, recipe_name)
+        commands_root = File.expand_path(File.join(dir, 'commands'))
+        omit_prefix = recipe_config.is_a?(Hash) ? recipe_config['omit_command_prefix'] : nil
+        command_files.each do |file|
+          path = file.is_a?(Hash) ? file[:path] : file
+          relative = ScriptManager.get_command_relative_path(path, omit_prefix)
+          next if File.expand_path(relative, commands_root).start_with?("#{commands_root}/")
+
+          raise Ruly::Error, "Command path '#{path}' escapes #{dir}/commands"
+        end
+      end
+
+      # @raise [Ruly::Error] see check_paths!; warns when two skills flatten to the same name
+      def check_skill_names!(skill_files, recipe_name)
+        seen = {}
+        skill_files.each do |file|
+          name = ScriptManager.flat_skill_name(file[:path])
+          if name.strip.empty? || UNSAFE_SKILL_NAMES.include?(name)
+            raise Ruly::Error, "Skill path '#{file[:path]}' maps to an unsafe plugin skill name '#{name}'"
+          end
+
+          if name == rules_skill_name(recipe_name)
+            raise Ruly::Error, "Skill '#{file[:path]}' collides with the generated rules skill #{name}"
+          end
+
+          if seen.key?(name)
+            warn "\u26A0\uFE0F  Skills #{seen[name]} and #{file[:path]} both map to plugin skill '#{name}'; " \
+                 'the last one wins'
+          end
+          seen[name] = file[:path]
+        end
+      end
+
+      # Write the plugin: manifest, rules skill and commands. Never writes a CLAUDE.md, a
+      # SessionStart hook or an output style (plugins cannot carry always-on instructions),
+      # and never adds component keys to plugin.json (the default directory scan stays in effect).
       # @param dir [String] plugin directory (already reset)
+      # @param command_files [Array<Hash, String>] recipe commands
+      # @param gem_root [String, nil] gem root (import-mode command paths)
       # @param local_sources [Array<Hash>] processed rule sources
       # @param recipe_config [Hash] recipe configuration
       # @param recipe_name [String] recipe name
       # @param script_mappings [Hash] absolute script path => relative name
+      # @param skill_files [Array<Hash>] recipe skills (checked here, written by the caller)
       # @param toc [Boolean] whether to write a table of contents
-      def write(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
+      def write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:, script_mappings:,
+                skill_files:, toc:)
+        check_paths!(dir, command_files:, recipe_config:, recipe_name:, skill_files:)
         FileUtils.mkdir_p(File.join(dir, File.dirname(MANIFEST)))
         File.write(File.join(dir, MANIFEST),
                    "#{JSON.pretty_generate(manifest(recipe_name, recipe_config, author: git_author))}\n")
         write_rules_skill(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
+        return if command_files.empty?
+
+        ScriptManager.save_command_files(command_files, recipe_config, commands_dir: File.join(dir, 'commands'),
+                                                                       gem_root:)
       end
 
       # Write `skills/NAME-rules/SKILL.md`: name/description frontmatter, then the squashed body.
