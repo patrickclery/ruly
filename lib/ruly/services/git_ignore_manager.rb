@@ -39,8 +39,11 @@ module Ruly
       end
 
       # Update an ignore file (gitignore or git-exclude) with a Ruly section.
+      # An existing section is merged, not replaced: its entries stay first, new patterns are
+      # appended, duplicates dropped. So `-i` for one target (claude, agents) never un-ignores
+      # another target's output.
       # @param file_path [String] path to the ignore file
-      # @param patterns [Array<String>] patterns to write in the Ruly section
+      # @param patterns [Array<String>] patterns to add to the Ruly section
       def update(file_path, patterns)
         existing_content = File.exist?(file_path) ? File.read(file_path, encoding: 'UTF-8') : ''
         existing_lines = existing_content.split("\n")
@@ -57,8 +60,9 @@ module Ruly
             ruly_section_end += 1
           end
 
-          # Replace the Ruly section
-          existing_lines[ruly_section_start...ruly_section_end] = ['# Ruly generated files'] + patterns
+          # Merge into the Ruly section: kept entries first, then new ones, deduplicated
+          kept = existing_lines[(ruly_section_start + 1)...ruly_section_end]
+          existing_lines[ruly_section_start...ruly_section_end] = ['# Ruly generated files'] + (kept + patterns).uniq
         else
           # Append new Ruly section
           existing_lines << '' unless existing_lines.last && existing_lines.last.empty?

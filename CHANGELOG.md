@@ -24,6 +24,12 @@ than Claude Code can read the same rules.
   header.
 - `-i` / `-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`.
 
+### Changed
+
+- `-i` / `-I` merge new entries into the existing `# Ruly generated files` section instead of
+  replacing it, so running one target with `-i` no longer un-ignores another target's output.
+  Entries already in the section are kept; remove stale ones by hand.
+
 ### Fixed
 
 - `ruly.gemspec` now takes its version from `Ruly::VERSION` (it still said 0.1.0).

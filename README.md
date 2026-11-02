@@ -723,7 +723,9 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   leaves `.claude/`, `.mcp.json` and `CLAUDE.local.md` alone; `--deepclean` still removes only Claude
   artifacts. Adding the header to a hand-written file hands that file to ruly.
 - `-i`/`-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`. `AGENTS.md` is usually committed,
-  so if the recipe pulls rules from a private repository, use `-i` or `-I`.
+  so if the recipe pulls rules from a private repository, use `-i` or `-I`. New entries are merged
+  into the existing `# Ruly generated files` section, so running `-i` for one target keeps the other
+  target's entries (`CLAUDE.local.md`, `.claude/commands/`) ignored.
 - Post-squash checks (such as ambiguous links) run over the whole `AGENTS.md`, inlined skills
   included.
 - `-a cursor` is unchanged.

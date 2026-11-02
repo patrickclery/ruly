@@ -225,4 +225,36 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
       expect(File.read('.git/info/exclude').lines.map(&:chomp)).to include('AGENTS.md')
     end
   end
+
+  context 'when both targets run with -i or -I' do
+    before do
+      FileUtils.mkdir_p('.git/info')
+      allow(Ruly::Services::MCPManager).to receive(:update_mcp_settings)
+    end
+
+    def ruly_section(path)
+      lines = File.read(path).lines.map(&:chomp)
+      start = lines.index('# Ruly generated files')
+      lines[(start + 1)..].take_while { |line| !line.empty? && !line.start_with?('#') }
+    end
+
+    {'-I' => '.git/info/exclude', '-i' => '.gitignore'}.each do |flag, path|
+      it "keeps the claude entries when -a agents #{flag} runs second" do
+        run_cli('squash', 'demo', flag)
+        run_cli('squash', 'demo', '-a', 'agents', flag)
+        expect(ruly_section(path)).to eq(['CLAUDE.local.md', '.claude/commands/', 'AGENTS.md'])
+      end
+
+      it "keeps AGENTS.md when the claude target #{flag} runs second" do
+        run_cli('squash', 'demo', '-a', 'agents', flag)
+        run_cli('squash', 'demo', flag)
+        expect(ruly_section(path)).to eq(['AGENTS.md', 'CLAUDE.local.md', '.claude/commands/'])
+      end
+
+      it "does not duplicate entries when the same target #{flag} runs twice" do
+        2.times { run_cli('squash', 'demo', '-a', 'agents', flag) }
+        expect(ruly_section(path)).to eq(['AGENTS.md'])
+      end
+    end
+  end
 end
