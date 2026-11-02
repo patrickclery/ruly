@@ -17,6 +17,9 @@ module Ruly
         puts "Would create: #{output_file}"
         puts "  → #{local_sources.size} rule files combined"
         puts "  → Output size: ~#{local_sources.sum { |s| s[:content].size }} bytes"
+        if agent == Services::AgentsMd::AGENT && !skill_files.empty?
+          puts "  → #{skill_files.size} skill files inlined under ## Skills"
+        end
         dry_run_commands(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
         dry_run_bins(bin_files) unless bin_files.empty?
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?

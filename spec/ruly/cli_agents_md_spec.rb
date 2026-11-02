@@ -93,6 +93,7 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
       expect(lines.index('## Skills')).to be > lines.index('# Base Rule')
       expect(lines.index('### Deploy Skill')).to be > lines.index('## Skills')
       expect(lines).to include('#### Rollback', '# deploy comment')
+      expect(lines).not_to include('### deploy')
     end
 
     it 'emits no command body and no skill or command directories' do
@@ -143,7 +144,7 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
       content = read_utf8('AGENTS.md')
       expect(content.lines.first.chomp).to eq(demo_header)
       expect(content).to include('## Table of Contents')
-      toc = content.split('## Table of Contents').last.split("\n\n").first
+      toc = content.split('## Table of Contents').last.split('<a id=').first
       expect(toc).to include('Deploy Skill')
     end
   end

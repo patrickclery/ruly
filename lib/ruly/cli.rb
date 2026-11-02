@@ -74,6 +74,7 @@ module Ruly
       sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
       local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
       validate_squash_dispatches(local_sources, recipe_config, recipe_name)
+      announce_agents_md_skips(recipe_config, command_files, local_sources) if agent == Services::AgentsMd::AGENT
 
       if options[:dry_run]
         Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
@@ -341,6 +342,12 @@ module Ruly
       Services::SquashHelpers.validate_dispatches_registered!(dispatches, recipe_config, recipe_name)
     end
 
+    def announce_agents_md_skips(recipe_config, command_files, local_sources)
+      parts = Services::AgentsMd.skipped_parts(recipe_config, command_files:, local_sources:)
+      notice = Services::AgentsMd.skipped_notice(parts)
+      puts notice if notice
+    end
+
     def write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
       File.open(output_file, 'w') do |output|
         if options[:toc]
@@ -355,12 +362,14 @@ module Ruly
     # subagents, hooks, MCP config, settings). Scripts are still copied for rewritten references.
     def write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
                         skill_files:)
-      Services::AgentsMd.write(output_file, local_sources:, recipe_name:, script_mappings:, toc: options[:toc])
+      Services::AgentsMd.write(output_file, local_sources:, recipe_name:, script_mappings:, skill_files:,
+                                            toc: options[:toc])
       update_git_ignores(output_file, Services::AgentsMd::AGENT, [])
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
-      Ruly::Checks.run_all(local_sources, [], find_rule_file: method(:find_rule_file),
-                                              parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                                              recipe_paths: build_recipe_paths(local_sources), skill_files:)
+      Ruly::Checks.run_all(local_sources + skill_files, [],
+                           find_rule_file: method(:find_rule_file),
+                           parse_frontmatter: Services::FrontmatterParser.method(:parse),
+                           recipe_paths: build_recipe_paths(local_sources), skill_files:)
       Services::Display.squash_summary(Services::AgentsMd::AGENT, recipe_name, recipe_config, output_file,
                                        local_sources, [], skill_files)
     end

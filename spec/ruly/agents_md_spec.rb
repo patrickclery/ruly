@@ -8,7 +8,8 @@ RSpec.describe Ruly::Services::AgentsMd do
 
   describe '.render_skill' do
     let(:skill_path) { File.join(fixture_dir, 'rules/skills/deploy.md') }
-    let(:rendered) { described_class.render_skill({content: File.read(skill_path, encoding: 'UTF-8'), path: skill_path}) }
+    let(:skill) { {content: File.read(skill_path, encoding: 'UTF-8'), path: skill_path} }
+    let(:rendered) { described_class.render_skill(skill) }
 
     it 'drops the leading frontmatter' do
       expect(rendered).not_to include('description:')
@@ -69,7 +70,7 @@ RSpec.describe Ruly::Services::AgentsMd do
 
     it 'names the parts' do
       expect(described_class.skipped_notice(['hooks']))
-        .to eq("ℹ️  AGENTS.md target skips Claude-only parts: hooks")
+        .to eq('ℹ️  AGENTS.md target skips Claude-only parts: hooks')
     end
   end
 end
