@@ -76,9 +76,14 @@ RSpec.describe Ruly::CLI, '.start' do
     end
 
     %w[sgpt shell_gpt].each do |agent|
-      it "writes plain markdown for -a #{agent}" do
+      it "writes plain markdown for -a #{agent} and says so on stderr" do
         cli.options = {agent:, output_file: 'role.json'}
-        expect { cli.squash }.to output.to_stdout
+        expect do
+          expect { cli.squash }.to output.to_stdout
+        end.to output(
+          a_string_including("Agent '#{agent}': shell_gpt JSON output was removed in ruly 0.2.0; " \
+                             'writing markdown instead')
+        ).to_stderr
 
         content = File.read('role.json')
         expect(content).to start_with('# Demo Rule')
@@ -86,8 +91,8 @@ RSpec.describe Ruly::CLI, '.start' do
       end
     end
 
-    it 'still normalizes claudecode to claude' do
-      expect(cli.send(:normalize_agent, 'claudecode')).to eq('claude')
+    it 'still normalizes claudecode to claude without a notice' do
+      expect { expect(cli.send(:normalize_agent, 'claudecode')).to eq('claude') }.not_to output.to_stderr
     end
   end
 

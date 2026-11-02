@@ -13,6 +13,8 @@ module Ruly
   # Command Line Interface for Ruly gem
   class CLI < Thor
     MERGE_SKIP_KEYS = %w[files sources skills commands scripts].freeze
+    # Agent names whose dedicated output ruly 0.2.0 dropped; they now get plain markdown.
+    REMOVED_AGENTS = %w[sgpt shell_gpt].freeze
 
     check_unknown_options!
 
@@ -232,6 +234,9 @@ module Ruly
     end
 
     def normalize_agent(agent)
+      if REMOVED_AGENTS.include?(agent&.downcase)
+        warn "\u26A0\uFE0F  Agent '#{agent}': shell_gpt JSON output was removed in ruly 0.2.0; writing markdown instead"
+      end
       agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
       agent
     end

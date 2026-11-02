@@ -155,7 +155,7 @@ continues.
 shell_gpt output was a role-JSON dump for a niche CLI. Nothing in it consumed skills, commands,
 subagents or MCP config, so it was the lowest-value adapter and the easiest to drop. The `-a
 shell_gpt` / `-a sgpt` names still work and now produce the same plain markdown as any other
-non-Claude agent. cursor stays because removing it now would leave ruly with no non-Claude target
+non-Claude agent, with a one-line stderr notice. cursor stays because removing it now would leave ruly with no non-Claude target
 at all until Phase 4 emits AGENTS.md, the cross-agent standard. Once AGENTS.md ships, cursor should
 be re-audited: if Cursor reads AGENTS.md, the cursor adapter becomes a duplicate.
 

@@ -21,7 +21,7 @@ Claude Code features. Removals are immediate, with no deprecation period.
 - The `-T` / `--taskmaster-config` flag on `squash` and `clean`, and `squash --keep-taskmaster`,
   including the `.taskmaster/` config copy and import.
 - Shell-GPT role-JSON output. `-a shell_gpt` and `-a sgpt` now produce plain markdown, like other
-  non-Claude agents.
+  non-Claude agents, and print a notice on stderr saying so.
 - The `tier` recipe and config key, and `lib/ruly/contexts.yml` (context-window tier percentages).
 
 ### Changed
