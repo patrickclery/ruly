@@ -30,6 +30,15 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
 
   def read_utf8(path) = File.read(path, encoding: 'UTF-8')
 
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
   def run_cli(*args)
     expect { described_class.start(args) }.to output.to_stdout
   end
@@ -72,6 +81,70 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
       run_cli('squash', 'demo', '-a', 'agents', '-o', 'docs/AGENTS.md')
       expect(read_utf8('docs/AGENTS.md').lines.first.chomp).to eq(demo_header)
       expect(File.exist?('AGENTS.md')).to be(false)
+    end
+  end
+
+  context 'when squashing a recipe with skills and Claude-only parts' do
+    let!(:stdout) { capture_stdout { described_class.start(%w[squash demo -a agents]) } }
+    let(:lines) { read_utf8('AGENTS.md').lines.map(&:chomp) }
+    let(:notice) { 'AGENTS.md target skips Claude-only parts: commands (1), subagents (1), hooks, mcp_servers' }
+
+    it 'inlines skills under ## Skills after the rules' do
+      expect(lines.index('## Skills')).to be > lines.index('# Base Rule')
+      expect(lines.index('### Deploy Skill')).to be > lines.index('## Skills')
+      expect(lines).to include('#### Rollback', '# deploy comment')
+    end
+
+    it 'emits no command body and no skill or command directories' do
+      expect(lines).not_to include('# Ship')
+      expect(Dir.exist?('.claude/skills')).to be(false)
+      expect(Dir.exist?('.claude/commands')).to be(false)
+    end
+
+    it 'prints the skipped-parts notice once with names only' do
+      expect(stdout.scan(notice).size).to eq(1)
+      notice_line = stdout.lines.find { |l| l.include?('skips Claude-only parts') }
+      expect(notice_line).not_to include('echo done')
+      expect(notice_line).not_to include('grafana')
+    end
+  end
+
+  context 'with --dry-run' do
+    let!(:stdout) { capture_stdout { described_class.start(%w[squash demo -a agents --dry-run]) } }
+
+    it 'reports the AGENTS.md plan and notice without writing' do
+      expect(stdout).to include('Would create: AGENTS.md', '1 skill files inlined under ## Skills',
+                                'skips Claude-only parts')
+      expect(File.exist?('AGENTS.md')).to be(false)
+    end
+  end
+
+  context 'with a skill heading that collides with a rule anchor' do
+    before do
+      skill = 'rules/skills/deploy.md'
+      File.write(skill, File.read(skill).sub('# Deploy Skill', '# Base Rule'))
+      allow(Ruly::Services::MCPManager).to receive(:update_mcp_settings)
+    end
+
+    it 'reports the ambiguous link for -a agents' do
+      out = capture_stdout { described_class.start(%w[squash demo -a agents]) }
+      expect(out).to include('Ambiguous markdown link references detected')
+    end
+
+    it 'does not report it for -a claude' do
+      out = capture_stdout { described_class.start(%w[squash demo -a claude]) }
+      expect(out).not_to include('Ambiguous markdown link references detected')
+    end
+  end
+
+  context 'with --toc' do
+    it 'keeps the header on line 1 and lists skills in the TOC' do
+      run_cli('squash', 'demo', '-a', 'agents', '-t')
+      content = read_utf8('AGENTS.md')
+      expect(content.lines.first.chomp).to eq(demo_header)
+      expect(content).to include('## Table of Contents')
+      toc = content.split('## Table of Contents').last.split("\n\n").first
+      expect(toc).to include('Deploy Skill')
     end
   end
 end
