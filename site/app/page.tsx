@@ -5,9 +5,12 @@ export default function Home() {
     <main className="min-h-screen bg-bg-primary text-slate-50">
       {/* Hero */}
       <section className="hero-gradient mx-auto max-w-4xl px-4 pt-24 pb-16 text-center">
-        <div className="mb-4 inline-block rounded-full border border-green-500/30 bg-green-500/10 px-4 py-1 text-sm font-medium text-green-400">
-          gem install ruly
-        </div>
+        <a
+          href="https://github.com/patrickclery/ruly#-quick-install"
+          className="mb-4 inline-block cursor-pointer rounded-full border border-green-500/30 bg-green-500/10 px-4 py-1 text-sm font-medium text-green-400 hover:brightness-110 transition duration-200"
+        >
+          One-line install: ruby setup.rb
+        </a>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           Compose the rules each task needs from one shared rules repo.
         </h1>
@@ -70,7 +73,9 @@ export default function Home() {
       <footer className="border-t border-gray-800 py-8">
         <div className="mx-auto max-w-4xl px-4 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <div className="text-sm text-gray-500">
-            <span className="font-mono">gem install ruly</span>
+            <span className="font-mono break-all">
+              curl -fsSL https://raw.githubusercontent.com/patrickclery/ruly/main/setup.rb -o /tmp/ruly_setup.rb &amp;&amp; ruby /tmp/ruly_setup.rb
+            </span>
           </div>
           <div className="flex gap-6 text-sm text-gray-500">
             <a href="https://github.com/patrickclery/ruly" className="cursor-pointer hover:text-white transition duration-200">
