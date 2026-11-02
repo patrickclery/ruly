@@ -237,14 +237,23 @@ module Ruly
     end
 
     def load_sources(recipe_name)
-      if recipe_name
-        Services::RecipeLoader.load_recipe_sources(
-          recipe_name, gem_root:, recipes: load_all_recipes,
-                       scan_files_for_recipe_tags: ->(name) { Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:) }
-        )
-      else
-        [collect_local_sources, {}]
-      end
+      return [collect_local_sources, {}] unless recipe_name
+
+      sources, recipe = Services::RecipeLoader.load_recipe_sources(
+        recipe_name, gem_root:, recipes: load_all_recipes,
+                     scan_files_for_recipe_tags: ->(name) { Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:) }
+      )
+      warn_recipe_keys(recipe_name, recipe)
+      [sources, recipe]
+    end
+
+    # Warn on stderr about removed or unknown recipe keys, once per recipe per run.
+    # Subagent recipes reuse load_sources, so the Set stops a shared recipe warning twice.
+    def warn_recipe_keys(recipe_name, recipe)
+      @warned_recipes ||= Set.new
+      return unless @warned_recipes.add?(recipe_name)
+
+      Services::RecipeLoader.recipe_key_warnings(recipe_name, recipe).each { |message| warn message }
     end
 
     # --- Core helpers ---

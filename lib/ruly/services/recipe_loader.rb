@@ -517,6 +517,33 @@ module Ruly
       # Array keys that get merged via union (concat + uniq).
       ARRAY_MERGE_KEYS = %w[files skills commands scripts sources remote_sources mcp_servers omit_command_prefix].freeze
 
+      # Every top-level recipe key ruly reads.
+      KNOWN_RECIPE_KEYS = %w[
+        commands description extends files hooks isolate mcp_servers model omit_command_prefix remote_sources
+        scripts skills sources subagents
+      ].freeze
+
+      # Recipe keys that earlier releases read and ruly 0.2.0 dropped.
+      REMOVED_RECIPE_KEYS = %w[cache tier].freeze
+
+      # Build stderr warnings for removed or unknown top-level recipe keys.
+      # Messages name the recipe and the key only, never the key's value.
+      #
+      # @param recipe_name [String]
+      # @param recipe [Hash, Array] recipe config (Array agent recipes have no keys)
+      # @return [Array<String>] one message per removed or unknown key
+      def recipe_key_warnings(recipe_name, recipe)
+        return [] unless recipe.is_a?(Hash)
+
+        (recipe.keys.map(&:to_s) - KNOWN_RECIPE_KEYS).map do |key|
+          if REMOVED_RECIPE_KEYS.include?(key)
+            "\u26A0\uFE0F  Recipe '#{recipe_name}': '#{key}' was removed in ruly 0.2.0 and is ignored"
+          else
+            "\u26A0\uFE0F  Recipe '#{recipe_name}': unknown key '#{key}' is ignored"
+          end
+        end
+      end
+
       # Resolve all `extends:` declarations in the recipes hash, in-place.
       #
       # @param recipes [Hash] all loaded recipes (mutated in place)
