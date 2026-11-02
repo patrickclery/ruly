@@ -30,8 +30,6 @@ module Ruly
     option :git_exclude, aliases: '-I', default: false, type: :boolean
     option :toc, aliases: '-t', default: false, type: :boolean
     option :essential, aliases: '-e', default: false, type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
-    option :keep_taskmaster, default: false, type: :boolean
     option :front_matter, default: false, type: :boolean
     option :home_override, default: false, type: :boolean
     option :verbose, aliases: '-v', default: false, type: :boolean
@@ -101,7 +99,6 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, type: :boolean
     option :agent, aliases: '-a', default: 'claude', type: :string
     option :deepclean, default: false, type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
     def clean(_recipe_name = nil)
       agent = normalize_agent(options[:agent] || 'claude')
       files = collect_files_to_clean(agent)
@@ -288,9 +285,9 @@ module Ruly
       return if options[:dry_run]
 
       if options[:deepclean]
-        invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
+        invoke :clean, [], {deepclean: true}
       elsif options[:clean]
-        invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
+        invoke :clean, [recipe_name], options.slice(:output_file, :agent)
       end
     end
 
@@ -362,9 +359,6 @@ module Ruly
         Services::SquashHelpers.write_shell_gpt_json(output_file, local_sources)
       else
         write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
-        if (options[:clean] || options[:deepclean]) && options[:keep_taskmaster] && agent != 'shell_gpt'
-          append_taskmaster_import(output_file)
-        end
       end
     end
 
@@ -383,15 +377,6 @@ module Ruly
       end
     end
 
-    def append_taskmaster_import(output_file)
-      File.open(output_file, 'a') do |f|
-        f.puts "\n## Task Master AI Instructions"
-        f.puts '**Import Task Master development workflow commands and guidelines, ' \
-               'treat as if import is in the main CLAUDE.md file.**'
-        f.puts '@./.taskmaster/CLAUDE.md'
-      end
-    end
-
     def post_squash(output_file, agent, recipe_name, recipe_config, # rubocop:disable Metrics/ParameterLists
                     local_sources, command_files, skill_files, script_files)
       recipe_paths = build_recipe_paths(local_sources)
@@ -404,7 +389,6 @@ module Ruly
       recipe_config = merge_mcp_servers(recipe_config, local_sources)
       Services::MCPManager.update_mcp_settings(recipe_config, agent)
       Services::SettingsManager.write_settings(recipe_config)
-      Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
       all_skill_files = skill_files.dup
       if recipe_config.is_a?(Hash) && recipe_config['subagents']
         subagent_skill_files = process_subagents(recipe_config, recipe_name, recipe_paths:)
@@ -508,7 +492,6 @@ module Ruly
           files << (agent == 'claude' ? '.mcp.json' : '.mcp.yml')
         end
       end
-      files << '.taskmaster/' if options[:taskmaster_config] && Dir.exist?('.taskmaster')
       files.uniq
     end
 

@@ -22,18 +22,15 @@ module Ruly
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?
         dry_run_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
         dry_run_git_info(options)
-        Services::SquashHelpers.copy_taskmaster_config(dry_run: true) if options[:taskmaster_config]
       end
 
       def dry_run_clean_info(options)
         if options[:deepclean]
           puts 'Would deep clean first:'
           %w[.claude/ CLAUDE.local.md CLAUDE.md].each { |f| puts "  → Remove #{f}" }
-          puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
           puts ''
         elsif options[:clean]
           puts 'Would clean existing files first'
-          puts '  → Remove .taskmaster/ directory' if options[:taskmaster_config]
           puts ''
         end
       end

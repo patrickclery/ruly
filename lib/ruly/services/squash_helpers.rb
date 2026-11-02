@@ -5,8 +5,8 @@ require 'find'
 module Ruly
   module Services
     # Helper methods for the squash pipeline that don't fit into other services.
-    # Includes filtering, dispatch validation, recipe-tag scanning, output file
-    # determination, and TaskMaster config copying.
+    # Includes filtering, dispatch validation, recipe-tag scanning and output file
+    # determination.
     module SquashHelpers # rubocop:disable Metrics/ModuleLength
       module_function
 
@@ -122,32 +122,6 @@ module Ruly
         else
           default_output
         end
-      end
-
-      # Copy TaskMaster config from user config to project.
-      # @param dry_run [Boolean] if true, only print what would happen
-      def copy_taskmaster_config(dry_run: false)
-        source_config = File.expand_path('~/.config/ruly/taskmaster/config.json')
-        target_dir = '.taskmaster'
-        target_config = File.join(target_dir, 'config.json')
-
-        unless File.exist?(source_config)
-          puts "⚠️  Warning: #{source_config} not found"
-          return
-        end
-
-        if dry_run
-          puts "\nWould copy TaskMaster config:"
-          puts "  → From: #{source_config}"
-          puts "  → To: #{target_config}"
-          return
-        end
-
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-        FileUtils.cp(source_config, target_config)
-        puts "🎯 Copied TaskMaster config to #{target_config}"
-      rescue StandardError => e
-        puts "⚠️  Warning: Could not copy TaskMaster config: #{e.message}"
       end
 
       # Collect all local sources from the rules directory (non-recipe mode).
