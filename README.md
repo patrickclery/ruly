@@ -111,6 +111,21 @@ Native behavior is quoted from the Claude Code docs as of November 2026.
 [cc-user-rules]: https://code.claude.com/docs/en/memory#user-level-rules
 [cc-subagents]: https://code.claude.com/docs/en/sub-agents
 
+## Ruly vs. Ruler and rulesync
+
+Ruler and rulesync write one rules source to many agents. The table compares how each tool chooses which rules go into an output, where the three tools overlap.
+
+| Capability                  | Ruler                                                                                               | rulesync                                                                           | Ruly                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Includes between rule files | No. Rule files are joined with source markers; there is no include syntax ([source][ruler-concat]). | No. Rule frontmatter has no `requires` or include field ([schema][rulesync-rule]). | `requires:` frontmatter is resolved recursively, for local and GitHub sources, and each file is included once. |
+
+Ruler and rulesync were checked by reading their source and docs at [Ruler @5e551e6][ruler-tree] (2026-10-27) and [rulesync @6e3869d][rulesync-tree] (2026-11-02), in November 2026; neither tool was run.
+
+[ruler-tree]: https://github.com/intellectronica/ruler/tree/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87
+[rulesync-tree]: https://github.com/dyoshikawa/rulesync/tree/6e3869d378066dc2f0b4cda3896e444ae7f200a7
+[ruler-concat]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/RuleProcessor.ts#L7-L28
+[rulesync-rule]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/src/features/rules/rulesync-rule.ts#L34-L257
+
 ## 🌟 How It Works
 
 ### Standalone CLI Tool

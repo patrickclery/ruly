@@ -10,16 +10,16 @@ It is **behind** on agent coverage and adoption. It also **partly duplicates** C
 
 ## Landscape
 
-| Tool / approach | What it is | Agents | Adoption |
-|---|---|---|---|
-| **ruly** | Ruby CLI that compiles recipes into CLAUDE.md, skills, commands and subagents | Claude (full); Cursor (`.mdc`) and shell_gpt (partial) | 5★, 0 forks |
-| **Ruler** (intellectronica) | One `.ruler/` source synced to many agents | 32 | ~2,956★, 165 forks, active |
-| **rulesync** (dyoshikawa) | Node CLI that generates rules, commands, MCP, ignore files, subagents, skills, hooks and permissions | ~67 + AGENTS.md | ~1.6k★, ~8.2k commits |
-| **vibe-rules** | Global rule store plus npm-package rule distribution (`llms` export) | ~10 | — |
-| **Claude Code native** | CLAUDE.md hierarchy, `.claude/rules/` with `paths:`, `@imports`, skills, plugins | Claude | built in |
-| **Basic Memory / memory MCPs** | Markdown + git as the source of truth, indexed as a graph and retrieved on demand through MCP search | any MCP client | — |
+| Tool / approach                | What it is                                                                                           | Agents                                                 | Adoption                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------- |
+| **ruly**                       | Ruby CLI that compiles recipes into CLAUDE.md, skills, commands and subagents                        | Claude (full); Cursor (`.mdc`) and shell_gpt (partial) | 5★, 0 forks                |
+| **Ruler** (intellectronica)    | One `.ruler/` source synced to many agents                                                           | 32                                                     | ~2,956★, 165 forks, active |
+| **rulesync** (dyoshikawa)      | Node CLI that generates rules, commands, MCP, ignore files, subagents, skills, hooks and permissions | ~67 + AGENTS.md                                        | ~1.6k★, ~8.2k commits      |
+| **vibe-rules**                 | Global rule store plus npm-package rule distribution (`llms` export)                                 | ~10                                                    | —                          |
+| **Claude Code native**         | CLAUDE.md hierarchy, `.claude/rules/` with `paths:`, `@imports`, skills, plugins                     | Claude                                                 | built in                   |
+| **Basic Memory / memory MCPs** | Markdown + git as the source of truth, indexed as a graph and retrieved on demand through MCP search | any MCP client                                         | —                          |
 
-**Closest rival: rulesync.** It covers nearly the same set of components as ruly across far more agents. Whether rulesync or Ruler can select rules per task the way ruly's recipes and `requires:` do was **not verified**. That is the most important open question.
+**Closest rival: rulesync.** It covers nearly the same set of components as ruly across far more agents. Whether rulesync or Ruler can select rules per task the way ruly's recipes and `requires:` do was **not verified**. That is the most important open question. **Answered 2026-11-02 (Phase 7 audit, .planning/phases/07-competitor-composition-audit/07-AUDIT.md):** neither tool has named rule sets or profiles, includes between rule files, or include-cycle detection, so recipes plus `requires:` remain ruly's main difference. rulesync can layer whole source directories per run with `--input-roots`.
 
 ## Where ruly is ahead
 
