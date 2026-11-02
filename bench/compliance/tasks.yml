@@ -15,9 +15,11 @@ tasks:
       paid) for a status symbol, and a constant listing the three labels. Reply with one fenced ruby code
       block and nothing else. Do not create or edit files.
     checks:
+      # A double-quoted literal with neither interpolation nor an escape sequence (the rule allows both). Matched
+      # from the line start over whole literals, so the text between two strings and comments never match.
       - type: forbid
         scope: code
-        pattern: '"[^"#\n]*"'
+        pattern: '^(?:[^"''#\n]|''(?:[^''\\\n]|\\.)*''|"(?:[^"\\#\n]|#(?!\{))*(?:\\.|#\{[^}\n]*\})(?:[^"\\#\n]|\\.|#\{[^}\n]*\}|#(?!\{))*")*"(?:[^"\\#\n]|#(?!\{))*"'
     example_pass: |
       ```ruby
       class InvoiceFormatter
@@ -25,6 +27,11 @@ tasks:
 
         def label(status)
           { draft: 'draft', sent: 'sent', paid: 'paid' }.fetch(status)
+        end
+
+        # The "summary" line, e.g. "42: paid".
+        def summary(number, status)
+          ["Invoice #{number}", "#{label(status)}\n"].join(': ')
         end
       end
       ```

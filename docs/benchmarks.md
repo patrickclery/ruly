@@ -74,7 +74,7 @@ Eight tasks, defined in [`bench/compliance/tasks.yml`](../bench/compliance/tasks
 
 | Task | Recipe | Rule | Native placement | Check |
 |---|---|---|---|---|
-| `ruby-single-quotes` | ruby-feature | Use single quotes for Ruby string literals that contain no interpolation. | always | no double-quoted string without interpolation in the code |
+| `ruby-single-quotes` | ruby-feature | Use single quotes for Ruby string literals that contain no interpolation. | always | no double-quoted string literal without interpolation or an escape sequence in the code (comments ignored) |
 | `frozen-string-literal` | ruby-feature | Every Ruby file starts with the magic comment `# frozen_string_literal: true`. | always | the code starts with the magic comment |
 | `no-puts-in-library` | ruby-feature | Library code never calls puts; write through the injected logger. | always | no `puts` in the code |
 | `rspec-expect` | testing | Write RSpec expectations with expect(...); never use the should syntax. | path-scoped | no `should`, and at least one `expect` |

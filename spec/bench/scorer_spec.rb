@@ -45,4 +45,36 @@ RSpec.describe RulyBench::Scorer do
       expect(result).to eq(failed: ['forbid code /\bputs\b/', 'require text /zzz/'], pass: false)
     end
   end
+
+  describe 'the committed ruby-single-quotes check' do
+    tasks = YAML.safe_load_file(RulyBench::ComplianceCLI::DEFAULT_TASKS)['tasks']
+    checks = tasks.find { _1['id'] == 'ruby-single-quotes' }['checks']
+
+    # One Ruby line per case; the heredocs keep `#{` literal.
+    passing = <<~'RUBY'.lines(chomp: true)
+      log("#{a}", "#{b}")
+      line = "total\n"
+      say = "a \"quoted\" word"
+      x = 'ok' # never "double" here
+      v = "#{h["key"]}"
+      LABELS = ['draft', 'sent'].freeze
+    RUBY
+    failing = <<~'RUBY'.lines(chomp: true)
+      name = "draft"
+      log("#{a}", "b")
+      pair = ['a', "b"]
+    RUBY
+
+    passing.each do |code|
+      it "passes #{code}" do
+        expect(described_class.score("```ruby\n#{code}\n```\n", checks)[:pass]).to be(true)
+      end
+    end
+
+    failing.each do |code|
+      it "fails #{code}" do
+        expect(described_class.score("```ruby\n#{code}\n```\n", checks)[:pass]).to be(false)
+      end
+    end
+  end
 end
