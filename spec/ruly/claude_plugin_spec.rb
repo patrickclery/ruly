@@ -232,4 +232,77 @@ RSpec.describe Ruly::Services::ClaudePlugin do
       expect(lines.first).to include('`ruly squash demo` (CLAUDE.local.md)')
     end
   end
+
+  describe 'ScriptManager.flat_skill_name' do
+    {
+      'notes.md' => 'notes',
+      'rules/skills/deploy.md' => 'deploy',
+      'rules/skills/git/commit.md' => 'git-commit',
+      'rules/skills/tdd/SKILL.md' => 'tdd'
+    }.each do |path, name|
+      it "maps #{path} to #{name}" do
+        expect(Ruly::Services::ScriptManager.flat_skill_name(path)).to eq(name)
+      end
+    end
+  end
+
+  describe 'ScriptManager.save_skill_files' do
+    let(:files) { [{content: "# TDD\n", path: 'rules/skills/tdd/SKILL.md'}] }
+    let(:deps) { {find_rule_file: ->(_p) {}, parse_frontmatter: ->(c) { [{}, c] }, strip_metadata: ->(c) { c }} }
+
+    it 'writes DIR/<flat name>/SKILL.md with skills_dir:' do
+      Ruly::Services::ScriptManager.save_skill_files(files, skills_dir: 'out/skills', **deps)
+      expect([File.file?('out/skills/tdd/SKILL.md'), File.exist?('out/skills/tdd/SKILL')]).to eq([true, false])
+    end
+
+    it 'keeps the nested .claude/skills path without skills_dir:' do
+      Ruly::Services::ScriptManager.save_skill_files(files, **deps)
+      expect(File.file?('.claude/skills/tdd/SKILL/SKILL.md')).to be(true)
+    end
+  end
+
+  describe 'ScriptManager.save_command_files' do
+    let(:command) { {content: "# Ship\n", path: 'rules/commands/ship.md'} }
+
+    it 'writes under commands_dir:' do
+      Ruly::Services::ScriptManager.save_command_files([command], nil, commands_dir: 'out/commands')
+      expect([File.file?('out/commands/ship.md'), File.exist?('.claude')]).to eq([true, false])
+    end
+
+    it 'writes under .claude/commands by default' do
+      Ruly::Services::ScriptManager.save_command_files([command], nil)
+      expect(File.file?('.claude/commands/ship.md')).to be(true)
+    end
+  end
+
+  describe '.check_paths!' do
+    def check(skills: [], commands: [])
+      described_class.check_paths!('plug', command_files: commands.map { |p| {content: '', path: p} },
+                                           recipe_config: {}, recipe_name: 'demo',
+                                           skill_files: skills.map { |p| {content: '', path: p} })
+    end
+
+    it 'accepts the fixture skills and commands' do
+      expect { check(skills: %w[rules/skills/deploy.md rules/skills/tdd/SKILL.md], commands: %w[rules/commands/ship.md]) }
+        .not_to raise_error
+    end
+
+    it 'refuses a skill that collides with the rules skill' do
+      expect { check(skills: %w[rules/skills/demo-rules.md]) }
+        .to raise_error(Ruly::Error, /collides with the generated rules skill demo-rules/)
+    end
+
+    it 'refuses a skill whose flattened name is unsafe' do
+      expect { check(skills: %w[rules/skills/...md]) }.to raise_error(Ruly::Error, /unsafe plugin skill name/)
+    end
+
+    it 'refuses a command path that escapes DIR/commands' do
+      expect { check(commands: %w[rules/commands/../../../evil.md]) }.to raise_error(Ruly::Error, /escapes/)
+    end
+
+    it 'warns when two skills flatten to the same name' do
+      expect { check(skills: %w[rules/skills/a/b.md rules/skills/a-b.md]) }
+        .to output(/both map to plugin skill 'a-b'/).to_stderr
+    end
+  end
 end

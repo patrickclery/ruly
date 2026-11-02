@@ -28,6 +28,7 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     allow(Ruly::Services::RecipeLoader).to receive(:user_recipes_file)
       .and_return(File.join(test_dir, 'no-user-recipes.yml'))
     allow(Ruly::Services::ClaudePlugin).to receive(:git_author).and_return('Fixture Author')
+    allow(Ruly::Services::MCPManager).to receive(:load_mcp_servers_from_config).and_return(nil)
   end
 
   def read_utf8(path) = File.read(path, encoding: 'UTF-8')
@@ -110,6 +111,51 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
 
     it 'writes no CLAUDE.md into the plugin' do
       expect(Dir.glob('**/CLAUDE.md', File::FNM_DOTMATCH, base: plugin_dir)).to be_empty
+    end
+
+    it 'writes recipe skills with their frontmatter' do
+      expect(read_utf8(File.join(plugin_dir, 'skills/deploy/SKILL.md')).lines.map(&:chomp))
+        .to include('description: Deploy the app')
+    end
+
+    it 'flattens the nested tdd skill' do
+      expect([File.file?(File.join(plugin_dir, 'skills/tdd/SKILL.md')), File.exist?(File.join(plugin_dir, 'skills/tdd/SKILL'))])
+        .to eq([true, false])
+    end
+
+    it 'writes the subagent skill and the command' do
+      expect(%w[skills/review/SKILL.md commands/ship.md].map { |f| File.file?(File.join(plugin_dir, f)) }).to eq([true, true])
+    end
+
+    context 'with the helper agent file' do
+      let(:agent_lines) { read_utf8(File.join(plugin_dir, 'agents/helper.md')).lines.map(&:chomp) }
+
+      it 'keeps the model and lists the namespaced preloaded skill' do
+        expect(agent_lines).to include('model: haiku', '- demo:review')
+      end
+
+      it 'has no permissionMode, hooks or mcpServers key' do
+        expect(agent_lines.grep(/^(permissionMode|mcpServers|hooks):/)).to be_empty
+      end
+    end
+  end
+
+  context 'with a recipe skill named like the rules skill' do
+    before do
+      File.write('rules/skills/demo-rules.md', "---\ndescription: Clash\n---\n# Clash\n")
+      File.write('.recipes.yml', read_utf8('.recipes.yml').sub("      - rules/skills/deploy.md\n",
+                                                               "      - rules/skills/deploy.md\n      - rules/skills/demo-rules.md\n"))
+    end
+
+    it 'exits 1 naming the collision' do
+      expect_refusal(%w[squash demo -a claude-plugin], /collides with the generated rules skill/)
+    end
+
+    it 'leaves a dir ruly owns, so a re-run without the skill succeeds' do
+      expect_refusal(%w[squash demo -a claude-plugin], /collides/)
+      File.write('.recipes.yml', read_utf8('.recipes.yml').sub("      - rules/skills/demo-rules.md\n", ''))
+      run_cli('squash', 'demo', '-a', 'claude-plugin')
+      expect(File.file?(rules_skill_path)).to be(true)
     end
   end
 
