@@ -99,6 +99,12 @@ None yet.
 - ⚠️ [Phase 2] Installed `ruly` binary not refreshed with 0.2.0 changes (per CLAUDE.md: update after changes)
 - ⚠️ [Phase 2] Pre-existing: 15 baseline rspec failures; `ruly stats` writes stats.md into gem rules/ dir regardless of cwd
 
+## Deferred Verification
+
+| Phase | State | Resume |
+|-------|-------|--------|
+| 03 | verification_deferred_human | /gsd-verify-work 03 |
+
 ## Session Continuity
 
 Last session: 2026-11-02T09:38:02.583Z
