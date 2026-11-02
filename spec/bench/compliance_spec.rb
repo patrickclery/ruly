@@ -182,6 +182,11 @@ RSpec.describe RulyBench do
       expect(err.string).to include('--allow-private-corpus')
     end
 
+    it 'refuses a --max-budget-usd below one cent, which claude would get as 0.00' do
+      expect(cli(%w[--max-budget-usd 0.004])).to eq(2)
+      expect(err.string).to include('at least 0.01')
+    end
+
     it 'refuses --isolated-home without ANTHROPIC_API_KEY' do
       expect(cli(%w[--isolated-home], env: {'ANTHROPIC_API_KEY' => ''})).to eq(2)
       expect(err.string).to include('ANTHROPIC_API_KEY')

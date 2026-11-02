@@ -91,7 +91,8 @@ module RulyBench
         @options[:output_dir] = v
       end
       opts.on('--max-budget-usd N', Float, "Per-call cap passed to claude (default: #{DEFAULT_MAX_BUDGET_USD})") do |v|
-        raise OptionParser::InvalidArgument, "--max-budget-usd must be positive, got #{v}" unless v.positive?
+        # claude receives the cap with two decimals, so a smaller value would reach it as 0.00.
+        raise OptionParser::InvalidArgument, "--max-budget-usd must be at least 0.01, got #{v}" unless v >= 0.01
 
         @options[:max_budget_usd] = v
       end
