@@ -33,4 +33,14 @@ Recipes measured: 5.
 - vs native floor: median 68.4% (min 62.8%, max 80.0%)
 - vs native ceiling: median 74.3% (min 69.8%, max 83.8%)
 
+## Files in no measured recipe
+
+3 corpus files are in no measured recipe's output: `comms/issue-tracker.md`, `comms/status-updates.md`, `database/queries.md` (1,175 tokens counted file by file). They count in load-all and both native baselines, because a native layout loads every rule without `paths:`, but no ruly output can include them.
+
+Without them, load-all is 8,797, the native floor 6,923 and the native ceiling 8,797 tokens, and the reductions are:
+
+- vs load-all: median 70.9% (min 65.7%, max 81.6%)
+- vs native floor: median 63.0% (min 56.4%, max 76.6%)
+- vs native ceiling: median 70.9% (min 65.7%, max 81.6%)
+
 Reproduce with `bundle exec ruby bench/tokens.rb`. Identical inputs give identical output.

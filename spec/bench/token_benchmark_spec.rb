@@ -52,6 +52,25 @@ RSpec.describe RulyBench do
       end
     end
 
+    it 'discloses files no measured recipe includes and the baselines without them' do
+      write_small_corpus
+      corpus = RulyBench::Corpus.new(dir)
+      result = described_class.new(corpus:, label: 'spec').result
+      excl = result['excluding_unreferenced']
+      a_tokens = RulyBench::TokenCounter.count(corpus.body('core/a.md'))
+      descriptor = RulyBench::TokenCounter.count('helper: Help out.')
+
+      expect(excl['files']).to eq(%w[core/b.md web/view.md])
+      expect(result['corpus_stats']['unreferenced_files']).to eq(2)
+      expect(excl['tokens']).to eq(%w[core/b.md web/view.md].sum { RulyBench::TokenCounter.count(corpus.body(_1)) })
+      expect(excl['baselines']).to eq('load_all' => a_tokens + descriptor, 'native_ceiling' => a_tokens + descriptor,
+                                      'native_floor' => a_tokens + descriptor)
+      expect(excl['summary']['reduction_vs_native_floor_pct']['median'])
+        .to be < result['summary']['reduction_vs_native_floor_pct']['median']
+      expect(described_class.new(corpus:, label: 'spec').to_markdown)
+        .to include('2 corpus files are in no measured recipe\'s output: `core/b.md`, `web/view.md`')
+    end
+
     it 'counts skills and commands by descriptor in load-all, never by body' do
       write_small_corpus
       stub_squash(fake_output)

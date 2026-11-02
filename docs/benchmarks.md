@@ -6,6 +6,8 @@ Ruly's case rests on two claims: a recipe-scoped `CLAUDE.local.md` costs fewer t
 
 Measured on ruly's synthetic fixture corpus, the squashed recipe output (plus the descriptions of the skills and commands it writes) was a median of 74.3% smaller than loading every rule (range 69.8% to 83.8% across five recipes). Against a native Claude Code layout of the same rules, it was a median of 68.4% smaller than the native floor (range 62.8% to 80.0%) and 74.3% smaller than the native ceiling (range 69.8% to 83.8%).
 
+Three always-loaded fixture rules (1,175 tokens) are in no recipe. They count in every baseline, because a native layout loads every rule without `paths:`, but no ruly output can include them. Left out, the medians are 70.9% vs load-all, 63.0% vs the native floor and 70.9% vs the native ceiling; see [Files in no recipe](#files-in-no-recipe).
+
 These numbers describe the fixture corpus in `bench/fixtures/corpus`, not any real rules repository. A repository whose rules are mostly needed by every task would see a smaller reduction; see [Limitations](#limitations).
 
 ### Conditions
@@ -19,7 +21,7 @@ Skill and command bodies are not counted in any condition: every condition count
 
 ### Corpus
 
-The fixture corpus has 30 markdown files: 19 always-loaded rules, 5 path-scoped rules, 4 skills and 2 commands. Its `recipes.yml` defines five recipes, each the set of files one kind of task needs: `bug`, `frontend`, `pr-review`, `ruby-feature` and `testing`.
+The fixture corpus has 30 markdown files: 19 always-loaded rules, 5 path-scoped rules, 4 skills and 2 commands. Its `recipes.yml` defines five recipes, each the set of files one kind of task needs: `bug`, `frontend`, `pr-review`, `ruby-feature` and `testing`. Three always-loaded rules, `comms/issue-tracker.md`, `comms/status-updates.md` and `database/queries.md`, are in none of the five recipes; see [Files in no recipe](#files-in-no-recipe).
 
 ### Results
 
@@ -38,6 +40,18 @@ Token counts are `cl100k_base` tokens. Percentages are reductions of ruly agains
 | vs load-all | 74.3% | 69.8% | 83.8% |
 | vs native floor | 68.4% | 62.8% | 80.0% |
 | vs native ceiling | 74.3% | 69.8% | 83.8% |
+
+### Files in no recipe
+
+`comms/issue-tracker.md`, `comms/status-updates.md` and `database/queries.md` are always-loaded rules that no fixture recipe includes: 1,175 tokens counted file by file, 14.5% of the native floor. They belong in the native baselines, because a native layout loads every rule without `paths:` frontmatter whether or not a task needs it, which is the comparison being made. But no ruly output can include them, so they raise every reduction. The harness detects such files (a file whose body, or skill or command description, appears in no measured recipe's output) and reports the baselines without them:
+
+| Baseline | Tokens without them | Median | Min | Max |
+|---|--:|--:|--:|--:|
+| vs load-all | 8,797 | 70.9% | 65.7% | 81.6% |
+| vs native floor | 6,923 | 63.0% | 56.4% | 76.6% |
+| vs native ceiling | 8,797 | 70.9% | 65.7% | 81.6% |
+
+A real repository may hold such rules too (rules kept for occasional tasks that no recipe covers yet); whether they belong in the comparison depends on whether a native user would load them. Both figures are in `tokens.json` (`summary` and `excluding_unreferenced`).
 
 The machine-readable results, including the split of each ruly total into squashed body and skill/command descriptions, are in [`bench/results/tokens.json`](../bench/results/tokens.json); [`bench/results/tokens.md`](../bench/results/tokens.md) is the same data as generated.
 
@@ -108,6 +122,7 @@ Runs are deterministic: results contain no timestamps or absolute paths, and the
 - **Synthetic corpus.** The fixture corpus was written and sized for the benchmark, and its makeup drives the percentages. A repository where most rules are needed by every task gains less from recipes; one with many task-specific rules gains more. The numbers are not a measurement of any real rules repository.
 - **Tokenizer.** `cl100k_base` is OpenAI's tiktoken encoding, not Claude's tokenizer. The counts are good for comparing conditions with each other, not as billing figures.
 - **Excluded context.** Claude Code's system prompt, tool definitions and user memory are not counted. They would add the same amount to every condition, which would shrink the percentages but not change which condition is smallest.
+- **Rules in no recipe.** Three fixture rules (1,175 tokens) are in no recipe, so they count in every baseline and in no ruly output. Without them the native-floor median falls from 68.4% to 63.0%; see [Files in no recipe](#files-in-no-recipe).
 - **One-to-one native mapping.** The native layout maps each rule file to one native rule. A native user could move more rules into skills or `paths:` scoping and get closer to ruly's numbers, so the native floor and ceiling bracket native cost rather than pin it.
 - **Path-scoped rules.** A native path-scoped rule loads only when a matching file is opened. A text-only compliance task may never open such a file, so in the native condition three of the eight rules (`rspec-expect`, `migration-up-down`, `react-named-export`) may never reach the model.
 - **Small compliance suite.** Eight tasks with one sample per task and condition is not statistically significant. The checks are regexes, which can pass a reply that breaks the rule's intent or fail one that follows it in an unexpected form.
