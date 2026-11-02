@@ -38,3 +38,243 @@ tasks:
         end
       end
       ```
+
+  - id: frozen-string-literal
+    recipe: ruby-feature
+    rule_file: ruby/style.md
+    rule_marker: 'Every Ruby file starts with the magic comment # frozen_string_literal: true.'
+    prompt: >-
+      Write a Ruby module Slugify with a method that turns an article title into a URL slug. Reply with one
+      fenced ruby code block and nothing else. Do not create or edit files.
+    checks:
+      - type: require
+        scope: code
+        pattern: '\A# frozen_string_literal: true$'
+    example_pass: |
+      ```ruby
+      # frozen_string_literal: true
+
+      module Slugify
+        def self.call(title)
+          title.downcase.strip.gsub(/[^a-z0-9]+/, '-').delete_prefix('-').delete_suffix('-')
+        end
+      end
+      ```
+    example_fail: |
+      ```ruby
+      module Slugify
+        def self.call(title)
+          title.downcase.strip.gsub(/[^a-z0-9]+/, '-').delete_prefix('-').delete_suffix('-')
+        end
+      end
+      ```
+
+  - id: no-puts-in-library
+    recipe: ruby-feature
+    rule_file: ruby/logging.md
+    rule_marker: Library code never calls puts; write through the injected logger.
+    prompt: >-
+      Write a Ruby class CsvExporter for a library gem that writes rows to a CSV file and reports progress
+      every 100 rows. Reply with one fenced ruby code block and nothing else. Do not create or edit files.
+    checks:
+      - type: forbid
+        scope: code
+        pattern: '\bputs\b'
+    example_pass: |
+      ```ruby
+      class CsvExporter
+        def initialize(path, logger:)
+          @path = path
+          @logger = logger
+        end
+
+        def export(rows)
+          CSV.open(@path, 'w') do |csv|
+            rows.each_with_index do |row, i|
+              csv << row
+              @logger.info("exported #{i + 1} rows") if ((i + 1) % 100).zero?
+            end
+          end
+        end
+      end
+      ```
+    example_fail: |
+      ```ruby
+      class CsvExporter
+        def initialize(path)
+          @path = path
+        end
+
+        def export(rows)
+          CSV.open(@path, 'w') do |csv|
+            rows.each_with_index do |row, i|
+              csv << row
+              puts "exported #{i + 1} rows" if ((i + 1) % 100).zero?
+            end
+          end
+        end
+      end
+      ```
+
+  - id: rspec-expect
+    recipe: testing
+    rule_file: testing/rspec.md
+    rule_marker: Write RSpec expectations with expect(...); never use the should syntax.
+    prompt: >-
+      Write RSpec examples for a Calculator class with add(a, b) and divide(a, b), where divide raises
+      ZeroDivisionError when b is 0. Reply with one fenced ruby code block and nothing else. Do not create
+      or edit files.
+    checks:
+      - type: forbid
+        scope: code
+        pattern: '\.should(?:_not)?\b'
+      - type: require
+        scope: code
+        pattern: '\bexpect\s*[({]'
+    example_pass: |
+      ```ruby
+      RSpec.describe Calculator do
+        it 'adds two numbers' do
+          expect(described_class.new.add(2, 3)).to eq(5)
+        end
+
+        it 'raises on division by zero' do
+          expect { described_class.new.divide(1, 0) }.to raise_error(ZeroDivisionError)
+        end
+      end
+      ```
+    example_fail: |
+      ```ruby
+      RSpec.describe Calculator do
+        it 'adds two numbers' do
+          described_class.new.add(2, 3).should eq(5)
+        end
+
+        it 'raises on division by zero' do
+          lambda { described_class.new.divide(1, 0) }.should raise_error(ZeroDivisionError)
+        end
+      end
+      ```
+
+  - id: commit-subject
+    recipe: pr-review
+    rule_file: git/commits.md
+    rule_marker: 'Commit subjects follow type(scope): summary, in lower case, at most 72 characters.'
+    prompt: >-
+      Write the commit message for a change that adds retry with exponential backoff to the payment
+      webhook handler. Reply with the commit message only.
+    checks:
+      - type: require
+        scope: first_line
+        pattern: '\A(?=.{1,72}\z)[a-z]+\([a-z0-9-]+\): [a-z]'
+    example_pass: |
+      feat(payments): retry webhook handling with exponential backoff
+
+      Transient failures from the provider no longer drop events.
+    example_fail: |
+      Add retry with exponential backoff to the payment webhook handler
+
+      Transient failures from the provider no longer drop events.
+
+  - id: migration-up-down
+    recipe: ruby-feature
+    rule_file: database/migrations.md
+    rule_marker: Every migration defines up and down methods; never define change.
+    prompt: >-
+      Write a Rails migration that adds a nullable archived_at datetime column with an index to the
+      projects table. Reply with one fenced ruby code block and nothing else. Do not create or edit files.
+    checks:
+      - type: forbid
+        scope: code
+        pattern: '\bdef change\b'
+      - type: require
+        scope: code
+        pattern: '\bdef up\b'
+      - type: require
+        scope: code
+        pattern: '\bdef down\b'
+    example_pass: |
+      ```ruby
+      class AddArchivedAtToProjects < ActiveRecord::Migration[7.1]
+        def up
+          add_column :projects, :archived_at, :datetime, null: true
+          add_index :projects, :archived_at
+        end
+
+        def down
+          remove_index :projects, :archived_at
+          remove_column :projects, :archived_at
+        end
+      end
+      ```
+    example_fail: |
+      ```ruby
+      class AddArchivedAtToProjects < ActiveRecord::Migration[7.1]
+        def change
+          add_column :projects, :archived_at, :datetime, null: true
+          add_index :projects, :archived_at
+        end
+      end
+      ```
+
+  - id: react-named-export
+    recipe: frontend
+    rule_file: frontend/components.md
+    rule_marker: React components use named exports; never export default.
+    prompt: >-
+      Write a TypeScript React function component UserBadge that shows a user's avatar and display name.
+      Reply with one fenced tsx code block and nothing else. Do not create or edit files.
+    checks:
+      - type: forbid
+        scope: code
+        pattern: '\bexport\s+default\b'
+      - type: require
+        scope: code
+        pattern: '\bexport\s+(?:function|const)\s+UserBadge\b'
+    example_pass: |
+      ```tsx
+      type UserBadgeProps = { avatarUrl: string; displayName: string };
+
+      export function UserBadge({ avatarUrl, displayName }: UserBadgeProps) {
+        return (
+          <span className="user-badge">
+            <img src={avatarUrl} alt="" />
+            {displayName}
+          </span>
+        );
+      }
+      ```
+    example_fail: |
+      ```tsx
+      type UserBadgeProps = { avatarUrl: string; displayName: string };
+
+      export default function UserBadge({ avatarUrl, displayName }: UserBadgeProps) {
+        return (
+          <span className="user-badge">
+            <img src={avatarUrl} alt="" />
+            {displayName}
+          </span>
+        );
+      }
+      ```
+
+  - id: bug-root-cause
+    recipe: bug
+    rule_file: skills/bug-report.md
+    rule_marker: 'The first line of every bug summary is Root cause: followed by one sentence.'
+    prompt: >-
+      Summarize this for the team: after the last release, password-reset emails went out twice, because the
+      mailer job was enqueued both in the controller and in an after_commit callback. Reply with the
+      summary only.
+    checks:
+      - type: require
+        scope: first_line
+        pattern: '\ARoot cause: \S'
+    example_pass: |
+      Root cause: the password-reset mailer job was enqueued twice, once in the controller and once in an after_commit callback.
+
+      Impact: every reset request since the last release sent two emails.
+    example_fail: |
+      After the last release, password-reset emails went out twice.
+
+      The mailer job was enqueued in the controller and again in an after_commit callback.

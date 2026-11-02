@@ -60,37 +60,15 @@ module RulyBench
     end
 
     def resolve_output_dir(corpus)
-      default = corpus.fixture? ? 'bench/results' : 'bench/results/local'
-      real_path(@options.fetch(:output_dir, File.join(@repo_root, default)))
+      OutputDir.resolve(corpus:, repo_root: @repo_root, requested: @options[:output_dir])
     end
 
-    # Expand a path and resolve symlinks through its nearest existing ancestor (the path may not exist yet).
-    def real_path(path)
-      path = File.expand_path(path)
-      missing = []
-      until File.exist?(path) || path == File.dirname(path)
-        missing.unshift(File.basename(path))
-        path = File.dirname(path)
-      end
-      File.join(File.realpath(path), *missing)
-    end
-
-    # A non-fixture corpus may be private: it never writes under bench/results/ outside bench/results/local/.
     def forbidden_output?(corpus, output_dir)
-      return false if corpus.fixture?
-
-      results = real_path(File.join(@repo_root, 'bench/results'))
-      local = real_path(File.join(@repo_root, 'bench/results/local'))
-      inside?(output_dir, results) && !inside?(output_dir, local)
-    end
-
-    def inside?(path, dir)
-      path == dir || path.start_with?("#{dir}/")
+      OutputDir.forbidden?(corpus:, output_dir:, repo_root: @repo_root)
     end
 
     def refuse(output_dir)
-      @err.puts "tokens: refusing to write results of a non-fixture corpus to #{output_dir}; " \
-                'use bench/results/local (git-ignored) or a directory outside bench/results'
+      @err.puts "tokens: #{OutputDir.refusal(output_dir)}"
       2
     end
 

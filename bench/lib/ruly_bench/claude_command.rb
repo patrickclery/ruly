@@ -23,5 +23,22 @@ module RulyBench
        '--no-session-persistence', '--max-budget-usd', format('%.2f', max_budget_usd),
        '--disallowedTools', DISALLOWED_TOOLS]
     end
+
+    # @param help_text [String] output of `claude --help`
+    # @return [Array<String>] one problem per flag the harness uses that the help text does not list
+    def check_cli(help_text)
+      (['--print'] + FLAGS).reject { |flag| help_text.match?(/(?<![\w-])#{Regexp.escape(flag)}(?![\w-])/) }
+                           .map { |flag| "#{flag} is not listed" }
+    end
+
+    # Runs `claude_bin --help` (no API call) and checks every flag the harness uses.
+    # @return [Array(Array<String>, Integer)] problems, and the number of flags checked
+    def check_binary(claude_bin)
+      help, = Open3.capture2e(claude_bin, '--help')
+      help = help.dup.force_encoding(Encoding::UTF_8).scrub
+      [check_cli(help).map { |problem| "#{claude_bin} --help: #{problem}" }, FLAGS.size + 1]
+    rescue SystemCallError => e
+      [["cannot run #{claude_bin} --help: #{e.class.name.split('::').last}"], 0]
+    end
   end
 end

@@ -15,11 +15,21 @@ module RulyBench
     def initialize(corpus:, path:)
       raise Error, "no task file #{path}" unless File.file?(path)
 
-      data = YAML.safe_load_file(path)
+      data = load_yaml(path)
       @tasks = data.is_a?(Hash) ? data['tasks'] : nil
       raise Error, "#{File.basename(path)} has no tasks: list" unless @tasks.is_a?(Array)
 
       @corpus = corpus
+    end
+
+    # Keep only the tasks with these ids, in suite order.
+    # @param ids [Array<String>]
+    # @return [Array<String>] the ids that name no task (nothing is filtered when any is unknown)
+    def restrict(ids)
+      known = tasks.filter_map { |task| task['id'] if task.is_a?(Hash) }
+      unknown = ids - known
+      @tasks = tasks.select { |task| task.is_a?(Hash) && ids.include?(task['id']) } if unknown.empty?
+      unknown
     end
 
     # @return [Array<String>] every problem in the suite (empty = valid)
@@ -48,6 +58,12 @@ module RulyBench
     end
 
     private
+
+    def load_yaml(path)
+      YAML.safe_load_file(path, aliases: true)
+    rescue Psych::Exception => e
+      raise Error, "#{File.basename(path)} is not valid YAML: #{e.message}"
+    end
 
     def field_problems(task)
       problems = []

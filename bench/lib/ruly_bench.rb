@@ -23,6 +23,7 @@ end
 require_relative 'ruly_bench/token_counter'
 require_relative 'ruly_bench/corpus'
 require_relative 'ruly_bench/squash_runner'
+require_relative 'ruly_bench/output_dir'
 require_relative 'ruly_bench/token_benchmark'
 require_relative 'ruly_bench/tokens_cli'
 require_relative 'ruly_bench/scorer'
