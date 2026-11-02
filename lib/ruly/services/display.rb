@@ -85,7 +85,7 @@ module Ruly
 
       def squash_summary(agent, recipe_name, recipe_config, output_file, # rubocop:disable Metrics/ParameterLists
                          local_sources, command_files, skill_files)
-        mode_desc = build_mode_description(agent, recipe_name, recipe_config)
+        mode_desc = build_mode_description(recipe_name, recipe_config)
         total_files = local_sources.size + command_files.size + skill_files.size
 
         Services::TOCGenerator.print_summary(mode_desc, output_file, total_files, agent:)
@@ -95,9 +95,8 @@ module Ruly
         puts "🎯 Saved #{skill_files.size} skill files to .claude/skills/" if agent == 'claude' && skill_files&.any?
       end
 
-      def build_mode_description(agent, recipe_name, recipe_config)
-        if agent == 'shell_gpt' then 'shell_gpt role JSON'
-        elsif recipe_name
+      def build_mode_description(recipe_name, recipe_config)
+        if recipe_name
           mode = recipe_config.is_a?(Array) ? 'agent generation' : 'squash'
           "#{mode} mode with '#{recipe_name}' recipe"
         else

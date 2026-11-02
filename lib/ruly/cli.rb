@@ -67,7 +67,7 @@ module Ruly
         return
       end
 
-      write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
+      write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
       post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
                   script_files)
 
@@ -292,7 +292,6 @@ module Ruly
     end
 
     def normalize_agent(agent)
-      agent = 'shell_gpt' if agent == 'sgpt'
       agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
       agent
     end
@@ -352,14 +351,6 @@ module Ruly
 
       dispatches = Services::SquashHelpers.collect_dispatches_from_sources(local_sources)
       Services::SquashHelpers.validate_dispatches_registered!(dispatches, recipe_config, recipe_name)
-    end
-
-    def write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
-      if agent == 'shell_gpt'
-        Services::SquashHelpers.write_shell_gpt_json(output_file, local_sources)
-      else
-        write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
-      end
     end
 
     def write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
@@ -542,7 +533,6 @@ module Ruly
     def fetch_remote_scripts(scripts) = Services::ScriptManager.fetch_remote_scripts(scripts)
     def copy_scripts(files, dest = nil) = Services::ScriptManager.copy_scripts(files, dest)
     def rewrite_script_references(content, mappings) = Services::TOCGenerator.rewrite_script_references(content, mappings)
-    def write_shell_gpt_json(file, sources) = Services::SquashHelpers.write_shell_gpt_json(file, sources)
     def collect_required_shell_commands(sources) = Services::ShellCommandChecker.collect_required_commands(sources, find_rule_file: method(:find_rule_file))
     def check_required_shell_commands(cmds) = Services::ShellCommandChecker.check_commands(cmds)
     def check_shell_command_available(cmd) = system("which #{cmd.shellescape} > /dev/null 2>&1")

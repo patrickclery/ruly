@@ -7,7 +7,7 @@ module Ruly
     # Helper methods for the squash pipeline that don't fit into other services.
     # Includes filtering, dispatch validation, recipe-tag scanning and output file
     # determination.
-    module SquashHelpers # rubocop:disable Metrics/ModuleLength
+    module SquashHelpers
       module_function
 
       # Filter sources to only those marked as essential: true in frontmatter.
@@ -136,26 +136,6 @@ module Ruly
           end
         end
         sources.sort_by { |s| s[:path] }
-      end
-
-      # Write shell_gpt JSON output format.
-      # @param output_file [String] output path
-      # @param local_sources [Array<Hash>] processed sources with :content
-      def write_shell_gpt_json(output_file, local_sources)
-        require 'json'
-
-        role_name = File.basename(output_file, '.json')
-        description_parts = local_sources.map do |source|
-          content = source[:content].dup.force_encoding('UTF-8')
-          content.scrub('?')
-        end
-
-        role_json = {
-          'description' => description_parts.join("\n\n"),
-          'name' => role_name
-        }
-
-        File.write(output_file, JSON.pretty_generate(role_json))
       end
 
       # Calculate bin file target path from relative path.
