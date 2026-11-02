@@ -111,9 +111,9 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, type: :boolean
     option :agent, aliases: '-a', default: 'claude', type: :string
     option :deepclean, default: false, type: :boolean
-    def clean(_recipe_name = nil)
+    def clean(recipe_name = nil)
       agent = normalize_agent(options[:agent] || 'claude')
-      files = collect_files_to_clean(agent)
+      files = collect_files_to_clean(agent, recipe_name)
 
       if files.empty? then puts '✨ Already clean - no files to remove'
       elsif options[:dry_run]
@@ -510,12 +510,15 @@ module Ruly
     def write_claude_plugin(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:)
       Services::ClaudePlugin.write(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:,
                                         toc: options[:toc])
+      update_git_ignores("#{dir}/", Services::ClaudePlugin::AGENT, [])
       puts "\u2705 Wrote Claude Code plugin to #{dir}", "   Load it with: claude --plugin-dir #{dir}"
     end
 
     # --- Clean helpers ---
 
-    def collect_files_to_clean(agent)
+    def collect_files_to_clean(agent, recipe_name = nil)
+      plugin = agent == Services::ClaudePlugin::AGENT && !options[:deepclean]
+      return Services::ClaudePlugin.files_to_clean(options[:output_file], recipe_name) if plugin
       return agents_md_files_to_clean if agent == Services::AgentsMd::AGENT && !options[:deepclean]
 
       files = []

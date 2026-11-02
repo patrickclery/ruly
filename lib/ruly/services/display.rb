@@ -11,7 +11,7 @@ module Ruly
       # --- Squash dry-run display ---
 
       def squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files, # rubocop:disable Metrics/ParameterLists
-                         output_file, agent, _recipe_name, recipe_config, options)
+                         output_file, agent, recipe_name, recipe_config, options)
         puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
         dry_run_clean_info(options)
         puts "Would create: #{output_file}"
@@ -20,11 +20,20 @@ module Ruly
         if agent == Services::AgentsMd::AGENT && !skill_files.empty?
           puts "  → #{skill_files.size} skill files inlined under ## Skills"
         end
+        plugin = agent == Services::ClaudePlugin::AGENT
+        dry_run_plugin_layout(recipe_name, recipe_config, command_files, skill_files) if plugin
         dry_run_commands(command_files, recipe_config) if agent == 'claude' && !command_files.empty?
-        dry_run_bins(bin_files) unless bin_files.empty?
+        scripts_dir = plugin ? "#{output_file}/scripts" : '.claude/scripts'
+        dry_run_bins(bin_files, scripts_dir:) unless bin_files.empty?
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?
         dry_run_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
         dry_run_git_info(options)
+      end
+
+      def dry_run_plugin_layout(recipe_name, recipe_config, command_files, skill_files)
+        subagents = recipe_config.is_a?(Hash) ? Array(recipe_config['subagents']).size : 0
+        puts "  → Claude Code plugin: skills/#{Services::ClaudePlugin.rules_skill_name(recipe_name)}/SKILL.md, " \
+             "#{skill_files.size} skills, #{command_files.size} commands, #{subagents} subagents"
       end
 
       def dry_run_clean_info(options)
@@ -46,8 +55,8 @@ module Ruly
         end
       end
 
-      def dry_run_bins(bin_files)
-        puts "\nWould copy script files to .claude/scripts/:"
+      def dry_run_bins(bin_files, scripts_dir: '.claude/scripts')
+        puts "\nWould copy script files to #{scripts_dir}/:"
         bin_files.each { |f| puts "  → #{Services::SquashHelpers.calculate_bin_target(f[:relative_path])} (executable)" }
       end
 
