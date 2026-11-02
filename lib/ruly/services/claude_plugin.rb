@@ -27,7 +27,6 @@ module Ruly
       RESERVED_NAMES = %w[anthropic anthropics claude claude-code claude-mods].freeze
       RESERVED_PREFIXES = %w[anthropic- anthropics- cc-plugin- claude-].freeze
       DESCRIPTION_LIMIT = 1536
-      UNSAFE_SKILL_NAMES = %w[. ..].freeze
       COMPONENT_DIRS = %w[skills commands agents].freeze
       SECRET_KEYS = %w[env headers].freeze
       PLUGIN_SCRIPTS = '${CLAUDE_PLUGIN_ROOT}/scripts'
@@ -59,7 +58,7 @@ module Ruly
           raise Ruly::Error, "-a claude-plugin needs a Hash recipe; '#{recipe_name}' is an agent (Array) recipe"
         end
 
-        unless recipe_name.match?(NAME_PATTERN) && !recipe_name.include?('..')
+        unless safe_name?(recipe_name)
           raise Ruly::Error, "Recipe name '#{recipe_name}' is not a valid plugin name " \
                              "(letters, digits, '.', '_' and '-'; no '..')"
         end
@@ -195,8 +194,8 @@ module Ruly
       # @param recipe_config [Hash] recipe configuration (omit_command_prefix)
       # @param recipe_name [String] recipe name
       # @param skill_files [Array<Hash>] recipe skills
-      # @raise [Ruly::Error] a skill named RECIPE-rules, an empty/'.'/'..' skill name, or a command
-      #   whose target is not under DIR/commands/
+      # @raise [Ruly::Error] a skill named RECIPE-rules, an unsafe skill name (see check_skill_names!),
+      #   or a command whose target is not under DIR/commands/
       def check_paths!(dir, command_files:, recipe_config:, recipe_name:, skill_files:)
         check_skill_names!(skill_files, recipe_name)
         commands_root = File.expand_path(File.join(dir, 'commands'))
@@ -210,12 +209,19 @@ module Ruly
         end
       end
 
-      # @raise [Ruly::Error] see check_paths!; warns when two skills flatten to the same name
-      def check_skill_names!(skill_files, recipe_name)
-        seen = {}
+      # Check skill names before the skills are written. Recipe skills are checked by check_paths!;
+      # each subagent's skills are checked with CLAIMED holding the skills already in the plugin.
+      # @param skill_files [Array<Hash>] skills about to be written
+      # @param recipe_name [String] recipe name
+      # @param claimed [Hash] flat skill name => source path of the skills already in the plugin;
+      #   updated with SKILL_FILES
+      # @return [Hash] claimed
+      # @raise [Ruly::Error] a name that is not a safe plugin name (NAME_PATTERN, no '..') or that
+      #   is the generated RECIPE-rules skill; warns when a name is taken by another source file
+      def check_skill_names!(skill_files, recipe_name, claimed = {})
         skill_files.each do |file|
           name = ScriptManager.flat_skill_name(file[:path])
-          if name.strip.empty? || UNSAFE_SKILL_NAMES.include?(name)
+          unless safe_name?(name)
             raise Ruly::Error, "Skill path '#{file[:path]}' maps to an unsafe plugin skill name '#{name}'"
           end
 
@@ -223,13 +229,24 @@ module Ruly
             raise Ruly::Error, "Skill '#{file[:path]}' collides with the generated rules skill #{name}"
           end
 
-          if seen.key?(name)
-            warn "\u26A0\uFE0F  Skills #{seen[name]} and #{file[:path]} both map to plugin skill '#{name}'; " \
+          if claimed.key?(name) && claimed[name] != file[:path]
+            warn "\u26A0\uFE0F  Skills #{claimed[name]} and #{file[:path]} both map to plugin skill '#{name}'; " \
                  'the last one wins'
           end
-          seen[name] = file[:path]
+          claimed[name] = file[:path]
         end
+        claimed
       end
+
+      # @param skill_files [Array<Hash>] skills already written into the plugin
+      # @return [Hash] flat skill name => source path, for check_skill_names!
+      def skill_claims(skill_files)
+        skill_files.to_h { |file| [ScriptManager.flat_skill_name(file[:path]), file[:path]] }
+      end
+
+      # @param name [String] a plugin, skill or agent name
+      # @return [Boolean] whether NAME is a single safe path segment (NAME_PATTERN, no '..')
+      def safe_name?(name) = name.match?(NAME_PATTERN) && !name.include?('..')
 
       # Write the plugin: manifest, rules skill and commands. Never writes a CLAUDE.md, a
       # SessionStart hook or an output style (plugins cannot carry always-on instructions),

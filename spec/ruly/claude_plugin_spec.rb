@@ -355,6 +355,31 @@ RSpec.describe Ruly::Services::ClaudePlugin do
       expect { check(skills: %w[rules/skills/a/b.md rules/skills/a-b.md]) }
         .to output(/both map to plugin skill 'a-b'/).to_stderr
     end
+
+    ['rules/skills/.hidden.md', 'rules/skills/a..b.md'].each do |path|
+      it "refuses the skill #{path}, which is not a safe plugin name" do
+        expect { check(skills: [path]) }.to raise_error(Ruly::Error, /unsafe plugin skill name/)
+      end
+    end
+  end
+
+  describe '.check_skill_names! with claimed skills (subagent skills)' do
+    let(:claimed) { described_class.skill_claims([{path: 'rules/skills/deploy.md'}]) }
+
+    def check(*paths) = described_class.check_skill_names!(paths.map { |p| {path: p} }, 'demo', claimed)
+
+    it 'refuses the rules skill name' do
+      expect { check('rules/sub/skills/demo-rules.md') }.to raise_error(Ruly::Error, /collides with the generated/)
+    end
+
+    it 'warns when a claimed name comes from another file' do
+      expect { check('rules/sub/skills/deploy.md') }.to output(/both map to plugin skill 'deploy'/).to_stderr
+    end
+
+    it 'is silent for the same file and records new names' do
+      expect { expect(check('rules/skills/deploy.md', 'rules/skills/review.md').keys).to eq(%w[deploy review]) }
+        .not_to output.to_stderr
+    end
   end
 
   describe '.hook_command' do

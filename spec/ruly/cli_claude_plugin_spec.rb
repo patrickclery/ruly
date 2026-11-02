@@ -208,6 +208,34 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
   end
 
+  context 'with subagent skills' do
+    def add_helper_skill(path, body = "---\ndescription: Helper skill\n---\n# Helper skill\n")
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, body)
+      skill_line = "      - rules/skills/review.md\n"
+      File.write('.recipes.yml', read_utf8('.recipes.yml').sub(skill_line, "#{skill_line}      - #{path}\n"))
+    end
+
+    it 'refuses one named like the rules skill and never overwrites the rules skill' do
+      add_helper_skill('rules/skills/demo-rules.md')
+      expect_refusal(%w[squash demo -a claude-plugin], /collides with the generated rules skill demo-rules/)
+      expect(File.exist?(rules_skill_path) && read_utf8(rules_skill_path).include?('# Helper skill')).to be(false)
+    end
+
+    it 'refuses one whose flattened name is unsafe' do
+      add_helper_skill('rules/skills/...md')
+      expect_refusal(%w[squash demo -a claude-plugin], /unsafe plugin skill name '\.\.'/)
+      expect(File.exist?(File.join(plugin_dir, 'skills', 'SKILL.md'))).to be(false)
+    end
+
+    it 'warns when one takes the name of a recipe skill from another file' do
+      add_helper_skill('rules/helper/skills/deploy.md')
+      expect { run_cli('squash', 'demo', '-a', 'claude-plugin') }
+        .to output(%r{rules/skills/deploy.md and rules/helper/skills/deploy.md both map to plugin skill 'deploy'})
+        .to_stderr
+    end
+  end
+
   context 'with the claude_plugin alias' do
     it 'writes the plugin dir' do
       run_cli('squash', 'demo', '-a', 'claude_plugin')

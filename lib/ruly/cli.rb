@@ -473,14 +473,14 @@ module Ruly
 
     def load_recipes_proc = -> { load_all_recipes }
 
-    def process_subagents(recipe_config, recipe_name, plugin_dir: nil, recipe_paths: Set.new)
+    def process_subagents(recipe_config, recipe_name, plugin_dir: nil, plugin_skills: [], recipe_paths: Set.new)
       Services::SubagentProcessor.process_subagents(
         recipe_config, recipe_name,
         find_rule_file: method(:find_rule_file),
         load_all_recipes: load_recipes_proc,
         load_recipe_sources: ->(name) { load_sources(name) },
         parse_frontmatter: Services::FrontmatterParser.method(:parse),
-        plugin_dir:,
+        plugin_dir:, plugin_skills:,
         process_sources_for_squash: method(:process_sources_for_squash),
         recipe_paths:,
         save_skill_files: method(:save_skill_files),
@@ -496,7 +496,8 @@ module Ruly
       Services::ClaudePlugin.write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:,
                                         script_files:, script_mappings:, skill_files:, toc: options[:toc])
       save_skill_files(skill_files, recipe_paths:, skills_dir: File.join(dir, 'skills'))
-      subagent_skills = process_subagents(recipe_config, recipe_name, plugin_dir: dir, recipe_paths:)
+      subagent_skills = process_subagents(recipe_config, recipe_name, plugin_dir: dir, plugin_skills: skill_files,
+                                                                      recipe_paths:)
       Services::ClaudePlugin.rewrite_script_paths(dir)
       update_git_ignores("#{dir}/", Services::ClaudePlugin::AGENT, [])
       run_checks(local_sources, command_files, recipe_paths, skill_files + Array(subagent_skills))
