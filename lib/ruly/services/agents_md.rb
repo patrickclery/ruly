@@ -29,6 +29,18 @@ module Ruly
         requested
       end
 
+      # Whether a file was written by ruly (line 1 starts with the ruly marker).
+      # Reads only the first line.
+      # @param path [String] file path
+      # @return [Boolean]
+      def generated?(path)
+        return false unless File.file?(path)
+
+        File.open(path, &:gets).to_s.start_with?(MARKER)
+      rescue SystemCallError
+        false
+      end
+
       # Generated-file header written on line 1.
       # @param recipe_name [String, nil] recipe name
       # @return [String] HTML comment header
