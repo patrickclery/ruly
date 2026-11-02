@@ -46,7 +46,7 @@ Phases execute in numeric order.
 | 1. Core Platform | N/A | Complete | Pre-existing |
 | 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
 | 3. Emphasize Core Advantages | 1/1 | In Progress | - |
-| 4. AGENTS.md Output Target | 1/2 | In Progress | - |
+| 4. AGENTS.md Output Target | 2/2 | In Progress | - |
 | 5. Claude Code Plugin Packaging | 0 | Not started | - |
 | 6. Token and Compliance Benchmark | 0 | Not started | - |
 | 7. Competitor Composition Audit | 0 | Not started | - |
@@ -84,14 +84,14 @@ Plans:
 **Goal:** Emit AGENTS.md from a recipe so ruly reaches the ~30-60 agents Ruler/rulesync cover without per-agent adapters, keeping recipe composition as ruly's layer.
 **Requirements**: TBD
 **Depends on:** Phase 3
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 **Wave 1**
 - [x] 04-01-PLAN.md — `-a agents` writes AGENTS.md (tracer), skills inlined + skipped-parts notice + checks, marker-gated clean/overwrite guard, git-ignore
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 04-02-PLAN.md — README AGENTS.md Output section, 0.3.0 version/gemspec/CHANGELOG, installed binary refresh, closing gates
+- [x] 04-02-PLAN.md — README AGENTS.md Output section, 0.3.0 version/gemspec/CHANGELOG, installed binary refresh, closing gates
 
 ### Phase 5: Claude Code Plugin Packaging
 
