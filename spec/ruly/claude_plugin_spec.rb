@@ -498,6 +498,39 @@ RSpec.describe Ruly::Services::ClaudePlugin do
       servers = {'e' => {'env' => {'K' => ''}}, 'h' => {'headers' => {'Authorization' => 'Bearer abc'}}}
       expect(described_class.literal_secret_servers(servers)).to eq(['h'])
     end
+
+    [
+      %w[grafana-mcp --token glsa_SECRET123],
+      %w[server --api-key=abc123],
+      %w[server API_KEY=abc123],
+      %w[server --password hunter2],
+      %w[server ghp_0123456789abcdefABCDEF],
+      ['server', 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8']
+    ].each do |args|
+      it "names a server with args #{args.inspect}" do
+        expect(described_class.literal_secret_servers({'s' => {'args' => args}})).to eq(['s'])
+      end
+    end
+
+    it 'does not name servers with ordinary or ${VAR} args' do
+      args = ['-y', '@modelcontextprotocol/server-filesystem', '/home/me/projects', '--port', '8080',
+              '--token', '${TOKEN}', '--api-key=${KEY}', '--no-auth', '--verbose', 'mcp-server-grafana']
+      expect(described_class.literal_secret_servers({'s' => {'args' => args}})).to eq([])
+    end
+
+    ['https://user:pass@mcp.example.com/sse', 'https://mcp.example.com/mcp?api_key=abc123',
+     'https://mcp.example.com/mcp?page=2&access_token=abc'].each do |url|
+      it "names a server with url #{url}" do
+        expect(described_class.literal_secret_servers({'s' => {'url' => url}})).to eq(['s'])
+      end
+    end
+
+    it 'does not name servers with an ordinary or ${VAR} url' do
+      servers = {'a' => {'url' => 'https://mcp.example.com/mcp?page=2'},
+                 'b' => {'url' => 'https://${MCP_HOST}/mcp?token=${MCP_TOKEN}'},
+                 'c' => {'url' => 'https://${USER}:${PASS}@mcp.example.com/sse'}}
+      expect(described_class.literal_secret_servers(servers)).to eq([])
+    end
   end
 
   describe '.write_mcp' do
@@ -514,8 +547,14 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     it 'names literal-secret servers on stderr without printing the value' do
       stub_servers('grafana' => {'command' => 'mcp-grafana', 'env' => {'KEY' => 'stub-secret-value'}})
       expect { described_class.write_mcp('plug', ['grafana']) }
-        .to output(a_string_including('literal env/headers values for: grafana')
+        .to output(a_string_including('may be secrets (env, headers, args or url) for: grafana')
           .and(satisfy { |err| !err.include?('stub-secret-value') })).to_stderr
+    end
+
+    it 'names a server with a token in args without printing it' do
+      stub_servers('grafana' => {'args' => %w[grafana-mcp --token glsa_SECRET123], 'command' => 'npx'})
+      expect { described_class.write_mcp('plug', ['grafana']) }
+        .to output(a_string_including('for: grafana').and(satisfy { |err| !err.include?('glsa_SECRET123') })).to_stderr
     end
 
     it 'does not warn for ${...} values' do

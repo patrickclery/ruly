@@ -176,7 +176,7 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
 
     it 'names the literal-secret server and never prints the value' do
-      expect([stderr.string.include?('literal env/headers values for: grafana'),
+      expect([stderr.string.include?('may be secrets (env, headers, args or url) for: grafana'),
               "#{stdout}#{stderr.string}".include?('fixture-secret-value')]).to eq([true, false])
     end
 

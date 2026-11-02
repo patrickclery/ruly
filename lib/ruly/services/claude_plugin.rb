@@ -29,6 +29,15 @@ module Ruly
       DESCRIPTION_LIMIT = 1536
       COMPONENT_DIRS = %w[skills commands agents].freeze
       SECRET_KEYS = %w[env headers].freeze
+      # A flag, KEY=VALUE key or URL query parameter that names a credential.
+      SECRET_NAME = /token|secret|passw(?:or)?d|\Apwd\z|api-?_?key|apikey|access-?_?key|private-?_?key|auth|
+                     credential|bearer|signature|\A-*key\z|\Asig\z/xi
+      # Literal args shaped like credentials: well-known token prefixes, or a long opaque word
+      # mixing letters and digits.
+      TOKEN_SHAPES = [
+        /\A(?:gh[pousr]_|github_pat_|glsa_|glpat-|sk-|sk_live_|xox[abpr]-|AKIA|AIza)[\w-]{12,}\z/,
+        /\A(?=[\w-]*\d)(?=[\w-]*[A-Za-z])[\w-]{32,}\z/
+      ].freeze
       PLUGIN_SCRIPTS = '${CLAUDE_PLUGIN_ROOT}/scripts'
       # `.claude/scripts/X` not preceded by a word character, '/', '.' or '~' (so `~/.claude/...`
       # and `$HOME/.claude/...` stay put); X ends in a word character (no trailing sentence dot).
@@ -445,20 +454,60 @@ module Ruly
         names = literal_secret_servers(servers)
         return if names.empty?
 
-        warn "\u26A0\uFE0F  #{dir}/.mcp.json has literal env/headers values for: #{names.join(', ')}. " \
-             'Replace them with ${VAR} references before sharing the plugin.'
+        warn "\u26A0\uFE0F  #{dir}/.mcp.json has literal values that may be secrets (env, headers, args or url) " \
+             "for: #{names.join(', ')}. Replace them with ${VAR} references before sharing the plugin."
       end
 
+      # Servers whose config holds a literal (not `${VAR}`) value that may be a credential: any
+      # env or headers value, a secret-looking args entry (see secret_args?) or a url with
+      # userinfo or a credential query parameter. Values are never returned or printed.
       # @param servers [Hash] name => server config
-      # @return [Array<String>] sorted names whose env or headers Hash holds a non-empty String without '${'
+      # @return [Array<String>] sorted server names
       def literal_secret_servers(servers)
         servers.select do |_name, config|
-          config.is_a?(Hash) && SECRET_KEYS.any? do |key|
-            config[key].is_a?(Hash) && config[key].values.any? do |value|
-              value.is_a?(String) && !value.empty? && !value.include?('${')
-            end
-          end
+          config.is_a?(Hash) &&
+            (SECRET_KEYS.any? { |key| config[key].is_a?(Hash) && config[key].values.any? { |v| literal?(v) } } ||
+              secret_args?(config['args']) || secret_url?(config['url']))
         end.keys.sort
+      end
+
+      # @return [Boolean] whether VALUE is a non-empty String without a `${` reference
+      def literal?(value) = value.is_a?(String) && !value.empty? && !value.include?('${')
+
+      # Secret-looking args: a literal after a credential flag (`--token X`), a credential
+      # `--flag=X` or `KEY=X`, or a literal shaped like a token (TOKEN_SHAPES).
+      # @param args [Array, nil] the server's args
+      # @return [Boolean]
+      def secret_args?(args)
+        return false unless args.is_a?(Array)
+
+        args.each_cons(2).any? { |flag, value| secret_flag?(flag) && literal?(value) && !value.start_with?('-') } ||
+          args.any? { |arg| secret_arg?(arg) }
+      end
+
+      # @return [Boolean] whether ARG is a flag naming a credential (`--token`, `--api-key`)
+      def secret_flag?(arg) = arg.is_a?(String) && arg.match?(/\A--?[\w-]+\z/) && arg.match?(SECRET_NAME)
+
+      # @return [Boolean] whether ARG is a literal `NAME=VALUE` with a credential NAME, or token-shaped
+      def secret_arg?(arg)
+        return false unless literal?(arg)
+
+        name, value = arg.split('=', 2)
+        return true if literal?(value) && name.match?(/\A-*[\w.-]+\z/) && name.match?(SECRET_NAME)
+
+        TOKEN_SHAPES.any? { |shape| arg.match?(shape) }
+      end
+
+      # @return [Boolean] whether URL has literal userinfo (`https://u:p@host`) or a literal
+      #   credential query parameter (`?api_key=X`)
+      def secret_url?(url)
+        return false unless url.is_a?(String)
+        return true if literal?(url[%r{\A[a-z][a-z0-9+.-]*://([^/?#]*)@}i, 1])
+
+        url[/\?([^#]*)/, 1].to_s.split('&').any? do |pair|
+          name, value = pair.split('=', 2)
+          literal?(value) && name.match?(SECRET_NAME)
+        end
       end
 
       # Rewrite `.claude/scripts/X` to `${CLAUDE_PLUGIN_ROOT}/scripts/X` in the markdown under
