@@ -274,6 +274,17 @@ RSpec.describe RulyBench do
       expect(RulyBench::TokenBenchmark).to have_received(:new).with(hash_including(label: 'fixture'))
     end
 
+    it 'returns 2 on an unknown --recipes name without measuring' do
+      expect(cli('--corpus', dir, '--recipes', 'demo,dmeo').run).to eq(2)
+      expect(err.string).to include('unknown recipe dmeo')
+      expect(RulyBench::TokenBenchmark).not_to have_received(:new)
+    end
+
+    it 'measures a repeated --recipes name once' do
+      expect(cli('--corpus', dir, '--recipes', 'demo,demo').run).to eq(0)
+      expect(RulyBench::TokenBenchmark).to have_received(:new).with(hash_including(recipe_names: %w[demo]))
+    end
+
     it 'returns 2 on an unknown option' do
       expect(cli('--bogus').run).to eq(2)
       expect(err.string).to include('--bogus')

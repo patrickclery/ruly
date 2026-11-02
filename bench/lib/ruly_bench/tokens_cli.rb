@@ -24,13 +24,15 @@ module RulyBench
       output_dir = resolve_output_dir(corpus)
       return refuse(output_dir) if forbidden_output?(corpus, output_dir)
 
+      unknown = unknown_recipes(corpus)
+      return usage("unknown recipe #{unknown.join(', ')}") unless unknown.empty?
+
       benchmark = TokenBenchmark.new(corpus:, label: label(corpus), recipe_names: @options[:recipes])
       write(benchmark, output_dir)
       report(benchmark)
       0
     rescue OptionParser::ParseError => e
-      @err.puts "tokens: #{e.message}"
-      2
+      usage(e.message)
     rescue Error => e
       @err.puts "tokens: #{e.message}"
       1
@@ -69,6 +71,19 @@ module RulyBench
 
     def refuse(output_dir)
       @err.puts "tokens: #{OutputDir.refusal(output_dir)}"
+      2
+    end
+
+    # A misspelled name would only show up as a skipped squash; a repeated one would count twice in the median.
+    def unknown_recipes(corpus)
+      return [] unless @options[:recipes]
+
+      @options[:recipes] = @options[:recipes].uniq
+      @options[:recipes] - corpus.recipes.keys
+    end
+
+    def usage(message)
+      @err.puts "tokens: #{message}"
       2
     end
 
