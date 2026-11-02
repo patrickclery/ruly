@@ -95,6 +95,25 @@ RSpec.describe RulyBench do
       expect(described_class.reduction(300, 100)).to eq(66.7)
     end
 
+    it 'reports no reduction (nil, rendered n/a) against an empty baseline' do
+      expect(described_class.reduction(0, 25)).to be_nil
+      expect(described_class.median([])).to be_nil
+    end
+
+    it 'renders n/a against the empty native floor of a corpus with only path-scoped rules' do
+      write('web/view.md', "---\npaths:\n  - \"**/*.tsx\"\n---\n# Views\n\nViews render data and hold no logic.\n")
+      write('recipes.yml', "recipes:\n  demo:\n    files:\n      - web/view.md\n")
+      stub_squash('claude_local_md' => "# Views\n\nViews render data and hold no logic.\n", 'descriptors' => [])
+      benchmark = described_class.new(corpus: RulyBench::Corpus.new(dir), label: 'spec')
+      row = benchmark.result['recipes'].first
+
+      expect(row['native_floor']).to eq(0)
+      expect(row['reduction_vs_native_floor_pct']).to be_nil
+      empty = {'max' => nil, 'median' => nil, 'min' => nil}
+      expect(benchmark.result['summary']['reduction_vs_native_floor_pct']).to eq(empty)
+      expect(benchmark.to_markdown).to include('- vs native floor: median n/a (min n/a, max n/a)')
+    end
+
     it 'takes the median of an even count as the mean of the middle two' do
       expect(described_class.median([1.0, 2.0, 4.0, 10.0])).to eq(3.0)
     end

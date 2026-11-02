@@ -106,10 +106,12 @@ module RulyBench
                          name: r['name'], ruly: r['ruly_total'])
       end
       summary = result['summary']
+      medians = %w[load_all native_floor native_ceiling].map do |b|
+        median = summary["reduction_vs_#{b}_pct"]['median']
+        median.nil? ? 'n/a' : "#{median}%"
+      end
       @out.puts "#{summary['recipes']} recipes measured, #{result['skipped'].size} skipped; median reduction " \
-                "vs load-all #{summary['reduction_vs_load_all_pct']['median']}%, " \
-                "vs native floor #{summary['reduction_vs_native_floor_pct']['median']}%, " \
-                "vs native ceiling #{summary['reduction_vs_native_ceiling_pct']['median']}%"
+                "vs load-all #{medians[0]}, vs native floor #{medians[1]}, vs native ceiling #{medians[2]}"
     end
   end
 end

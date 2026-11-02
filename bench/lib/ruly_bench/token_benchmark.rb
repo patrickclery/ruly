@@ -13,15 +13,16 @@ module RulyBench
     attr_reader :corpus, :label
 
     # Reduction of ruly against a baseline in percent, rounded to one decimal; negative when ruly is larger.
+    # nil for an empty baseline, where no percentage is meaningful (0.0 would hide an increase).
     def self.reduction(baseline, ruly)
-      return 0.0 if baseline.zero?
+      return nil if baseline.zero?
 
       ((baseline - ruly) * 100.0 / baseline).round(1)
     end
 
-    # Median rounded to one decimal; an even count takes the mean of the middle two.
+    # Median rounded to one decimal; an even count takes the mean of the middle two; nil when there is no value.
     def self.median(values)
-      return 0.0 if values.empty?
+      return nil if values.empty?
 
       sorted = values.sort
       mid = sorted.size / 2
@@ -183,8 +184,8 @@ module RulyBench
 
     def summary(rows)
       stats = REDUCTION_KEYS.values.sort.to_h do |key|
-        values = rows.map { |r| r[key] }
-        [key, {'max' => values.max || 0.0, 'median' => self.class.median(values), 'min' => values.min || 0.0}]
+        values = rows.filter_map { |r| r[key] }
+        [key, {'max' => values.max, 'median' => self.class.median(values), 'min' => values.min}]
       end
       {'recipes' => rows.size}.merge(stats).sort.to_h
     end
@@ -262,7 +263,7 @@ module RulyBench
 
     def tokens(num) = Ruly::Operations::Stats.format_number(num)
 
-    def pct(value) = format('%.1f%%', value)
+    def pct(value) = value.nil? ? 'n/a' : format('%.1f%%', value)
 
     def skipped_lines
       return [] if result['skipped'].empty?
