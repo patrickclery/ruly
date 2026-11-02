@@ -248,8 +248,9 @@ module Ruly
       # @return [Boolean] whether NAME is a single safe path segment (NAME_PATTERN, no '..')
       def safe_name?(name) = name.match?(NAME_PATTERN) && !name.include?('..')
 
-      # Write the plugin: manifest, rules skill, commands, scripts, hooks and MCP servers, then the
-      # block's parts (recipe skills and subagents), then the plugin-root script paths. Never writes
+      # Write the plugin: manifest, rules skill, commands and scripts, then the block's parts (recipe
+      # skills and subagents, which copy their own scripts), then hooks, MCP servers and the
+      # plugin-root script paths, which rely on DIR/scripts holding every script. Never writes
       # a CLAUDE.md, a SessionStart hook or an output style (plugins cannot carry always-on
       # instructions), and never adds component keys to plugin.json (the default directory scan
       # stays in effect). The skill and command paths are checked before anything is written, and
@@ -277,23 +278,24 @@ module Ruly
           write_rules_skill(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
           write_components(dir, bin_files:, command_files:, gem_root:, recipe_config:, script_files:)
           result = yield
+          # After the block, so hook commands and markdown see the subagents' scripts too.
+          write_hooks(dir, recipe_config)
+          write_mcp(dir, Array(recipe_config['mcp_servers']))
           rewrite_script_paths(dir)
           result
         end
       end
 
-      # Write the recipe commands, scripts, hooks and MCP servers into DIR.
+      # Write the recipe commands and scripts into DIR.
       def write_components(dir, bin_files:, command_files:, gem_root:, recipe_config:, script_files:)
         unless command_files.empty?
           ScriptManager.save_command_files(command_files, recipe_config, commands_dir: File.join(dir, 'commands'),
                                                                          gem_root:)
         end
         ScriptManager.copy_script_files(bin_files, scripts_dir: File.join(dir, 'scripts')) unless bin_files.empty?
-        if Array(script_files[:local]).any? || Array(script_files[:remote]).any?
-          ScriptManager.copy_scripts(script_files, File.join(dir, 'scripts'))
-        end
-        write_hooks(dir, recipe_config)
-        write_mcp(dir, Array(recipe_config['mcp_servers']))
+        return unless Array(script_files[:local]).any? || Array(script_files[:remote]).any?
+
+        ScriptManager.copy_scripts(script_files, File.join(dir, 'scripts'))
       end
 
       # Run the block with DIR emptied down to the ownership marker (see reset_dir). A previous

@@ -196,6 +196,24 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
   end
 
+  context 'with a hook that runs a subagent script' do
+    before do
+      File.write('rules/scripts/helper.sh', "#!/bin/sh\necho helper\n")
+      type_line = "              type: command\n"
+      hook = "            - command: .claude/scripts/helper.sh\n#{type_line}"
+      scripts = "    scripts:\n      - rules/scripts/helper.sh\n"
+      File.write('.recipes.yml', read_utf8('.recipes.yml').sub(type_line, "#{type_line}#{hook}")
+                                   .sub("    description: Subagent fixture\n", "\\0#{scripts}"))
+    end
+
+    it 'rewrites it to the plugin root without a warning' do
+      expect { run_cli('squash', 'demo', '-a', 'claude-plugin') }.not_to output.to_stderr
+      hooks = JSON.parse(read_utf8(File.join(plugin_dir, 'hooks/hooks.json')))
+      expect(hooks.dig('hooks', 'Stop', 0, 'hooks').map { |h| h['command'] })
+        .to eq(['"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"', '"${CLAUDE_PLUGIN_ROOT}/scripts/helper.sh"'])
+    end
+  end
+
   context 'with a recipe skill named like the rules skill' do
     before do
       File.write('rules/skills/demo-rules.md', "---\ndescription: Clash\n---\n# Clash\n")
