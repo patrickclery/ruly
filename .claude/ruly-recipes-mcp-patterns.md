@@ -35,13 +35,13 @@ files:
 ```yaml
 # ✅ Use directory path when including all files
 files:
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/bug/  # Includes all .md files
+  - workaxle/core/bug/  # Includes all .md files
 
 # ✅ List specific files when being selective
 files:
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
+  - workaxle/core/frameworks/rspec-basics.md
+  - workaxle/core/frameworks/rspec-sequel.md
+  - workaxle/core/frameworks/rspec-factories.md
 ```
 
 ### 3. MCP Server Selection
@@ -102,11 +102,11 @@ Inheritance chain: subagent `model` > recipe `model` > `inherit`
 workaxle-bug:
   description: "WorkAxle bug investigation and fixing"
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/recipes/bug-investigation.md
-    - /Users/patrick/Projects/ruly/rules/bug/
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
+    - workaxle/core.md
+    - workaxle/recipes/bug-investigation.md
+    - bug/
+    - workaxle/commands/diagnose.md
+    - workaxle/commands/fix.md
   mcp_servers:
     - teams           # For Teams DM notifications
     # Note: Jira uses CLI (jira issue view, jira issue move, etc.)
@@ -119,10 +119,10 @@ workaxle-bug:
 workaxle-review:
   description: "WorkAxle final review and QA stage"
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-    - /Users/patrick/Projects/ruly/rules/github/pr/
-    - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-    - /Users/patrick/Projects/ruly/rules/comms/  # Includes jira, confluence
+    - workaxle/core.md
+    - github/pr/
+    - workaxle/core/testing/
+    - comms/  # Includes jira, confluence
   mcp_servers:
     - atlassian       # For Confluence page creation only
   # playwright-cli is available globally via npm — no MCP server needed
@@ -172,18 +172,10 @@ files:
 # AVOID - This defeats token optimization
 workaxle:
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/  # Too broad for most tasks
+    - workaxle/  # Too broad for most tasks
 ```
 
-### 3. ❌ Relative Paths
-
-```yaml
-# WRONG - Must use absolute paths
-files:
-  - rules/workaxle/core.md  # Missing full path
-```
-
-### 4. ❌ Unnecessary MCP Servers
+### 3. ❌ Unnecessary MCP Servers
 
 ```yaml
 # WRONG - Including atlassian when only Jira (not Confluence) is needed
