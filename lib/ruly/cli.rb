@@ -468,24 +468,7 @@ module Ruly
     end
 
     def merge_mcp_servers(recipe_config, local_sources)
-      servers = Services::MCPManager.collect_mcp_servers_from_sources(local_sources)
-      if servers.any?
-        recipe_config = {} unless recipe_config.is_a?(Hash)
-        existing = Array(recipe_config['mcp_servers'])
-        new_servers = servers - existing
-        recipe_config['mcp_servers'] = (existing + servers).uniq
-        puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
-      end
-      if recipe_config.is_a?(Hash) && recipe_config['subagents']
-        orig = Array(recipe_config['mcp_servers'])
-        all = Services::MCPManager.collect_all_mcp_servers(recipe_config, load_all_recipes: load_recipes_proc)
-        if all.any?
-          propagated = all - orig
-          recipe_config['mcp_servers'] = all
-          puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
-        end
-      end
-      recipe_config
+      Services::MCPManager.merge_recipe_servers(recipe_config, local_sources, load_all_recipes: load_recipes_proc)
     end
 
     def load_recipes_proc = -> { load_all_recipes }

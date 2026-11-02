@@ -60,6 +60,33 @@ module Ruly
         servers.uniq
       end
 
+      # Add the MCP servers named in rule-file frontmatter and in subagent recipes to the recipe's
+      # `mcp_servers`, printing the names each step adds.
+      # @param recipe_config [Hash, nil] recipe configuration (a Hash is updated in place)
+      # @param local_sources [Array<Hash>] processed rule sources
+      # @param load_all_recipes [Proc] callable returning all recipes hash
+      # @return [Hash, nil] the recipe configuration ({} when servers were found and it was not a Hash)
+      def merge_recipe_servers(recipe_config, local_sources, load_all_recipes:)
+        servers = collect_mcp_servers_from_sources(local_sources)
+        if servers.any?
+          recipe_config = {} unless recipe_config.is_a?(Hash)
+          existing = Array(recipe_config['mcp_servers'])
+          new_servers = servers - existing
+          recipe_config['mcp_servers'] = (existing + servers).uniq
+          puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
+        end
+        if recipe_config.is_a?(Hash) && recipe_config['subagents']
+          orig = Array(recipe_config['mcp_servers'])
+          all = collect_all_mcp_servers(recipe_config, load_all_recipes:)
+          if all.any?
+            propagated = all - orig
+            recipe_config['mcp_servers'] = all
+            puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
+          end
+        end
+        recipe_config
+      end
+
       # Update MCP settings based on recipe config, writing .mcp.json or .mcp.yml.
       # @param recipe_config [Hash, nil] recipe configuration with optional 'mcp_servers'
       # @param agent [String] target agent name ('claude' writes JSON, others write YAML)
