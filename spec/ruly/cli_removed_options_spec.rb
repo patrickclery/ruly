@@ -35,6 +35,36 @@ RSpec.describe Ruly::CLI, '.start' do
     end
   end
 
+  context 'with the removed TaskMaster switches' do
+    it 'rejects squash -T' do
+      expect_unknown_switch(%w[squash -T], '-T')
+    end
+
+    it 'rejects squash --taskmaster-config' do
+      expect_unknown_switch(%w[squash --taskmaster-config], '--taskmaster-config')
+    end
+
+    it 'rejects squash --keep-taskmaster' do
+      expect_unknown_switch(%w[squash --keep-taskmaster], '--keep-taskmaster')
+    end
+
+    it 'rejects clean -T' do
+      expect_unknown_switch(%w[clean -T], '-T')
+    end
+  end
+
+  context 'when a .taskmaster/ directory exists' do
+    before do
+      FileUtils.mkdir_p('.claude')
+      FileUtils.mkdir_p('.taskmaster')
+    end
+
+    it 'never lists .taskmaster/ in clean --deepclean --dry-run' do
+      expect { described_class.start(%w[clean --deepclean --dry-run]) }
+        .to output(a_string_including('.claude/').and(satisfy { |out| !out.include?('.taskmaster') })).to_stdout
+    end
+  end
+
   context 'with kept switches' do
     it 'still parses clean --dry-run' do
       expect { described_class.start(%w[clean --dry-run]) }.to output(/Already clean/).to_stdout
