@@ -311,8 +311,8 @@ RSpec.describe RulyBench do
 
         expect(result['complete']).to be(false)
         expect(result['tasks'].map { _1['id'] }).to eq(%w[no-shout])
-        expect(journal.map { [_1['id'], _1['condition']] }).to eq([%w[no-shout ruly], %w[no-shout native],
-                                                                    %w[no-shout-bye ruly]])
+        expected = [%w[no-shout ruly], %w[no-shout native], %w[no-shout-bye ruly]]
+        expect(journal.map { [_1['id'], _1['condition']] }).to eq(expected)
         expect(File.read(File.join(output_dir, 'compliance.md'))).to include('**Incomplete run:**')
       end
 
