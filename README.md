@@ -7,6 +7,16 @@
 ╚═╝░░╚═╝░╚═════╝░╚══════╝░░░╚═╝░░░
 ```
 
+## Why ruly
+
+Ruly compiles the rules each task needs, from one shared rules repository, into the files Claude Code reads: `CLAUDE.local.md`, `.claude/skills/`, `.claude/commands/` and `.claude/agents/`.
+
+- **Task-scoped recipes:** a named recipe lists the rule files, skills, commands and MCP servers for one kind of work, and `ruly squash <recipe>` writes only that set.
+- **`requires:` dependency resolution:** rule files declare their dependencies; ruly resolves them recursively, includes each file once, and `ruly stats` reports circular `requires:` chains.
+- **A recipe and model per subagent:** each entry under a recipe's `subagents:` gets its own recipe and model, written to `.claude/agents/`.
+- **One rules repo on every machine:** `ruly squash --sync` mirrors a shared `recipes.yml` and the files it uses; per-machine `overrides:` add to it without copying it.
+- **Checks after every squash:** ambiguous anchor links, and files that several skills require but the recipe leaves out, are reported.
+
 ## 🚀 Quick Install
 
 ### One-Line Installation

@@ -9,10 +9,10 @@ export default function Home() {
           gem install ruly
         </div>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-          Bring your own rules, skills, and agents to anywhere Claude is installed.
+          Compose the rules each task needs from one shared rules repo.
         </h1>
         <p className="mt-6 text-lg text-gray-400 sm:text-xl">
-          Three modes: override everything with your stack, merge permanently into theirs, or slip in through gitignored files — invisible to their codebase.
+          Recipes pick the rules, skills and commands for a task, and requires: pulls in their dependencies. Each subagent gets its own recipe and model, ruly squash --sync shares one rules repo across machines with per-machine overrides:, and every squash runs checks on the output.
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <a
@@ -40,9 +40,9 @@ export default function Home() {
             <svg className="h-8 w-8 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-9.75 5.25m0 0v6.75m5.571-8.25l4.179 2.25m0 0L12 20.25 2.25 14.25" />
             </svg>
-            <h3 className="text-lg font-semibold text-white">Profiles</h3>
+            <h3 className="text-lg font-semibold text-white">Recipes</h3>
             <p className="mt-2 text-sm text-gray-400">
-              Define task-specific profiles that load only the rules you need. One YAML file controls everything.
+              A named recipe lists the rule files, skills and commands for one task. Dependencies declared with requires: are resolved and included once, and circular chains are reported.
             </p>
           </div>
           <div className="card-glow rounded-lg border border-gray-800 bg-bg-secondary p-6 transition duration-200">
@@ -51,16 +51,16 @@ export default function Home() {
             </svg>
             <h3 className="text-lg font-semibold text-white">Subagents</h3>
             <p className="mt-2 text-sm text-gray-400">
-              Dispatch specialized agents into repos. Each inherits its repo&apos;s CLAUDE.md, rules, and hooks automatically.
+              Each subagent gets its own recipe and model, written to .claude/agents/. The model falls back from the subagent to the recipe to inherit.
             </p>
           </div>
           <div className="card-glow rounded-lg border border-gray-800 bg-bg-secondary p-6 transition duration-200">
             <svg className="h-8 w-8 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
             </svg>
-            <h3 className="text-lg font-semibold text-white">Three Modes</h3>
+            <h3 className="text-lg font-semibold text-white">Sync and checks</h3>
             <p className="mt-2 text-sm text-gray-400">
-              Override, merge, or ghost. Deploy your full stack without touching their codebase.
+              ruly squash --sync mirrors one rules repo to every machine, with per-machine overrides:. Each squash checks for ambiguous anchor links and duplicate skill requires.
             </p>
           </div>
         </div>
