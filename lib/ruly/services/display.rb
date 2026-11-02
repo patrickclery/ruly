@@ -11,7 +11,7 @@ module Ruly
       # --- Squash dry-run display ---
 
       def squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files, # rubocop:disable Metrics/ParameterLists
-                         output_file, agent, recipe_name, recipe_config, options)
+                         output_file, agent, _recipe_name, recipe_config, options)
         puts "\n🔍 Dry run mode - no files will be created/modified\n\n"
         dry_run_clean_info(options)
         puts "Would create: #{output_file}"
@@ -21,7 +21,6 @@ module Ruly
         dry_run_bins(bin_files) unless bin_files.empty?
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?
         dry_run_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
-        puts "\nWould cache output for recipe '#{recipe_name}'" if recipe_name && options[:cache]
         dry_run_git_info(options)
         Services::SquashHelpers.copy_taskmaster_config(dry_run: true) if options[:taskmaster_config]
       end
@@ -87,14 +86,10 @@ module Ruly
 
       # --- Squash summary ---
 
-      def squash_summary(agent, recipe_name, recipe_config, output_file, cache_used, # rubocop:disable Metrics/ParameterLists
+      def squash_summary(agent, recipe_name, recipe_config, output_file, # rubocop:disable Metrics/ParameterLists
                          local_sources, command_files, skill_files)
-        mode_desc = build_mode_description(agent, recipe_name, recipe_config, cache_used)
-        total_files = if cache_used
-                        Services::SquashHelpers.cached_file_count(output_file)
-                      else
-                        local_sources.size + command_files.size + skill_files.size
-                      end
+        mode_desc = build_mode_description(agent, recipe_name, recipe_config)
+        total_files = local_sources.size + command_files.size + skill_files.size
 
         Services::TOCGenerator.print_summary(mode_desc, output_file, total_files, agent:)
         if agent == 'claude' && command_files&.any?
@@ -103,9 +98,8 @@ module Ruly
         puts "🎯 Saved #{skill_files.size} skill files to .claude/skills/" if agent == 'claude' && skill_files&.any?
       end
 
-      def build_mode_description(agent, recipe_name, recipe_config, cache_used)
+      def build_mode_description(agent, recipe_name, recipe_config)
         if agent == 'shell_gpt' then 'shell_gpt role JSON'
-        elsif cache_used then "cached squash mode with '#{recipe_name}' recipe"
         elsif recipe_name
           mode = recipe_config.is_a?(Array) ? 'agent generation' : 'squash'
           "#{mode} mode with '#{recipe_name}' recipe"

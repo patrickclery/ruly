@@ -14,6 +14,8 @@ module Ruly
   class CLI < Thor
     MERGE_SKIP_KEYS = %w[files sources skills commands scripts].freeze
 
+    check_unknown_options!
+
     def self.exit_on_failure?
       true
     end
@@ -21,7 +23,6 @@ module Ruly
     desc 'squash [RECIPE]', 'Combine all markdown files into one CLAUDE.local.md (recipe optional)'
     option :output_file, aliases: '-o', default: 'CLAUDE.local.md', desc: 'Output file path', type: :string
     option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, etc.)', type: :string
-    option :cache, default: false, desc: 'Enable caching for this recipe', type: :boolean
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
     option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
     option :dry_run, aliases: '-d', default: false, type: :boolean
@@ -56,30 +57,24 @@ module Ruly
       script_mappings = Services::ScriptManager.build_script_mappings(script_files)
       Services::ShellCommandChecker.check_and_warn(sources, find_rule_file: method(:find_rule_file))
 
-      cache_used = recipe_name && options[:cache] && !options[:dry_run] &&
-                   cached?(recipe_name, agent, output_file, recipe_config)
+      prepare_output(output_file) unless options[:dry_run]
+      sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
+      local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
+      validate_squash_dispatches(local_sources, recipe_config, recipe_name)
 
-      unless cache_used
-        prepare_output(output_file) unless options[:dry_run]
-        sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
-        local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
-        validate_squash_dispatches(local_sources, recipe_config, recipe_name)
-
-        if options[:dry_run]
-          Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
-                                           output_file, agent, recipe_name, recipe_config, options)
-          report_source_failures!
-          return
-        end
-
-        write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
-        post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
-                    script_files)
+      if options[:dry_run]
+        Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
+                                         output_file, agent, recipe_name, recipe_config, options)
+        report_source_failures!
+        return
       end
 
-      Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, cache_used,
-                                       cache_used ? nil : local_sources, cache_used ? nil : command_files,
-                                       cache_used ? nil : skill_files)
+      write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
+      post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
+                  script_files)
+
+      Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, local_sources, command_files,
+                                       skill_files)
       report_source_failures!
     end
 
@@ -335,17 +330,6 @@ module Ruly
 
     def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
-    def cached?(recipe_name, agent, output_file, _recipe_config)
-      cache_file = File.join(cache_dir, agent, "#{recipe_name}.md")
-      return false unless File.exist?(cache_file) && options[:cache]
-
-      puts "\n💾 Using cached version for recipe '#{recipe_name}'"
-      FileUtils.cp(cache_file, output_file)
-      true
-    end
-
-    def cache_dir = @cache_dir ||= ENV['RULY_HOME'] ? File.expand_path('~/.cache/ruly') : File.join(gem_root, 'cache')
-
     def prepare_output(output_file)
       Services::ScriptManager.ensure_parent_directory(output_file)
       FileUtils.rm_f(output_file)
@@ -412,7 +396,6 @@ module Ruly
                     local_sources, command_files, skill_files, script_files)
       recipe_paths = build_recipe_paths(local_sources)
       update_git_ignores(output_file, agent, command_files)
-      save_to_cache(output_file, recipe_name, agent) if recipe_name && options[:cache]
       if agent == 'claude' && !command_files.empty?
         Services::ScriptManager.save_command_files(command_files, recipe_config,
                                                    gem_root:)
@@ -464,12 +447,6 @@ module Ruly
       patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files)
       Services::GitIgnoreManager.update_gitignore(patterns) if options[:git_ignore]
       Services::GitIgnoreManager.update_git_exclude(patterns) if options[:git_exclude]
-    end
-
-    def save_to_cache(output_file, recipe_name, agent)
-      dir = File.join(cache_dir, agent)
-      FileUtils.mkdir_p(dir)
-      FileUtils.cp(output_file, File.join(dir, "#{recipe_name}.md"))
     end
 
     def save_skill_files(skill_files, recipe_paths: Set.new)

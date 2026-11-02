@@ -194,18 +194,6 @@ module Ruly
           File.basename(relative_path)
         end
       end
-
-      # Count sections in a cached output file.
-      # @param output_file [String] path to the cached file
-      # @return [Integer] number of sections
-      def cached_file_count(output_file)
-        return 0 unless File.exist?(output_file)
-
-        content = File.read(output_file, encoding: 'UTF-8')
-        content.scan(/^## /).size
-      rescue StandardError
-        0
-      end
     end
   end
 end
