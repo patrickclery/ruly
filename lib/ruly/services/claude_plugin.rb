@@ -104,10 +104,8 @@ module Ruly
       # @raise [Ruly::Error] the working directory, a parent of it, $HOME or '/'; an existing
       #   non-directory; a non-empty directory ruly did not generate
       def guard_dir!(dir)
-        if dangerous?(dir)
-          raise Ruly::Error, "Refusing to use #{dir} as the plugin directory: it is the working directory, " \
-                             'one of its parents or your home directory'
-        end
+        reason = refusal_reason(dir)
+        raise Ruly::Error, "Refusing to use #{dir} as the plugin directory: #{reason}" if reason
         raise Ruly::Error, "#{dir} exists and is not a directory" if File.exist?(dir) && !File.directory?(dir)
         return unless File.directory?(dir) && !Dir.empty?(dir) && !generated?(dir)
 
@@ -115,12 +113,37 @@ module Ruly
                            '.claude-plugin/plugin.json). Move it aside or pass -o DIR.'
       end
 
+      # Why DIR must never be used (or cleaned) as the plugin directory.
+      # @param dir [String] plugin directory
+      # @return [String, nil] the reason, nil when DIR may be used
+      def refusal_reason(dir)
+        # ruly never expands '~' (the filesystem calls would use the literal path), so refuse it.
+        return "a leading '~' is not expanded by ruly; pass the path unquoted or spell it out" if dir.start_with?('~')
+        return unless dangerous?(dir)
+
+        'it is the working directory, one of its parents or your home directory'
+      end
+
+      # Compares physical paths (symlinks resolved, '//' collapsed), so a symlinked path to the
+      # working directory or $HOME is caught. A path that does not exist cannot be any of them.
       # @param dir [String] plugin directory
       # @return [Boolean] whether DIR is the working directory, one of its parents, $HOME or '/'
       def dangerous?(dir)
-        path = File.expand_path(dir)
-        cwd = File.expand_path(Dir.pwd)
-        path == '/' || path == cwd || path == File.expand_path('~') || cwd.start_with?("#{path}/")
+        path = physical_path(dir)
+        return false unless path
+
+        cwd = File.realpath(Dir.pwd)
+        ['/', cwd, physical_path(Dir.home)].include?(path) || cwd.start_with?("#{path}/")
+      rescue SystemCallError, ArgumentError
+        true # cannot resolve the working or home directory: refuse rather than risk wiping it
+      end
+
+      # @param path [String] a path
+      # @return [String, nil] the physical path of an existing PATH, nil when it does not exist
+      def physical_path(path)
+        File.realpath(path)
+      rescue Errno::ENOENT, Errno::ENOTDIR
+        nil
       end
 
       # Empty the plugin directory and write the ownership marker at once, so a run that
@@ -404,9 +427,9 @@ module Ruly
           return []
         end
         dir = output_dir(requested, recipe_name)
-        if dangerous?(dir)
-          warn "\u26A0\uFE0F  Refusing to clean #{dir}: it is the working directory, one of its parents " \
-               'or your home directory'
+        reason = refusal_reason(dir)
+        if reason
+          warn "\u26A0\uFE0F  Refusing to clean #{dir}: #{reason}"
           return []
         end
         return ["#{dir}/"] if generated?(dir)

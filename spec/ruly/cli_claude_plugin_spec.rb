@@ -296,6 +296,40 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
       expect(Dir.children('.').sort).to eq(before)
     end
 
+    ['//', '~nouser'].each do |dir|
+      it "refuses -o #{dir} cleanly and writes nothing" do
+        before = Dir.children('.').sort
+        expect_refusal(['squash', 'demo', '-a', 'claude-plugin', '-o', dir], /Refusing to use/)
+        expect(Dir.children('.').sort).to eq(before)
+      end
+    end
+
+    context 'when the working directory is reached through a symlink' do
+      let(:work) { File.join(test_dir, 'work') }
+      let(:link) { File.join(test_dir, 'lnk') }
+
+      before do
+        FileUtils.mkdir_p(work)
+        FileUtils.cp_r(File.join(fixture_dir, '.'), work)
+        FileUtils.mkdir_p(File.join(work, '.claude-plugin'))
+        File.write(File.join(work, '.claude-plugin', 'plugin.json'), %({"metadata": {"generator": "ruly"}}\n))
+        File.symlink(work, link)
+        Dir.chdir(link)
+      end
+
+      it 'refuses squash -o through the symlink and keeps the working directory' do
+        expect_refusal(['squash', 'demo', '-a', 'claude-plugin', '-o', link], /working directory/)
+        expect([File.directory?(File.join(work, 'rules')), File.file?(File.join(work, '.recipes.yml'))])
+          .to eq([true, true])
+      end
+
+      it 'refuses clean -o through the symlink' do
+        expect { described_class.start(['clean', 'demo', '-a', 'claude-plugin', '-o', link]) }
+          .to output(/Refusing to clean/).to_stderr.and output(/Already clean/).to_stdout
+        expect(File.directory?(File.join(work, 'rules'))).to be(true)
+      end
+    end
+
     it 'refuses an existing file' do
       File.write('somefile.txt', "x\n")
       expect_refusal(%w[squash demo -a claude-plugin -o somefile.txt], /is not a directory/)

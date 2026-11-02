@@ -164,6 +164,57 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     it 'refuses the home directory' do
       expect { described_class.guard_dir!(File.expand_path('~')) }.to raise_error(Ruly::Error, /Refusing to use/)
     end
+
+    context 'with symlinks, // and ~' do
+      let(:home) { File.join(test_dir, 'home') }
+
+      before do
+        FileUtils.mkdir_p(['work/sub', home])
+        File.symlink(File.join(test_dir, 'work'), 'lnk')
+        File.symlink(home, 'home-link')
+        allow(Dir).to receive(:home).and_return(home)
+        allow(described_class).to receive(:generated?).and_return(true)
+      end
+
+      it 'refuses a symlinked path to the working directory' do
+        Dir.chdir('work') do
+          expect { described_class.guard_dir!(File.join(test_dir, 'lnk')) }.to raise_error(Ruly::Error, /working dir/)
+        end
+      end
+
+      it 'refuses a symlinked path to a parent of the working directory' do
+        Dir.chdir('work/sub') do
+          expect { described_class.guard_dir!('../../lnk') }.to raise_error(Ruly::Error, /Refusing to use/)
+        end
+      end
+
+      it 'refuses a symlinked path to the home directory' do
+        expect { described_class.guard_dir!('home-link') }.to raise_error(Ruly::Error, /Refusing to use/)
+      end
+
+      ['//', '//.'].each do |dir|
+        it "refuses #{dir}" do
+          expect { described_class.guard_dir!(dir) }.to raise_error(Ruly::Error, /Refusing to use/)
+        end
+      end
+
+      it 'refuses //HOME' do
+        expect { described_class.guard_dir!("/#{home}") }.to raise_error(Ruly::Error, /Refusing to use/)
+      end
+
+      ['~', '~nouser', '~/plug'].each do |dir|
+        it "refuses #{dir} without expanding it" do
+          expect { described_class.guard_dir!(dir) }.to raise_error(Ruly::Error, /leading '~' is not expanded/)
+        end
+      end
+
+      it 'refuses to clean a symlinked path to the working directory' do
+        Dir.chdir('work') do
+          expect { expect(described_class.files_to_clean(File.join(test_dir, 'lnk'), 'demo')).to eq([]) }
+            .to output(/Refusing to clean/).to_stderr
+        end
+      end
+    end
   end
 
   describe '.files_to_clean' do
