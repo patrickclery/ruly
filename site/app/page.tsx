@@ -42,7 +42,7 @@ export default function Home() {
             </svg>
             <h3 className="text-lg font-semibold text-white">Recipes</h3>
             <p className="mt-2 text-sm text-gray-400">
-              A named recipe lists the rule files, skills and commands for one task. Dependencies declared with requires: are resolved and included once, and circular chains are reported.
+              A named recipe lists the rule files, skills and commands for one task. Dependencies declared with requires: are resolved and included once, and ruly stats lists any circular chains.
             </p>
           </div>
           <div className="card-glow rounded-lg border border-gray-800 bg-bg-secondary p-6 transition duration-200">
