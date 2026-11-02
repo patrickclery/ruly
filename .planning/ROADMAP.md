@@ -13,6 +13,12 @@ Ruly is a mature Ruby gem and CLI tool with all foundational capabilities alread
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Platform** - Squash pipeline, recipe system, multi-agent output, GitHub integration, and CLI (existing/complete)
+- [ ] **Phase 2: Lean Out Native Duplication** - Remove/delegate features Claude Code now does natively
+- [ ] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models
+- [ ] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard
+- [ ] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format
+- [ ] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance
+- [ ] **Phase 7: Competitor Composition Audit** - Check Ruler/rulesync task-scoped composition
 
 ## Phase Details
 
@@ -36,3 +42,71 @@ Phases execute in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Platform | N/A | Complete | Pre-existing |
+| 2. Lean Out Native Duplication | 0 | Not started | - |
+| 3. Emphasize Core Advantages | 0 | Not started | - |
+| 4. AGENTS.md Output Target | 0 | Not started | - |
+| 5. Claude Code Plugin Packaging | 0 | Not started | - |
+| 6. Token and Compliance Benchmark | 0 | Not started | - |
+| 7. Competitor Composition Audit | 0 | Not started | - |
+
+### Phase 2: Lean Out Native Duplication
+
+**Goal:** Strip ruly down to its unique strengths by removing or delegating features that Claude Code now provides natively (plugins/skills package skills, commands, agents, hooks, MCP). Audit each CLI command and output type, keep recipes + `requires:` + per-subagent model + sync/overrides + post-squash checks, and deprecate the rest.
+**Requirements**: TBD
+**Depends on:** Phase 1
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Remove `--cache`, TaskMaster flags and shell_gpt output; removed switches fail loudly (tracer)
+- [ ] 02-02-PLAN.md — Remove `import`/`mcp`, fold `analyze` into `stats`, warn-and-continue on removed/unknown recipe keys
+- [ ] 02-03-PLAN.md — AUDIT.md, 0.2.0 version + CHANGELOG, retire v1 requirements, README/docs cleanup
+
+### Phase 3: Emphasize Core Advantages
+
+**Goal:** Make ruly's verified advantages the headline: task-scoped recipe composition, `requires:` dependency resolution with cycle detection, per-subagent recipe/model selection, multi-machine `--sync` with per-machine overrides, and post-squash checks. Rewrite README/site positioning against native `.claude/rules/` (path-only scoping), `@imports` (no token savings), and symlink sharing limits.
+**Requirements**: TBD
+**Depends on:** Phase 2
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 3 to break down)
+
+### Phase 4: AGENTS.md Output Target
+
+**Goal:** Emit AGENTS.md from a recipe so ruly reaches the ~30-60 agents Ruler/rulesync cover without per-agent adapters, keeping recipe composition as ruly's layer.
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 4 to break down)
+
+### Phase 5: Claude Code Plugin Packaging
+
+**Goal:** Package squashed recipe output as a Claude Code plugin (skills/, commands/, agents/, hooks, .mcp.json) so distribution uses the native format instead of ruly-specific file writing; resolve whether plugins can carry always-on instructions.
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 5 to break down)
+
+### Phase 6: Token and Compliance Benchmark
+
+**Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 6 to break down)
+
+### Phase 7: Competitor Composition Audit
+
+**Goal:** Verify whether Ruler's and rulesync's composition models (nesting, includes, profiles) offer task-scoped selection comparable to recipes + `requires:`; feed results into Phase 3 positioning.
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 7 to break down)

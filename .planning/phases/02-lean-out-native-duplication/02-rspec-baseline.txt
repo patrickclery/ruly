@@ -1,0 +1,24 @@
+Ruly::CLI mcpServers in agent frontmatter when mcp_servers overlap between recipe and rule files deduplicates mcpServers in agent frontmatter
+Ruly::CLI mcpServers in agent frontmatter when only recipe-level mcp_servers are configured includes only recipe-level mcpServers in agent frontmatter
+Ruly::CLI mcpServers in agent frontmatter when subagent recipe has mcp_servers and rule files also have mcp_servers includes mcpServers in agent frontmatter from both recipe and rule-file sources
+Ruly::CLI requires deduplication integration: deduplication in squash processes files in correct dependency order
+Ruly::CLI requires feature #get_source_key returns full path for local files
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json combines all source content in description
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json creates a valid JSON file
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json handles invalid UTF-8 sequences
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json handles markdown with code blocks
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json properly escapes special characters in JSON
+Ruly::CLI shell_gpt agent support #write_shell_gpt_json uses filename as role name
+Ruly::CLI shell_gpt agent support agent normalization normalizes sgpt to shell_gpt
+Ruly::CLI shell_gpt agent support integration: squash with shell_gpt agent generates JSON output for shell_gpt agent
+Ruly::CLI shell_gpt agent support summary output shows appropriate message for shell_gpt agent
+Ruly::CLI skills: in agent frontmatter when subagent rule files have skills: frontmatter includes skills: in agent frontmatter
+Ruly::CLI#clean with agent-specific files removes duplicate entries from file list
+Ruly::CLI#clean with agent-specific files removes files for specified agent
+Ruly::CLI#squash with --clean option cleans existing files before squashing
+Ruly::CLI#squash with --clean option passes recipe name to clean when specified
+Ruly::CLI#squash with --clean option uses correct agent for clean operation
+Ruly::CLI#squash with --front-matter option strips all frontmatter by default
+Ruly::CLI#squash with git ignore options --git-ignore option includes command files directory for Claude agent
+Ruly::CLI#squash with metadata creates the output file
+Ruly::CLI#strip_metadata_from_frontmatter with keep_frontmatter: false (default) strips all frontmatter and returns just body content
