@@ -26,7 +26,7 @@ module Ruly
         scripts_dir = plugin ? "#{output_file}/scripts" : '.claude/scripts'
         dry_run_bins(bin_files, scripts_dir:) unless bin_files.empty?
         dry_run_skills(skill_files) if agent == 'claude' && !skill_files.empty?
-        dry_run_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+        dry_run_scripts(script_files, scripts_dir:) if script_files[:local].any? || script_files[:remote].any?
         dry_run_git_info(options)
       end
 
@@ -67,9 +67,9 @@ module Ruly
         end
       end
 
-      def dry_run_scripts(script_files)
+      def dry_run_scripts(script_files, scripts_dir: '.claude/scripts')
         total = script_files[:local].size + script_files[:remote].size
-        puts "\nWould copy #{total} scripts to .claude/scripts/:"
+        puts "\nWould copy #{total} scripts to #{scripts_dir}/:"
         script_files[:local].each { |s| puts "  → #{s[:relative_path]} (local)" }
         script_files[:remote].each { |s| puts "  → #{s[:filename]} (remote from GitHub)" }
       end

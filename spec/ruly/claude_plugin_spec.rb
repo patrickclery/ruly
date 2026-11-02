@@ -457,4 +457,18 @@ RSpec.describe Ruly::Services::ClaudePlugin do
       expect(described_class.notices('demo', {}).size).to eq(1)
     end
   end
+
+  describe 'Display.dry_run_scripts' do
+    let(:script_files) { {local: [{relative_path: 'x.sh'}], remote: []} }
+
+    it 'names the plugin scripts dir' do
+      expect { Ruly::Services::Display.dry_run_scripts(script_files, scripts_dir: 'plug/scripts') }
+        .to output(%r{Would copy 1 scripts to plug/scripts/:}).to_stdout
+    end
+
+    it 'keeps .claude/scripts by default' do
+      expect { Ruly::Services::Display.dry_run_scripts(script_files) }
+        .to output(%r{Would copy 1 scripts to \.claude/scripts/:}).to_stdout
+    end
+  end
 end
