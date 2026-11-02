@@ -84,10 +84,14 @@ Plans:
 **Goal:** Emit AGENTS.md from a recipe so ruly reaches the ~30-60 agents Ruler/rulesync cover without per-agent adapters, keeping recipe composition as ruly's layer.
 **Requirements**: TBD
 **Depends on:** Phase 3
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 4 to break down)
+**Wave 1**
+- [ ] 04-01-PLAN.md — `-a agents` writes AGENTS.md (tracer), skills inlined + skipped-parts notice + checks, marker-gated clean/overwrite guard, git-ignore
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 04-02-PLAN.md — README AGENTS.md Output section, 0.3.0 version/gemspec/CHANGELOG, installed binary refresh, closing gates
 
 ### Phase 5: Claude Code Plugin Packaging
 
