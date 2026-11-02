@@ -147,23 +147,6 @@ module Ruly
       def display_recipe_tree(tree, prefix = '') = Services::RecipeIntrospector.display_recipe_tree(tree, prefix)
     end
 
-    desc 'analyze [RECIPE]', 'Analyze token usage for a recipe or all recipes'
-    option :tier, aliases: '-p', type: :string
-    option :all, aliases: '-a', default: false, type: :boolean
-    def analyze(recipe_name = nil)
-      if !options[:all] && !recipe_name && puts('❌ Please specify a recipe or use -a for all recipes')
-        raise Thor::Error,
-              'Recipe required'
-      end
-
-      result = Operations::Analyzer.call(analyze_all: options[:all], gem_root:, recipe_name:, recipes_file:,
-                                         tier_override: options[:tier])
-      return if result[:success]
-
-      puts "❌ Error: #{result[:error]}"
-      exit 1
-    end
-
     desc 'init', 'Initialize Ruly with a basic configuration'
     def init
       config_dir = File.expand_path('~/.config/ruly')
@@ -191,8 +174,8 @@ module Ruly
       puts "📊 Analyzing #{resolved.size} files..."
       out = options[:output]
       out = File.join(rules_dir, out) if out == 'stats.md'
-      Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes: recipes_for_stats,
-                                                                       rules_dir:, sources: resolved))
+      Operations::Stats.display_result(Operations::Stats.call(output_file: out, recipes: recipes_for_stats,
+                                                              rules_dir:, sources: resolved))
     end
 
     private

@@ -112,7 +112,6 @@ module Ruly
         puts
         puts "   📊 Summary: #{file_count} local files" if file_count > 0
         puts "   🌐 Remote: #{remote_count} remote sources" if remote_count > 0
-        puts "   🎯 Tier: #{config['tier'] || 'default'}" if config['tier']
       end
 
       def collect_recipe_display_files(config)
