@@ -6,10 +6,12 @@ module RulyBench
     # @param argv [Array<String>]
     # @param err [IO] stderr
     # @param out [IO] stdout
-    def initialize(argv, err: $stderr, out: $stdout)
+    # @param repo_root [String] repository root the default output dirs and the guard resolve against
+    def initialize(argv, err: $stderr, out: $stdout, repo_root: REPO_ROOT)
       @argv = argv.dup
       @out = out
       @err = err
+      @repo_root = repo_root
       @options = {}
     end
 
@@ -20,6 +22,8 @@ module RulyBench
 
       corpus = Corpus.new(@options.fetch(:corpus, FIXTURE_CORPUS))
       output_dir = resolve_output_dir(corpus)
+      return refuse(output_dir) if forbidden_output?(corpus, output_dir)
+
       benchmark = TokenBenchmark.new(corpus:, label: label(corpus), recipe_names: @options[:recipes])
       write(benchmark, output_dir)
       report(benchmark)
@@ -57,7 +61,37 @@ module RulyBench
 
     def resolve_output_dir(corpus)
       default = corpus.fixture? ? 'bench/results' : 'bench/results/local'
-      File.expand_path(@options.fetch(:output_dir, File.join(REPO_ROOT, default)))
+      real_path(@options.fetch(:output_dir, File.join(@repo_root, default)))
+    end
+
+    # Expand a path and resolve symlinks through its nearest existing ancestor (the path may not exist yet).
+    def real_path(path)
+      path = File.expand_path(path)
+      missing = []
+      until File.exist?(path) || path == File.dirname(path)
+        missing.unshift(File.basename(path))
+        path = File.dirname(path)
+      end
+      File.join(File.realpath(path), *missing)
+    end
+
+    # A non-fixture corpus may be private: it never writes under bench/results/ outside bench/results/local/.
+    def forbidden_output?(corpus, output_dir)
+      return false if corpus.fixture?
+
+      results = real_path(File.join(@repo_root, 'bench/results'))
+      local = real_path(File.join(@repo_root, 'bench/results/local'))
+      inside?(output_dir, results) && !inside?(output_dir, local)
+    end
+
+    def inside?(path, dir)
+      path == dir || path.start_with?("#{dir}/")
+    end
+
+    def refuse(output_dir)
+      @err.puts "tokens: refusing to write results of a non-fixture corpus to #{output_dir}; " \
+                'use bench/results/local (git-ignored) or a directory outside bench/results'
+      2
     end
 
     def label(corpus)

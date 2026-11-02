@@ -6,6 +6,7 @@ cache/
 /.idea/
 
 # Ruly generated files
+bench/results/local/
 test.md
 vendor/bundle
 *.gem

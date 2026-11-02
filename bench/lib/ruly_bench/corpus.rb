@@ -4,6 +4,8 @@ module RulyBench
   # A rules repository on disk: its recipes, its markdown files and how each file maps to the native layout.
   class Corpus
     ROOT_SKIPS = %w[AGENTS.md CHANGELOG.md CLAUDE.local.md CLAUDE.md LICENSE.md README.md].freeze
+    SOURCE_KEYS = %w[commands files skills].freeze
+    REMOTE_URL = %r{\Ahttps?://}i
 
     attr_reader :dir
 
@@ -68,6 +70,15 @@ module RulyBench
     # @return [String] the up-front descriptor of a corpus skill or command file
     def source_descriptor(rel)
       descriptor(read(rel), Ruly::Services::ScriptManager.derive_skill_name(rel))
+    end
+
+    # @param recipe [Hash] one recipe's config
+    # @return [Boolean] true when the recipe pulls remote sources (a `sources:` key or an http(s) entry)
+    def remote?(recipe)
+      return false unless recipe.is_a?(Hash)
+      return true if recipe.key?('sources')
+
+      SOURCE_KEYS.any? { |key| Array(recipe[key]).any? { |entry| entry.to_s.strip.match?(REMOTE_URL) } }
     end
 
     def fixture?

@@ -54,7 +54,8 @@ module RulyBench
     private
 
     def build_result
-      rows = recipe_names.map { |name| measure(name) }
+      skipped = []
+      rows = recipe_names.filter_map { |name| measure_or_skip(name, skipped) }
       {
         'baselines' => baselines,
         'corpus' => corpus.fixture? ? FIXTURE_CORPUS_LABEL : 'external',
@@ -64,13 +65,27 @@ module RulyBench
         'recipes' => rows,
         'ruly_version' => Ruly::VERSION,
         'schema' => SCHEMA,
-        'skipped' => [],
+        'skipped' => skipped,
         'summary' => summary(rows)
       }
     end
 
     def recipe_names
       @recipe_names || corpus.recipes.keys.sort
+    end
+
+    # @return [Hash, nil] the row, or nil after recording why the recipe was skipped
+    def measure_or_skip(name, skipped)
+      if corpus.remote?(corpus.recipes[name])
+        skipped << {'name' => name, 'reason' => 'remote sources'}
+        return nil
+      end
+      measure(name)
+    rescue SquashRunner::SquashFailed => e
+      raise if corpus.fixture?
+
+      skipped << {'name' => name, 'reason' => "squash failed (exit #{e.exit_status})"}
+      nil
     end
 
     def measure(name)
