@@ -2,7 +2,7 @@
 
 ## Description
 
-This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that reported an 85% token reduction through conditional documentation loading (self-reported; unverified until an independent benchmark measures it).
+This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project, which uses recipes for conditional documentation loading. On ruly's synthetic fixture corpus (not the WorkAxle rules), recipe-scoped output measured a median 76.9% smaller than loading every rule ([Benchmarks](../docs/benchmarks.md)).
 
 ## Key Patterns
 
@@ -153,7 +153,7 @@ workaxle-review:
 
 - **Only `core.md` should have `alwaysApply: true`** in the actual rule files
 - **Use recipes to conditionally load** documentation based on current task
-- **Reported an 85% token reduction** through this approach (self-reported; unverified until an independent benchmark measures it)
+- **Measured a median 76.9% token reduction** against loading every rule with this approach, on ruly's synthetic fixture corpus rather than the WorkAxle rules ([Benchmarks](../docs/benchmarks.md))
 
 ## Anti-patterns
 
@@ -246,7 +246,7 @@ cd ~/ruly && git pull && bundle install
 
 ## Key Achievements
 
-- **85% token reduction** from ~15,000 tokens to ~2,000 tokens base usage (self-reported; unverified until an independent benchmark measures it)
+- **76.9% median token reduction** against loading every rule, measured on ruly's synthetic fixture corpus rather than the WorkAxle rules ([Benchmarks](../docs/benchmarks.md))
 - **Conditional loading** based on file patterns and task recipes
 - **MCP server integration** for automated tool availability
 - **Task-specific recipes** for focused workflows
