@@ -53,6 +53,15 @@ RSpec.describe RulyBench::NativeLayout do
     expect(skill).not_to include('requires')
   end
 
+  it 'refuses two rules that flatten to the same native path and writes nothing' do
+    write('a-b/c.md', "# One\n\nFirst.\n")
+    write('a/b-c.md', "# Two\n\nSecond.\n")
+
+    expect { described_class.build(corpus: RulyBench::Corpus.new(corpus_dir), into:) }
+      .to raise_error(RulyBench::Error, %r{collision: \.claude/rules/a-b-c\.md <- a-b/c\.md, a/b-c\.md})
+    expect(Dir.children(into)).to eq([])
+  end
+
   it 'writes no CLAUDE.md, CLAUDE.local.md or source files' do
     described_class.build(corpus: RulyBench::Corpus.new(corpus_dir), into:)
 

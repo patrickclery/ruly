@@ -9,14 +9,26 @@ module RulyBench
     # @param corpus [RulyBench::Corpus]
     # @param into [String] target directory
     # @return [Array<String>] the written paths, relative to `into`, sorted
+    # @raise [RulyBench::Error] when two corpus files map to the same native path (nothing is written)
     def build(corpus:, into:)
-      corpus.files.map do |rel|
-        target, text = entry(corpus, rel)
+      entries = corpus.files.to_h { |rel| [rel, entry(corpus, rel)] }
+      check_collisions!(entries)
+      entries.values.map do |target, text|
         path = File.join(into, target)
         FileUtils.mkdir_p(File.dirname(path))
         File.write(path, text)
         target
       end.sort
+    end
+
+    # Rules are flattened (a-b/c.md and a/b-c.md both become a-b-c.md) and skills are keyed by derived name, so
+    # two sources can share a target; writing both would silently drop one.
+    def check_collisions!(entries)
+      clashes = entries.group_by { |_, (target, _)| target }.select { |_, group| group.size > 1 }
+      return if clashes.empty?
+
+      details = clashes.sort.map { |target, group| "#{target} <- #{group.map(&:first).sort.join(', ')}" }
+      raise Error, "native layout collision: #{details.join('; ')}"
     end
 
     def entry(corpus, rel)
