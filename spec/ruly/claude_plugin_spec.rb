@@ -276,15 +276,15 @@ RSpec.describe Ruly::Services::ClaudePlugin do
   end
 
   describe '.check_paths!' do
-    def check(skills: [], commands: [])
+    def check(commands: [], skills: [])
       described_class.check_paths!('plug', command_files: commands.map { |p| {content: '', path: p} },
                                            recipe_config: {}, recipe_name: 'demo',
                                            skill_files: skills.map { |p| {content: '', path: p} })
     end
 
     it 'accepts the fixture skills and commands' do
-      expect { check(skills: %w[rules/skills/deploy.md rules/skills/tdd/SKILL.md], commands: %w[rules/commands/ship.md]) }
-        .not_to raise_error
+      skills = %w[rules/skills/deploy.md rules/skills/tdd/SKILL.md]
+      expect { check(commands: %w[rules/commands/ship.md], skills:) }.not_to raise_error
     end
 
     it 'refuses a skill that collides with the rules skill' do
@@ -331,8 +331,10 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     end
 
     it 'keeps and warns about a script that is not a recipe script' do
-      expect { expect(described_class.hook_command('.claude/scripts/other.sh', 'plug')).to eq('.claude/scripts/other.sh') }
-        .to output(/\.claude\/scripts\/other\.sh, which is not a recipe script; left unchanged/).to_stderr
+      result = nil
+      expect { result = described_class.hook_command('.claude/scripts/other.sh', 'plug') }
+        .to output(%r{\.claude/scripts/other\.sh, which is not a recipe script; left unchanged}).to_stderr
+      expect(result).to eq('.claude/scripts/other.sh')
     end
   end
 
@@ -370,7 +372,7 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     end
 
     it 'names servers with a literal headers value' do
-      servers = {'h' => {'headers' => {'Authorization' => 'Bearer abc'}}, 'e' => {'env' => {'K' => ''}}}
+      servers = {'e' => {'env' => {'K' => ''}}, 'h' => {'headers' => {'Authorization' => 'Bearer abc'}}}
       expect(described_class.literal_secret_servers(servers)).to eq(['h'])
     end
   end
@@ -428,8 +430,11 @@ RSpec.describe Ruly::Services::ClaudePlugin do
 
   describe '.skipped_parts' do
     it 'names all four parts in order' do
-      config = {'isolate' => true, 'model' => 'opus',
-                'subagents' => [{'append' => true, 'cwd' => 'x', 'name' => 'a', 'recipe' => 'a'}]}
+      config = {
+        'isolate' => true,
+        'model' => 'opus',
+        'subagents' => [{'append' => true, 'cwd' => 'x', 'name' => 'a', 'recipe' => 'a'}]
+      }
       expect(described_class.skipped_parts(config))
         .to eq(['model', 'isolate', 'subagent permissionMode', 'subagent cwd hooks'])
     end
@@ -445,7 +450,7 @@ RSpec.describe Ruly::Services::ClaudePlugin do
 
     it 'adds the skipped notice to notices' do
       expect(described_class.notices('demo', {'subagents' => [{'name' => 'a'}]}).last)
-        .to eq("ℹ️  claude-plugin target skips: subagent permissionMode")
+        .to eq('ℹ️  claude-plugin target skips: subagent permissionMode')
     end
 
     it 'adds no skipped notice when nothing is skipped' do

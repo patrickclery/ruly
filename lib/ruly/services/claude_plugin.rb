@@ -28,6 +28,14 @@ module Ruly
       RESERVED_PREFIXES = %w[anthropic- anthropics- cc-plugin- claude-].freeze
       DESCRIPTION_LIMIT = 1536
       UNSAFE_SKILL_NAMES = %w[. ..].freeze
+      COMPONENT_DIRS = %w[skills commands agents].freeze
+      SECRET_KEYS = %w[env headers].freeze
+      PLUGIN_SCRIPTS = '${CLAUDE_PLUGIN_ROOT}/scripts'
+      # `.claude/scripts/X` not preceded by a word character, '/', '.' or '~' (so `~/.claude/...`
+      # and `$HOME/.claude/...` stay put); X ends in a word character (no trailing sentence dot).
+      SCRIPT_REF = %r{(?<![\w/.~])\.claude/scripts/([\w./-]*\w)}
+      # SCRIPT_REF absorbing one pair of double quotes around the reference (hook commands).
+      QUOTED_SCRIPT_REF = %r{(?<![\w/.~])("?)\.claude/scripts/([\w./-]*\w)\1}
 
       # Resolve the plugin directory.
       # @param requested [String, nil] the -o value (Thor default 'CLAUDE.local.md')
@@ -210,19 +218,135 @@ module Ruly
       # @param recipe_config [Hash] recipe configuration
       # @param recipe_name [String] recipe name
       # @param script_mappings [Hash] absolute script path => relative name
+      # @param script_files [Hash] frontmatter scripts `{local: [...], remote: [...]}`, copied to DIR/scripts
       # @param skill_files [Array<Hash>] recipe skills (checked here, written by the caller)
       # @param toc [Boolean] whether to write a table of contents
-      def write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:, script_mappings:,
-                skill_files:, toc:)
+      def write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:, script_files:,
+                script_mappings:, skill_files:, toc:)
         check_paths!(dir, command_files:, recipe_config:, recipe_name:, skill_files:)
         FileUtils.mkdir_p(File.join(dir, File.dirname(MANIFEST)))
         File.write(File.join(dir, MANIFEST),
                    "#{JSON.pretty_generate(manifest(recipe_name, recipe_config, author: git_author))}\n")
         write_rules_skill(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:, toc:)
-        return if command_files.empty?
+        unless command_files.empty?
+          ScriptManager.save_command_files(command_files, recipe_config, commands_dir: File.join(dir, 'commands'),
+                                                                         gem_root:)
+        end
+        if Array(script_files[:local]).any? || Array(script_files[:remote]).any?
+          ScriptManager.copy_scripts(script_files, File.join(dir, 'scripts'))
+        end
+        write_hooks(dir, recipe_config)
+        write_mcp(dir, Array(recipe_config['mcp_servers']))
+      end
 
-        ScriptManager.save_command_files(command_files, recipe_config, commands_dir: File.join(dir, 'commands'),
-                                                                       gem_root:)
+      # Write `DIR/hooks/hooks.json`: the recipe `hooks:` under a top-level `hooks` key, each
+      # `command` passed through hook_command. Writes nothing when hooks is not a non-empty Hash.
+      # @param dir [String] plugin directory
+      # @param recipe_config [Hash] recipe configuration
+      def write_hooks(dir, recipe_config)
+        hooks = recipe_config.is_a?(Hash) ? recipe_config['hooks'] : nil
+        return unless hooks.is_a?(Hash) && !hooks.empty?
+
+        FileUtils.mkdir_p(File.join(dir, 'hooks'))
+        File.write(File.join(dir, 'hooks', 'hooks.json'),
+                   "#{JSON.pretty_generate({'hooks' => rewrite_hook_commands(hooks, dir)})}\n")
+      end
+
+      # @return [Object] a copy of value with every String under a 'command' key passed through hook_command
+      def rewrite_hook_commands(value, dir)
+        case value
+        when Hash
+          value.to_h do |key, item|
+            [key, key == 'command' && item.is_a?(String) ? hook_command(item, dir) : rewrite_hook_commands(item, dir)]
+          end
+        when Array then value.map { |item| rewrite_hook_commands(item, dir) }
+        else value
+        end
+      end
+
+      # Rewrite `.claude/scripts/X` in a hook command to the double-quoted
+      # `"${CLAUDE_PLUGIN_ROOT}/scripts/X"` when X was copied into DIR/scripts; other references
+      # are kept and named on stderr.
+      # @param command [String] hook command
+      # @param dir [String] plugin directory
+      # @return [String]
+      def hook_command(command, dir)
+        command.gsub(QUOTED_SCRIPT_REF) do
+          match = Regexp.last_match
+          next %("#{PLUGIN_SCRIPTS}/#{match[2]}") if copied_script?(dir, match[2])
+
+          warn "\u26A0\uFE0F  Hook command references .claude/scripts/#{match[2]}, which is not a recipe script; " \
+               'left unchanged'
+          match[0]
+        end
+      end
+
+      # @return [Boolean] whether DIR/scripts holds the script (no '..' segments)
+      def copied_script?(dir, script)
+        !script.split('/').include?('..') && File.file?(File.join(dir, 'scripts', script))
+      end
+
+      # Write `DIR/.mcp.json` from `~/.config/ruly/mcp.json` and name (never print) literal secrets.
+      # Writes nothing when no server resolves.
+      # @param dir [String] plugin directory
+      # @param server_names [Array<String>] MCP server names
+      def write_mcp(dir, server_names)
+        servers = MCPManager.load_mcp_servers_from_config(server_names)
+        return unless servers.is_a?(Hash) && !servers.empty?
+
+        FileUtils.mkdir_p(dir)
+        File.write(File.join(dir, '.mcp.json'), "#{JSON.pretty_generate({'mcpServers' => servers})}\n")
+        names = literal_secret_servers(servers)
+        return if names.empty?
+
+        warn "\u26A0\uFE0F  #{dir}/.mcp.json has literal env/headers values for: #{names.join(', ')}. " \
+             'Replace them with ${VAR} references before sharing the plugin.'
+      end
+
+      # @param servers [Hash] name => server config
+      # @return [Array<String>] sorted names whose env or headers Hash holds a non-empty String without '${'
+      def literal_secret_servers(servers)
+        servers.select do |_name, config|
+          config.is_a?(Hash) && SECRET_KEYS.any? do |key|
+            config[key].is_a?(Hash) && config[key].values.any? do |value|
+              value.is_a?(String) && !value.empty? && !value.include?('${')
+            end
+          end
+        end.keys.sort
+      end
+
+      # Rewrite `.claude/scripts/X` to `${CLAUDE_PLUGIN_ROOT}/scripts/X` in the markdown under
+      # DIR/skills, DIR/commands and DIR/agents, for every X copied into DIR/scripts. Other
+      # references are left alone (a script may be installed some other way).
+      # @param dir [String] plugin directory
+      def rewrite_script_paths(dir)
+        scripts_root = File.join(dir, 'scripts')
+        copied = Dir.glob('**/*', base: scripts_root).select { |path| File.file?(File.join(scripts_root, path)) }
+        return if copied.empty?
+
+        COMPONENT_DIRS.flat_map { |sub| Dir.glob(File.join(dir, sub, '**', '*.md')) }.each do |file|
+          text = File.read(file, encoding: 'UTF-8')
+          updated = text.gsub(SCRIPT_REF) do
+            match = Regexp.last_match
+            copied.include?(match[1]) ? "#{PLUGIN_SCRIPTS}/#{match[1]}" : match[0]
+          end
+          File.write(file, updated) unless updated == text
+        end
+      end
+
+      # Recipe parts a plugin cannot carry, by key only.
+      # @param recipe_config [Hash] recipe configuration
+      # @return [Array<String>] subset of 'model', 'isolate', 'subagent permissionMode', 'subagent cwd hooks'
+      def skipped_parts(recipe_config)
+        return [] unless recipe_config.is_a?(Hash)
+
+        subagents = recipe_config['subagents'].is_a?(Array) ? recipe_config['subagents'] : []
+        parts = []
+        parts << 'model' if recipe_config['model'].is_a?(String) && !recipe_config['model'].empty?
+        parts << 'isolate' if recipe_config['isolate'] == true
+        parts << 'subagent permissionMode' unless subagents.empty?
+        parts << 'subagent cwd hooks' if subagents.any? { |agent| agent.is_a?(Hash) && agent['append'] && agent['cwd'] }
+        parts
       end
 
       # Write `skills/NAME-rules/SKILL.md`: name/description frontmatter, then the squashed body.
@@ -255,14 +379,18 @@ module Ruly
         "Rules from the ruly recipe #{source}. Invoke before starting any task in this project."[0, DESCRIPTION_LIMIT]
       end
 
-      # Stdout lines printed on every -a claude-plugin run (dry run included).
+      # Stdout lines printed on every -a claude-plugin run (dry run included): the always-on
+      # notice, plus the skipped-parts notice when skipped_parts is non-empty.
       # @param recipe_name [String] recipe name
-      # @param _recipe_config [Hash] recipe configuration
+      # @param recipe_config [Hash] recipe configuration
       # @return [Array<String>]
-      def notices(recipe_name, _recipe_config)
-        ["\u2139\uFE0F  Claude Code plugins cannot carry always-on instructions, so the rules were written as " \
-         "skill /#{recipe_name}:#{rules_skill_name(recipe_name)}. For always-on rules run " \
-         "`ruly squash #{recipe_name}` (CLAUDE.local.md)."]
+      def notices(recipe_name, recipe_config)
+        lines = ["\u2139\uFE0F  Claude Code plugins cannot carry always-on instructions, so the rules were written " \
+                 "as skill /#{recipe_name}:#{rules_skill_name(recipe_name)}. For always-on rules run " \
+                 "`ruly squash #{recipe_name}` (CLAUDE.local.md)."]
+        parts = skipped_parts(recipe_config)
+        lines << "\u2139\uFE0F  claude-plugin target skips: #{parts.join(', ')}" unless parts.empty?
+        lines
       end
 
       # What `clean -a claude-plugin` may remove: the plugin dir, and only when ruly generated it.

@@ -96,7 +96,7 @@ module Ruly
                                      skill_files:)
       elsif plugin
         write_claude_plugin(output_file, command_files:, local_sources:, recipe_config:, recipe_name:,
-                                         script_mappings:, skill_files:)
+                                         script_files:, script_mappings:, skill_files:)
       else
         write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
         post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
@@ -506,13 +506,15 @@ module Ruly
     end
 
     # Write the Claude Code plugin dir; never writes into the project (.claude/, CLAUDE.local.md, .mcp.json).
-    def write_claude_plugin(dir, command_files:, local_sources:, recipe_config:, recipe_name:, script_mappings:,
-                            skill_files:)
+    def write_claude_plugin(dir, command_files:, local_sources:, recipe_config:, recipe_name:, script_files:,
+                            script_mappings:, skill_files:)
       recipe_paths = build_recipe_paths(local_sources)
+      recipe_config = merge_mcp_servers(recipe_config, local_sources)
       Services::ClaudePlugin.write(dir, command_files:, gem_root:, local_sources:, recipe_config:, recipe_name:,
-                                        script_mappings:, skill_files:, toc: options[:toc])
+                                        script_files:, script_mappings:, skill_files:, toc: options[:toc])
       save_skill_files(skill_files, recipe_paths:, skills_dir: File.join(dir, 'skills'))
       subagent_skills = process_subagents(recipe_config, recipe_name, plugin_dir: dir, recipe_paths:)
+      Services::ClaudePlugin.rewrite_script_paths(dir)
       update_git_ignores("#{dir}/", Services::ClaudePlugin::AGENT, [])
       run_checks(local_sources, command_files, recipe_paths, skill_files + Array(subagent_skills))
       puts "\u2705 Wrote Claude Code plugin to #{dir}", "   Load it with: claude --plugin-dir #{dir}"

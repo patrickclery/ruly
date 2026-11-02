@@ -6,7 +6,7 @@ require 'fileutils'
 require 'yaml'
 require 'ruly/services/subagent_processor'
 
-RSpec.describe Ruly::Services::SubagentProcessor, 'plugin mode' do
+RSpec.describe Ruly::Services::SubagentProcessor do
   around do |example|
     Dir.mktmpdir do |dir|
       Dir.chdir(dir) { example.run }

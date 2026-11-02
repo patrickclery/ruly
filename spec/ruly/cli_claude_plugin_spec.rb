@@ -87,8 +87,9 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
       expect([lines.first, lines]).to match(['---', include('name: demo-rules')])
     end
 
-    it 'writes the same rules body the claude target writes to CLAUDE.local.md' do
-      expect(skill_body(rules_skill_path)).to eq(claude_reference)
+    it 'writes the rules body the claude target writes to CLAUDE.local.md, with plugin-root script paths' do
+      expect(skill_body(rules_skill_path))
+        .to eq(claude_reference.gsub('.claude/scripts/notify.sh', '${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh'))
     end
 
     it 'copies the recipe scripts into the plugin, executable' do
@@ -119,12 +120,14 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
 
     it 'flattens the nested tdd skill' do
-      expect([File.file?(File.join(plugin_dir, 'skills/tdd/SKILL.md')), File.exist?(File.join(plugin_dir, 'skills/tdd/SKILL'))])
+      expect([File.file?(File.join(plugin_dir, 'skills/tdd/SKILL.md')),
+              File.exist?(File.join(plugin_dir, 'skills/tdd/SKILL'))])
         .to eq([true, false])
     end
 
     it 'writes the subagent skill and the command' do
-      expect(%w[skills/review/SKILL.md commands/ship.md].map { |f| File.file?(File.join(plugin_dir, f)) }).to eq([true, true])
+      files = %w[skills/review/SKILL.md commands/ship.md].map { |f| File.join(plugin_dir, f) }
+      expect(files).to all(satisfy { |f| File.file?(f) })
     end
 
     context 'with the helper agent file' do
@@ -172,8 +175,8 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     it 'rewrites script references in the rules skill, skills and commands' do
       texts = %w[skills/demo-rules/SKILL.md skills/deploy/SKILL.md commands/ship.md]
               .map { |f| read_utf8(File.join(plugin_dir, f)) }
-      expect(texts.map { |t| [t.include?('${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh'), t.include?('.claude/scripts/notify.sh')] })
-        .to all(eq([true, false]))
+      expect(texts).to all(include('${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh'))
+      expect(texts).to all(satisfy { |t| !t.include?('.claude/scripts/notify.sh') })
     end
 
     it 'prints the skipped notice once' do
@@ -188,8 +191,9 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
   context 'with a recipe skill named like the rules skill' do
     before do
       File.write('rules/skills/demo-rules.md', "---\ndescription: Clash\n---\n# Clash\n")
-      File.write('.recipes.yml', read_utf8('.recipes.yml').sub("      - rules/skills/deploy.md\n",
-                                                               "      - rules/skills/deploy.md\n      - rules/skills/demo-rules.md\n"))
+      skill_line = "      - rules/skills/deploy.md\n"
+      File.write('.recipes.yml',
+                 read_utf8('.recipes.yml').sub(skill_line, "#{skill_line}      - rules/skills/demo-rules.md\n"))
     end
 
     it 'exits 1 naming the collision' do
