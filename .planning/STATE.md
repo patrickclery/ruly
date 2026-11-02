@@ -129,6 +129,7 @@ None yet.
 |-------|-------|--------|
 | 03 | verification_deferred_human | /gsd-verify-work 03 |
 | 05 | verification_deferred_human | /gsd-verify-work 05 |
+| 06 | verification_deferred_human | /gsd-verify-work 06 |
 
 ## Session Continuity
 
