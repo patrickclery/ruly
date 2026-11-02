@@ -272,12 +272,18 @@ module Ruly
     def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
 
     def load_all_recipes
+      load_recipes_and_warn
+    rescue Ruly::Error => e
+      raise Thor::Error, "\u274C #{e.message}"
+    end
+
+    # Loads recipes through the config chain and warns about removed config keys.
+    # @raise [Ruly::Error] when no recipe source exists or the config is invalid
+    def load_recipes_and_warn
       recipes = Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
                                                         user_recipes_file: recipes_file)
       warn_config_keys
       recipes
-    rescue Ruly::Error => e
-      raise Thor::Error, "\u274C #{e.message}"
     end
 
     def sync_requested? = options[:sync] ? true : false
@@ -463,10 +469,13 @@ module Ruly
       recipe_data
     end
 
-    # Recipes for stats orphan detection; nil when no recipe source is configured.
+    # Recipes for stats orphan detection; nil when none can be loaded (e.g. no recipe source
+    # is configured), so stats.md is still written for the local rule files.
     def recipes_for_stats
-      load_all_recipes
-    rescue Ruly::Error
+      load_recipes_and_warn
+    rescue Ruly::Error => e
+      reason = e.message.lines.first.strip.delete_suffix(' Looked for:')
+      warn "\u26A0\uFE0F  Recipes not loaded, so recipe totals are skipped: #{reason}"
       nil
     end
 

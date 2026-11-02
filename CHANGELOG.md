@@ -32,6 +32,11 @@ Claude Code features. Removals are immediate, with no deprecation period.
 - `ruly stats` is the single token-reporting command.
 - `ruly list-recipes` no longer prints a `Tier:` line.
 
+### Fixed
+
+- `ruly stats` no longer aborts when no recipe source is configured. It writes `stats.md` for the
+  local rule files and warns on stderr that recipe totals are skipped.
+
 ## [0.1.0] - 2024-08-19
 
 ### Added

@@ -405,7 +405,8 @@ ruly stats rails -o tokens.md
 ```
 
 `ruly stats` writes `stats.md` (per-file token counts, per-recipe totals, orphaned files, circular
-`requires:` chains) to the rules directory unless `-o` is given.
+`requires:` chains) to the rules directory unless `-o` is given. With no recipe source configured, it
+still writes the per-file counts and warns on stderr that recipe totals are skipped.
 
 **Clean up generated files:**
 
