@@ -17,6 +17,8 @@ Ruly compiles the rules each task needs, from one shared rules repository, into 
 - **One rules repo on every machine:** `ruly squash --sync` mirrors a shared `recipes.yml` and the files it uses; per-machine `overrides:` add to it without copying it.
 - **Checks after every squash:** ambiguous anchor links, and files that several skills require but the recipe leaves out, are reported.
 
+See [Ruly vs. native Claude Code](#ruly-vs-native-claude-code) for how each of these compares with what Claude Code does on its own.
+
 ## 🚀 Quick Install
 
 ### One-Line Installation
@@ -87,6 +89,28 @@ $ ruly list-recipes
 $ ruly version
 ```
 
+## Ruly vs. native Claude Code
+
+Claude Code already loads `CLAUDE.md`, `.claude/rules/`, `@path` imports, skills and subagents itself. Ruly runs before that: it picks the files a task needs and writes them where Claude Code reads them.
+
+| Capability | Native Claude Code | Ruly |
+| --- | --- | --- |
+| Per-task selection | A rule is scoped by file path only: `paths` is the only frontmatter field a rule reads ([docs][cc-rules]). It loads every session or when a matching file is opened; the docs send task-specific instructions to skills, which load on demand ([docs][cc-memory]). | A named recipe lists the files, skills, commands and MCP servers for one task, and `ruly squash <recipe>` writes only that set. |
+| Dependency resolution | `@path` imports pull files into a `CLAUDE.md`, up to four hops deep ([docs][cc-imports]); a rule file has no field for declaring dependencies ([docs][cc-rules]). | `requires:` frontmatter is resolved recursively, each file is included once, `--strict` fails on a missing dependency, and `ruly stats` lists circular chains. |
+| Token cost of includes | Imports "don't reduce its context cost, because imported files load together with the CLAUDE.md that imports them" ([docs][cc-imports]); path-scoped rules and skills defer loading instead ([docs][cc-rules]). | The squashed output holds only the recipe's files and their `requires:`, and `ruly stats` reports token counts per file and in total. The savings have not been independently benchmarked yet. |
+| Cross-machine sharing | Symlinked shared rules load only after a once-per-project approval of external imports, and then only the rules without `paths` ([docs][cc-symlinks]); `~/.claude/rules/` applies to every project on one machine ([docs][cc-user-rules]). | `ruly squash --sync` mirrors a shared `recipes.yml` and every file it uses into `~/.config/ruly/remotes/`, and per-machine `overrides:` add to a shared recipe without copying it. |
+| Per-subagent model | Each subagent file sets its own `model:` and preloaded `skills:` by hand ([docs][cc-subagents]). | A recipe's `subagents:` entries each name a recipe and a model; ruly writes the `.claude/agents/` files, and the model falls back from subagent to recipe to `inherit`. |
+| Post-squash checks | Rules and imports are read as written, at session start or when a matching file is opened, with no compile step in between ([docs][cc-memory]). | Every squash checks for ambiguous anchor links (a heading that appears more than once) and warns when several skills require a file the recipe leaves out. |
+
+Native behavior is quoted from the Claude Code docs as of November 2026.
+
+[cc-memory]: https://code.claude.com/docs/en/memory
+[cc-rules]: https://code.claude.com/docs/en/memory#path-specific-rules
+[cc-imports]: https://code.claude.com/docs/en/memory#import-additional-files
+[cc-symlinks]: https://code.claude.com/docs/en/memory#share-rules-across-projects-with-symlinks
+[cc-user-rules]: https://code.claude.com/docs/en/memory#user-level-rules
+[cc-subagents]: https://code.claude.com/docs/en/sub-agents
+
 ## 🌟 How It Works
 
 ### Standalone CLI Tool
@@ -102,7 +126,7 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 
 - ✅ **Standalone**: No gem installation required
 - ✅ **Easy updates**: Just pull the latest changes
-- ✅ **No system dependencies**: Self-contained in your home directory
+- ✅ **Requirements**: Ruby 3.3+ (with Bundler), and the `gh` CLI for GitHub sources
 - ✅ **Flexible rules system**: Define your own rules repository or use remote sources
 - ✅ **Cross-platform**: Works anywhere Ruby is installed
 
@@ -144,7 +168,7 @@ For other agents:
 
 ## About Ruly
 
-Ruly is a powerful CLI tool that manages AI assistant rules and configurations for software development projects. It provides a framework for organizing and combining rule files from various sources - your own private repositories, public GitHub repos, or local files - into a single document for AI assistants like Claude or Cursor.
+Ruly is a CLI tool that manages AI assistant rules and configurations for software development projects. It provides a framework for organizing and combining rule files from various sources - your own private repositories, public GitHub repos, or local files - into a single document for AI assistants like Claude or Cursor.
 
 ### ⚠️ Important: Rules Not Included
 
@@ -371,7 +395,7 @@ Here's how the maintainer set up their private rules repository:
 
 ## 📝 Using Ruly Commands
 
-Ruly provides a powerful CLI for managing and compiling your AI assistant rules.
+Ruly provides a CLI for managing and compiling your AI assistant rules.
 
 ### Basic Commands
 

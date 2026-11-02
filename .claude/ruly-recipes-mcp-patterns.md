@@ -2,7 +2,7 @@
 
 ## Description
 
-This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that achieved 85% token reduction through conditional documentation loading.
+This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that reported an 85% token reduction through conditional documentation loading (self-reported; unverified until the Phase 6 token benchmark measures it).
 
 ## Key Patterns
 
@@ -82,6 +82,7 @@ subagents:
 ```
 
 Recipe-level default:
+
 ```yaml
 core:
   model: sonnet           # All subagents default to sonnet
@@ -152,7 +153,7 @@ workaxle-review:
 
 - **Only `core.md` should have `alwaysApply: true`** in the actual rule files
 - **Use recipes to conditionally load** documentation based on current task
-- **Achieved 85% token reduction** through this approach
+- **Reported an 85% token reduction** through this approach (self-reported; unverified until the Phase 6 token benchmark measures it)
 
 ## Anti-patterns
 
@@ -253,7 +254,7 @@ mise install ruby
 
 ## Key Achievements
 
-- **85% token reduction** from ~15,000 tokens to ~2,000 tokens base usage
+- **85% token reduction** from ~15,000 tokens to ~2,000 tokens base usage (self-reported; unverified until the Phase 6 token benchmark measures it)
 - **Conditional loading** based on file patterns and task recipes
 - **MCP server integration** for automated tool availability
 - **Task-specific recipes** for focused workflows
