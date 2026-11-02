@@ -17,6 +17,7 @@ Rules get squashed correctly into agent instruction files every time — reliabl
 - ✓ Dependency resolution via `requires:` and `skills:` frontmatter — existing
 - ✓ Remote file fetching from GitHub repositories — existing
 - ✓ Multi-agent output (Claude, Cursor) — existing; Shell-GPT JSON removed Phase 2
+- ✓ AGENTS.md output target (`-a agents`, marker-gated clean/overwrite guard) — Phase 4 (0.3.0)
 - ✓ Token counting and stats reporting — existing; `analyze` folded into `stats` Phase 2
 - ✓ Post-squash validation checks — existing
 - ✓ Subagent recipe processing — existing
@@ -66,6 +67,8 @@ Rules get squashed correctly into agent instruction files every time — reliabl
 | Hard removal, no deprecation window | Single maintainer, no forks | ✓ Phase 2 |
 | Thor `check_unknown_options!` class-wide | Removed switches must fail loudly, not be read as recipe names | ✓ Phase 2 |
 | Unknown/removed recipe keys warn and continue | Don't break shared recipes across machines | ✓ Phase 2 |
+| AGENTS.md as the cross-agent path (no per-agent adapters) | Reach Ruler/rulesync-covered agents via the standard | ✓ Phase 4 |
+| `-i`/`-I` merge into the Ruly ignore section | Targets must not un-ignore each other's output | ✓ Phase 4 |
 
 ## Evolution
 
@@ -85,4 +88,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-02 after Phase 2*
+*Last updated: 2026-11-02 after Phase 4*
