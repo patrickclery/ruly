@@ -12,7 +12,7 @@ export default function Home() {
           Compose the rules each task needs from one shared rules repo.
         </h1>
         <p className="mt-6 text-lg text-gray-400 sm:text-xl">
-          Recipes pick the rules, skills and commands for a task, and requires: pulls in their dependencies. Each subagent gets its own recipe and model, ruly squash --sync shares one rules repo across machines with per-machine overrides:, and every squash runs checks on the output.
+          Recipes pick the rules, skills and commands for a task, and requires: pulls in their dependencies. Each subagent gets its own recipe and model, ruly squash --sync shares one rules repo across machines with per-machine overrides:, and every squash that writes files runs checks on the output.
         </p>
         <div className="mt-8 flex justify-center gap-4">
           <a
@@ -60,7 +60,7 @@ export default function Home() {
             </svg>
             <h3 className="text-lg font-semibold text-white">Sync and checks</h3>
             <p className="mt-2 text-sm text-gray-400">
-              ruly squash --sync mirrors one rules repo to every machine, with per-machine overrides:. Each squash checks for ambiguous anchor links and duplicate skill requires.
+              ruly squash --sync mirrors one rules repo to every machine, with per-machine overrides:. Each squash that writes files checks for ambiguous anchor links and duplicate skill requires.
             </p>
           </div>
         </div>
