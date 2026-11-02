@@ -48,7 +48,7 @@ Phases execute in numeric order.
 | 3. Emphasize Core Advantages | 1/1 | In Progress | - |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
 | 5. Claude Code Plugin Packaging | 3/3 | In Progress | - |
-| 6. Token and Compliance Benchmark | 0 | Not started | - |
+| 6. Token and Compliance Benchmark | 1/3 | In Progress | - |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
 
 ### Phase 2: Lean Out Native Duplication
@@ -115,9 +115,12 @@ Plans:
 **Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
 **Requirements**: TBD
 **Depends on:** Phase 5
-**Plans:** 0 plans
+**Plans:** 1/3 plans executed
 
 Plans:
+- [x] 06-01-PLAN.md
+- [ ] 06-02-PLAN.md
+- [ ] 06-03-PLAN.md
 - [ ] TBD (run /gsd-plan-phase 6 to break down)
 
 ### Phase 7: Competitor Composition Audit
