@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ruly — Bring your own rules, skills, and agents",
+  title: "Ruly — Compose the rules each task needs from one shared rules repo",
   description:
-    "Bring your own rules, skills, and agents to anywhere Claude is installed.",
+    "Recipes pick the rules, skills and commands for a task, requires: pulls in their dependencies, and ruly squash --sync shares one rules repo across machines.",
 };
 
 export default function RootLayout({

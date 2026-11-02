@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { DemoAnswers, ProjectType, DeployMode } from "@/lib/demo-types";
+import type { DemoAnswers, ProjectType } from "@/lib/demo-types";
 
 interface InteractiveTerminalProps {
   onComplete: (answers: DemoAnswers) => void;
 }
 
-type Phase = "q-project" | "q-mode" | "q-name" | "q-name2" | "processing";
+type Phase = "q-project" | "q-name" | "q-name2" | "processing";
 
 interface HistoryEntry {
   question: string;
@@ -85,18 +85,8 @@ export default function InteractiveTerminal({
 
   const handleProjectType = (type: ProjectType) => {
     addHistory("Which best fits your project?", type === "single" ? "Single repo" : "Multi-repo");
-    setAnswers((prev) => ({ ...prev, projectType: type }));
-    setPhase("q-mode");
-  };
-
-  const handleDeployMode = (mode: DeployMode) => {
-    const labels: Record<DeployMode, string> = {
-      override: "Override",
-      merge: "Merge",
-      ghost: "Ghost",
-    };
-    addHistory("How do you want to deploy your rules?", labels[mode]);
-    setAnswers((prev) => ({ ...prev, deployMode: mode }));
+    // ruly writes CLAUDE.local.md, which Claude Code loads alongside the repo's CLAUDE.md
+    setAnswers((prev) => ({ ...prev, projectType: type, deployMode: "merge" }));
     setPhase("q-name");
   };
 
@@ -184,43 +174,6 @@ export default function InteractiveTerminal({
                 className="cursor-pointer rounded border border-gray-600 px-4 py-2 text-gray-300 transition duration-150 hover:border-green-500 hover:text-green-400"
               >
                 Multi-repo
-              </button>
-            </div>
-          </div>
-        )}
-
-        {phase === "q-mode" && (
-          <div>
-            <div className="mb-3 text-gray-400">
-              How do you want to deploy your rules?
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => handleDeployMode("override")}
-                className="cursor-pointer rounded border border-gray-600 px-4 py-2 text-left text-gray-300 transition duration-150 hover:border-green-500 hover:text-green-400"
-              >
-                <span className="font-bold">Override</span>
-                <span className="ml-1 text-xs text-gray-500">
-                  — replace theirs
-                </span>
-              </button>
-              <button
-                onClick={() => handleDeployMode("merge")}
-                className="cursor-pointer rounded border border-gray-600 px-4 py-2 text-left text-gray-300 transition duration-150 hover:border-green-500 hover:text-green-400"
-              >
-                <span className="font-bold">Merge</span>
-                <span className="ml-1 text-xs text-gray-500">
-                  — layer on top
-                </span>
-              </button>
-              <button
-                onClick={() => handleDeployMode("ghost")}
-                className="cursor-pointer rounded border border-gray-600 px-4 py-2 text-left text-gray-300 transition duration-150 hover:border-green-500 hover:text-green-400"
-              >
-                <span className="font-bold">Ghost</span>
-                <span className="ml-1 text-xs text-gray-500">
-                  — merge + gitignored
-                </span>
               </button>
             </div>
           </div>
