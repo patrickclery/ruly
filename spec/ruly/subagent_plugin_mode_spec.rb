@@ -36,6 +36,25 @@ RSpec.describe Ruly::Services::SubagentProcessor do
     YAML.safe_load(frontmatter_for(context).match(/\A---\n(.*?)^---$/m)[1])
   end
 
+  describe '.validate_agent_names!' do
+    def validate(*names) = described_class.validate_agent_names!({'subagents' => names.map { |n| {'name' => n} }})
+
+    %w[../x a/b .. .hidden a..b].each do |name|
+      it "refuses #{name}" do
+        expect { validate('ok', name) }.to raise_error(Ruly::Error, /Subagent name '#{Regexp.escape(name)}'/)
+      end
+    end
+
+    it 'accepts plain names and a missing name' do
+      expect { validate('helper', 'context_grabber', 'core-engineer.v2', nil) }.not_to raise_error
+    end
+
+    it 'ignores recipes without subagents' do
+      expect { [nil, [], {}, {'subagents' => 'x'}].each { |c| described_class.validate_agent_names!(c) } }
+        .not_to raise_error
+    end
+  end
+
   describe '.write_agent_frontmatter with plugin: true' do
     let(:parsed) { parsed_frontmatter(base_context.merge(plugin: true)) }
 

@@ -283,6 +283,18 @@ RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
     end
   end
 
+  context 'with a subagent name that leaves the agents dir' do
+    before { File.write('.recipes.yml', read_utf8('.recipes.yml').sub('name: helper', 'name: ../../escaped')) }
+
+    [%w[-a claude-plugin], %w[-a claude], %w[-a claude-plugin --dry-run]].each do |flags|
+      it "refuses squash demo #{flags.join(' ')} before writing anything" do
+        before = Dir.glob('**/*', File::FNM_DOTMATCH).sort
+        expect_refusal(['squash', 'demo', *flags], %r{Subagent name '\.\./\.\./escaped' is not a valid agent name})
+        expect(Dir.glob('**/*', File::FNM_DOTMATCH).sort).to eq(before)
+      end
+    end
+  end
+
   context 'with the claude_plugin alias' do
     it 'writes the plugin dir' do
       run_cli('squash', 'demo', '-a', 'claude_plugin')

@@ -68,6 +68,23 @@ module Ruly
         []
       end
 
+      # Refuse subagent names that are not a single safe file name (NAME_PATTERN, no '..'). Runs
+      # before anything is written: the name becomes `agents/NAME.md`, and a recipe may come from a
+      # remote mirrored by --sync.
+      # @param recipe_config [Hash, Array, nil] recipe configuration
+      # @raise [Ruly::Error] naming the first invalid subagent name
+      def validate_agent_names!(recipe_config)
+        return unless recipe_config.is_a?(Hash) && recipe_config['subagents'].is_a?(Array)
+
+        recipe_config['subagents'].each do |subagent|
+          name = subagent['name'] if subagent.is_a?(Hash)
+          next if name.nil? || Services::ClaudePlugin.safe_name?(name.to_s)
+
+          raise Ruly::Error, "Subagent name '#{name}' is not a valid agent name " \
+                             "(letters, digits, '.', '_' and '-'; no '..')"
+        end
+      end
+
       # @param plugin_dir [String, nil] Claude Code plugin dir, nil for the claude target
       # @return [String] directory the agent files are written to
       def agents_dir(plugin_dir) = plugin_dir ? File.join(plugin_dir, 'agents') : '.claude/agents'
