@@ -125,7 +125,7 @@ RSpec.describe RulyBench do
       argv = described_class.argv(max_budget_usd: 0.5, model: described_class::DEFAULT_MODEL)
       expect(argv).to eq(['claude', '-p', '--model', 'claude-sonnet-5-5', '--output-format', 'json',
                           '--setting-sources', 'project,local', '--no-session-persistence', '--max-budget-usd',
-                          '0.50', '--disallowedTools', 'Edit,Write,Bash,NotebookEdit'])
+                          '0.50', '--strict-mcp-config', '--tools', 'Skill'])
     end
 
     it 'rejects a model id with a space or a semicolon' do
@@ -135,8 +135,15 @@ RSpec.describe RulyBench do
     end
 
     it 'reports a missing flag by name' do
-      help = "-p, --print\n--model <m>\n--output-format\n--setting-sources\n--max-budget-usd\n--disallowedTools\n"
+      help = "-p, --print\n--model <m>\n--output-format\n--setting-sources\n--max-budget-usd\n" \
+             "--strict-mcp-config\n--tools <tools...>\n"
       expect(described_class.check_cli(help)).to eq(['--no-session-persistence is not listed'])
+    end
+
+    it 'does not take --allowedTools or --disallowedTools for --tools' do
+      help = (['-p, --print'] + (described_class::FLAGS - ['--tools']).map { "#{_1} <x>" } +
+              ['--allowedTools <t>', '--disallowedTools <t>']).join("\n")
+      expect(described_class.check_cli(help)).to eq(['--tools is not listed'])
     end
 
     it 'passes when --print and every flag are listed' do

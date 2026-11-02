@@ -278,7 +278,9 @@ module RulyBench
         '- **ruly**: `claude -p` in a workspace holding only the outputs of `ruly squash RECIPE` ' \
         '(CLAUDE.local.md and .claude/).',
         '- **native**: `claude -p` in a workspace holding the native Claude Code layout of the same corpus ' \
-        '(.claude/rules/ with `paths:` kept, .claude/skills/, .claude/commands/).', ''
+        '(.claude/rules/ with `paths:` kept, .claude/skills/, .claude/commands/).',
+        '', 'Both conditions run with only the Skill tool enabled (`--tools Skill`) and no MCP servers ' \
+            '(`--strict-mcp-config`): the model cannot read, search, edit, run commands, start subagents or browse.', ''
       ]
     end
 

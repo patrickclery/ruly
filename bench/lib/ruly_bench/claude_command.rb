@@ -4,9 +4,12 @@ module RulyBench
   # The headless `claude -p` call a live compliance run makes. The prompt is never part of argv; it goes on stdin.
   module ClaudeCommand
     DEFAULT_MODEL = 'claude-sonnet-5-5'
-    DISALLOWED_TOOLS = 'Edit,Write,Bash,NotebookEdit'
+    # The only built-in tool left on, in both conditions: skills must stay invocable for the skill task. Without
+    # Read, Glob, Grep, Task/Agent, Web*, Bash or edit tools the model cannot look for rules on its own, so rules
+    # reach it only through what Claude Code loads. --strict-mcp-config with no --mcp-config turns off MCP servers.
+    TOOLS = 'Skill'
     FLAGS = %w[--model --output-format --setting-sources --no-session-persistence --max-budget-usd
-               --disallowedTools].freeze
+               --strict-mcp-config --tools].freeze
     MODEL = /\A[\w.:-]+\z/
 
     module_function
@@ -21,7 +24,7 @@ module RulyBench
 
       [claude_bin, '-p', '--model', model, '--output-format', 'json', '--setting-sources', 'project,local',
        '--no-session-persistence', '--max-budget-usd', format('%.2f', max_budget_usd),
-       '--disallowedTools', DISALLOWED_TOOLS]
+       '--strict-mcp-config', '--tools', TOOLS]
     end
 
     # @param help_text [String] output of `claude --help`
