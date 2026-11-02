@@ -199,6 +199,8 @@ For other agents:
 - **Cursor**: Uses `.cursor/` directory with `.mdc` files
 - **AGENTS.md**: `-a agents` writes `AGENTS.md` for agents that read the AGENTS.md standard. See
   [AGENTS.md Output](#agentsmd-output).
+- **Claude Code plugin**: `-a claude-plugin` packages the same skills, commands, agents, hooks and
+  MCP servers as a plugin directory. See [Claude Code Plugin Output](#claude-code-plugin-output).
 - **Custom**: Specify with `--agent` and `--output-file` options
 
 ---
@@ -662,6 +664,7 @@ All four keys support both individual file paths and directory paths. Directorie
 - When `--agent claude` (default), files listed under the `commands:` recipe key are saved to `.claude/commands/`
 - For other agents (`cursor`, `agents`), command files are not written; `-a agents` lists them in
   its skipped-parts line
+- With `-a claude-plugin`, recipe commands go to the plugin's `commands/` directory
 - Files in `/commands/` paths under `files:` are treated as regular content (squashed into main output)
 
 User recipes:
@@ -772,6 +775,59 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   included.
 - `-a cursor` is unchanged.
 
+### Claude Code Plugin Output
+
+`ruly squash RECIPE -a claude-plugin` writes the recipe as a
+[Claude Code plugin](https://code.claude.com/docs/en/plugins-reference) directory that you load with
+`claude --plugin-dir` or share, instead of writing into the project's `.claude/`. The default output
+is unchanged. `-o DIR` picks the directory; the default is `ruly-plugin-RECIPE/`.
+
+```
+ruly-plugin-RECIPE/
+├── .claude-plugin/plugin.json
+├── skills/RECIPE-rules/SKILL.md   # the squashed rules
+├── skills/<skill>/SKILL.md
+├── commands/
+├── agents/
+├── hooks/hooks.json
+├── scripts/
+└── .mcp.json
+```
+
+- **Manifest**: `name` is the recipe name (kebab-case recommended; `claude plugin validate` warns
+  otherwise, and names Claude Code reserves, such as `claude-*`, are refused), `version` is the ruly
+  version, `description` is the recipe description, `author` is `git config user.name` when set, and
+  `metadata.generator: ruly` marks ruly's ownership. A set `version` pins marketplace installs until
+  it changes, so rules re-squashed under the same ruly version reach only `--plugin-dir` and
+  local-path installs, which load in place.
+- **Rules are not always-on.** Plugins cannot carry always-on instructions: a plugin-root
+  `CLAUDE.md` is not loaded (the docs say to ship instructions as a skill), a SessionStart hook's
+  added context is capped at 10,000 characters, a forced plugin output style replaces the user's own
+  and never reaches subagents, and a plugin `agent` setting replaces the whole system prompt. So the
+  rules become the skill `/RECIPE:RECIPE-rules`, loaded when invoked, and squash prints a notice.
+  For always-on rules keep using `ruly squash RECIPE` (CLAUDE.local.md). If you want a nudge, add
+  your own SessionStart hook that tells Claude to invoke that skill; ruly does not generate one.
+- **Skills and subagents**: nested skill paths are flattened (`skills/tdd/SKILL.md` becomes
+  `skills/tdd/`, `git/commit` becomes `git-commit`), and a recipe skill named `RECIPE-rules` is
+  refused. Subagent `model:` is kept. `permissionMode`, `hooks` and `mcpServers` are left out of
+  plugin agents because Claude Code ignores them there; the recipe's hooks and MCP servers (subagent
+  servers included) go to `hooks/hooks.json` and `.mcp.json` instead. Preloaded skills are listed as
+  `RECIPE:skill`. Squash names what it left out, for example
+  `claude-plugin target skips: model, isolate, subagent permissionMode, subagent cwd hooks`.
+- **Scripts** are copied to `scripts/`, and references in skills, commands, agents and hook commands
+  are rewritten to `${CLAUDE_PLUGIN_ROOT}/scripts/...` (quoted in hooks).
+- **MCP secrets**: `.mcp.json` copies server definitions from `~/.config/ruly/mcp.json`. Squash names
+  (never prints) the servers whose `env` or `headers` hold literal values; replace those values with
+  `${VAR}` references before sharing the plugin.
+- **Safety**: squash refuses a directory ruly did not generate (no ruly metadata in
+  `.claude-plugin/plugin.json`), the working directory, its parents and `$HOME`, and wipes and
+  rewrites a ruly-generated one. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated
+  plugin directory and never `.claude/`; `--deepclean` keeps its meaning. Adding the marker to a
+  hand-made `plugin.json` hands that directory to ruly. `-i`/`-I` add the directory to `.gitignore` /
+  `.git/info/exclude`.
+- **Check and share**: run `claude plugin validate ruly-plugin-RECIPE`. Ruly does not write a
+  `marketplace.json`; publishing is up to you.
+
 ### Commands
 
 - **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
@@ -781,6 +837,8 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
   Use `--sync` to mirror every `remotes:` entry (its `recipes.yml` plus all referenced rule files) into `~/.config/ruly/remotes/<owner>/<repo>/` before squashing. See [Sharing Recipes Across Machines](#sharing-recipes-across-machines).
   Use `-a agents` to write `AGENTS.md` instead. See [AGENTS.md Output](#agentsmd-output).
+  Use `-a claude-plugin` to write a Claude Code plugin directory instead. See
+  [Claude Code Plugin Output](#claude-code-plugin-output).
 
 - **Stats** (`stats [RECIPE]`): Writes `stats.md` with per-file token counts, per-recipe totals, orphaned files and circular `requires:` chains. Use `-o` to choose the output path.
 
@@ -788,6 +846,7 @@ recommended cross-agent path for sharing a ruly recipe with agents other than Cl
   optional. Removes main output file and command files directory.
   Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
   `ruly clean -a agents` removes only a ruly-generated `AGENTS.md`.
+  `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated plugin directory.
 
 - **Introspect** (`introspect RECIPE SOURCE...`): Scans one or more local directories or GitHub
   repo URLs for markdown files and creates or updates the named recipe in
@@ -847,6 +906,15 @@ ruly squash rails -a agents
 
 # Remove a ruly-generated AGENTS.md (a hand-written one is left alone)
 ruly clean -a agents
+
+# Package the rails recipe as a Claude Code plugin in ruly-plugin-rails/
+ruly squash rails -a claude-plugin
+
+# Load the generated plugin for one session
+claude --plugin-dir ruly-plugin-rails
+
+# Remove the ruly-generated plugin directory
+ruly clean rails -a claude-plugin
 
 # Generate with remote sources (command files go to .claude/commands/)
 ruly squash example_mixed
