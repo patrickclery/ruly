@@ -804,7 +804,8 @@ recipes:
       - /Users/john/Projects/my_app/rules/commands/testing/*.md
 ```
 
-Unknown or removed recipe keys print a warning on stderr and are ignored.
+Unknown or removed recipe keys print a warning on stderr and are ignored. A top-level `tier:` in
+`~/.config/ruly/recipes.yml` or `.recipes.yml` (removed in 0.2.0) also warns and is ignored.
 
 #### Recipe Keys: Skills, Commands, and Bins
 

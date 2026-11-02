@@ -256,13 +256,21 @@ module Ruly
       Services::RecipeLoader.recipe_key_warnings(recipe_name, recipe).each { |message| warn message }
     end
 
+    # Warn on stderr about removed top-level config keys (e.g. a global `tier:`), once per run.
+    def warn_config_keys
+      @warned_config_keys ||= Set.new
+      Services::RecipeLoader.config_warnings.each { |message| warn message if @warned_config_keys.add?(message) }
+    end
+
     # --- Core helpers ---
 
     def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
 
     def load_all_recipes
-      Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
-                                              user_recipes_file: recipes_file)
+      recipes = Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
+                                                        user_recipes_file: recipes_file)
+      warn_config_keys
+      recipes
     rescue Ruly::Error => e
       raise Thor::Error, "\u274C #{e.message}"
     end

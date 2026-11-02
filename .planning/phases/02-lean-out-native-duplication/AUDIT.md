@@ -148,7 +148,7 @@ continues.
 | Config-level `recipes:` | keep | Recipe definitions | - |
 | Config-level `remotes:` | keep | Sharing across machines | - |
 | Config-level `overrides:` | keep | Per-machine additions | - |
-| Config-level `tier:` | remove | Inert now and not warned; D-11 covers recipe keys only | Delete by hand |
+| Config-level `tier:` | remove | Warns as removed on stderr and is ignored | Delete by hand |
 
 ## Discretion: shell_gpt vs cursor (D-13)
 

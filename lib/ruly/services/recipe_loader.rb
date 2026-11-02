@@ -103,6 +103,8 @@ module Ruly
         remotes_dir ||= RemoteSync.remotes_dir
         user_config = read_config_file(user_file)
         project_config = read_config_file(project_file)
+        @config_warnings = config_key_warnings(user_file, user_config) +
+                           config_key_warnings(project_file, project_config)
 
         remotes = (Array(user_config['remotes']) + Array(project_config['remotes']))
                   .map { |r| RemoteSync.normalize_remote(r, remotes_dir:) }
@@ -541,6 +543,30 @@ module Ruly
           else
             "\u26A0\uFE0F  Recipe '#{recipe_name}': unknown key '#{key}' is ignored"
           end
+        end
+      end
+
+      # Top-level config keys that earlier releases read and ruly 0.2.0 dropped.
+      REMOVED_CONFIG_KEYS = %w[tier].freeze
+
+      # Stderr warnings for removed top-level keys in the user and project config files,
+      # set by the last load_all_recipes call.
+      # @return [Array<String>]
+      def config_warnings
+        @config_warnings || []
+      end
+
+      # Build stderr warnings for removed top-level keys in a recipes config file.
+      # Messages name the file and the key only, never the key's value.
+      #
+      # @param path [String] config file the keys were read from
+      # @param config [Hash] parsed config file
+      # @return [Array<String>] one message per removed key
+      def config_key_warnings(path, config)
+        return [] unless config.is_a?(Hash)
+
+        (config.keys.map(&:to_s) & REMOVED_CONFIG_KEYS).map do |key|
+          "\u26A0\uFE0F  #{path}: '#{key}' was removed in ruly 0.2.0 and is ignored"
         end
       end
 
