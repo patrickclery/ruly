@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: AGENTS.md Output Target
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-11-02T09:55:53.839Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-11-02T10:02:16.251Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 4 execution started
-state_head: 8edc329974684cb87b9c388a2c0f6f7e7fb6d2cb
+state_head: 2dfeb581e9a261ca00dcb0215353c1d1e3422cdd
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 29
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 ## Current Position
 
 Phase: 4 (AGENTS.md Output Target) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 4
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-11-02 — Phase 4 execution started
 
 Progress: [███░░░░░░░] 29% (existing work)
@@ -61,6 +61,7 @@ Progress: [███░░░░░░░] 29% (existing work)
 | Phase 02 P02 | 6 min | 3 tasks | 13 files |
 | Phase 02 P03 | 2 min | 2 tasks | 6 files |
 | Phase 03 P01 | 3min | 3 tasks | 4 files |
+| Phase 04 P01 | 5min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Ruly vs. native table concedes native subagent model:/skills:; ruly's edge is generating them per recipe with fallback
 - [Phase 03]: Token-cost row states no percentage until the Phase 6 benchmark
 - [Phase 03]: Subagents subtree moved verbatim under ## Reference with a pointer at its old spot
+- [Phase 04]: AGENTS.md target routes around post_squash; logic lives in Services::AgentsMd
+- [Phase 04]: Fixture rules/ files force-added because .gitignore rules/ matches any rules dir
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-02T09:38:02.583Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-11-02T10:02:16.195Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
