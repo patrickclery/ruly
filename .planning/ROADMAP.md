@@ -44,7 +44,7 @@ Phases execute in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Platform | N/A | Complete | Pre-existing |
-| 2. Lean Out Native Duplication | 2/3 | In Progress | - |
+| 2. Lean Out Native Duplication | 3/3 | In Progress | - |
 | 3. Emphasize Core Advantages | 0 | Not started | - |
 | 4. AGENTS.md Output Target | 0 | Not started | - |
 | 5. Claude Code Plugin Packaging | 0 | Not started | - |
@@ -56,7 +56,7 @@ Phases execute in numeric order.
 **Goal:** Strip ruly down to its unique strengths by removing or delegating features that Claude Code now provides natively (plugins/skills package skills, commands, agents, hooks, MCP). Audit each CLI command and output type, keep recipes + `requires:` + per-subagent model + sync/overrides + post-squash checks, and deprecate the rest.
 **Requirements**: TBD
 **Depends on:** Phase 1
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -66,7 +66,7 @@ Plans:
 - [x] 02-02-PLAN.md — Remove `import`/`mcp`, fold `analyze` into `stats`, warn-and-continue on removed/unknown recipe keys
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-03-PLAN.md — AUDIT.md, 0.2.0 version + CHANGELOG, retire v1 requirements, README/docs cleanup
+- [x] 02-03-PLAN.md — AUDIT.md, 0.2.0 version + CHANGELOG, retire v1 requirements, README/docs cleanup
 
 ### Phase 3: Emphasize Core Advantages
 
