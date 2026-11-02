@@ -237,8 +237,8 @@ post-jira-comment.sh WA-1234 "markdown with [@Name](mention:ID)"
 ## Usage Commands
 
 ```bash
-# Import a specific recipe
-ruly import --recipe workaxle-bug
+# Squash a specific recipe (also copies its scripts)
+ruly squash workaxle-bug
 
 # Squash a recipe for testing (run from temp directory)
 cd $(mktemp -d)

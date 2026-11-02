@@ -86,8 +86,7 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 1. **Simple Installation**: One-line install with curl
 2. **Self-Contained**: Everything runs from `~/ruly`
 3. **Recipe System**: Use pre-configured recipes or create your own
-4. **Smart Caching**: Cache compiled recipes for performance
-5. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
+4. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
 
 **Benefits:**
 
@@ -104,7 +103,6 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 - ✅ Combine multiple rule files into one document
 - ✅ Use recipe collections for different contexts
 - ✅ Fetch and include remote GitHub files
-- ✅ Cache compiled recipes for performance
 - ✅ Support for Claude, Cursor, and other AI assistants
 - ✅ Clean up all agent-related files automatically
 
@@ -393,17 +391,21 @@ ruly squash -o docs/my-rules.md
 ruly squash rails -o RAILS.md
 ```
 
-**Analyze token usage:**
+**Token statistics:**
 
 ```bash
-# Analyze a specific recipe
-ruly analyze rails
-ruly analyze api
+# Token stats for every file and recipe
+ruly stats
 
-# Analyze all recipes
-ruly analyze --all
-ruly analyze -a
+# Token stats for one recipe
+ruly stats rails
+
+# Write the report somewhere else
+ruly stats rails -o tokens.md
 ```
+
+`ruly stats` writes `stats.md` (per-file token counts, per-recipe totals, orphaned files, circular
+`requires:` chains) to the rules directory unless `-o` is given.
 
 **Clean up generated files:**
 
@@ -431,26 +433,9 @@ ruly squash --deepclean
 ruly squash rails --deepclean
 ```
 
-**Generate MCP server configuration:**
-
-```bash
-# Create .mcp.json with specific servers (must exist in ~/.config/ruly/mcp.json)
-ruly mcp atlassian teams playwright
-
-# Use MCP servers from a recipe
-ruly mcp -r workaxle-spike
-ruly mcp --recipe workaxle-bug
-
-# Append to existing .mcp.json instead of overwriting
-ruly mcp playwright -a
-ruly mcp --append teams
-
-# Combine recipe servers with additional servers
-ruly mcp -r workaxle-bug playwright
-
-# Append recipe servers to existing config
-ruly mcp -r workaxle-spike -a
-```
+MCP servers are chosen per recipe with `mcp_servers:` (definitions come from
+`~/.config/ruly/mcp.json`) and written to `.mcp.json` by `ruly squash`. For one-off servers, use
+Claude Code's `claude mcp add`.
 
 ### Subagents
 
@@ -768,12 +753,10 @@ Create a `~/.config/ruly/recipes.yml` file to define your own recipes or overrid
 ```yaml
 # ~/.config/ruly/recipes.yml
 ---
-tier: claude_max
 recipes:
   # Complete development environment combining multiple sources
   my_company_core:
     description: Complete development environment with Ruby, testing, and workflow rules
-    tier: claude_max
     sources:
       # John's private rules repository
       - github: john/private-rules
@@ -812,16 +795,16 @@ recipes:
       - /Users/john/Projects/my_app/rules/commands/bug/diagnose.md
       - /Users/john/Projects/my_app/rules/commands/bug/fix.md
       - /Users/john/Projects/my_app/rules/commands/pr/create.md
-    tier: claude_max
 
   # Simple recipe for specific context
   testing_only:
     description: Testing and QA rules
-    tier: claude_max
     files:
       - /Users/john/Projects/my_app/rules/testing/*.md
       - /Users/john/Projects/my_app/rules/commands/testing/*.md
 ```
+
+Unknown or removed recipe keys print a warning on stderr and are ignored.
 
 #### Recipe Keys: Skills, Commands, and Bins
 
@@ -884,14 +867,6 @@ All four keys support both individual file paths and directory paths. Directorie
 - For other agents, command files are included in the main output file
 - Files in `/commands/` paths under `files:` are treated as regular content (squashed into main output)
 
-**Caching:**
-
-- Use `--cache` flag to enable caching for any recipe
-- Cached files are stored in `cache/<agent>/` directory
-- Remote files are cached separately in `cache/remote/` (7-day expiration)
-- Cache is disabled by default
-- Use `ruly clean` to remove cache files
-
 User recipes:
 
 - Are automatically loaded from `~/.config/ruly/recipes.yml`
@@ -904,7 +879,7 @@ User recipes:
 Recipes can extend other recipes using the `extends:` key. The child recipe inherits all keys from the parent, with:
 
 - **Array keys** (`files`, `skills`, `commands`, `scripts`, `sources`, `mcp_servers`, `omit_command_prefix`): Merged via union — parent entries first, then child entries, deduplicated
-- **Scalar keys** (`description`, `model`, `tier`): Child wins — parent value only used if child doesn't define it
+- **Scalar keys** (`description`, `model`): Child wins — parent value only used if child doesn't define it
 - **Subagents**: Merged by `name` — child entry overrides parent entry with same name
 
 ```yaml
@@ -969,14 +944,13 @@ After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.js
 ### Commands
 
 - **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
-  optional positional parameter. Supports fetching remote GitHub files and caching for performance.
+  optional positional parameter. Supports fetching remote GitHub files.
   Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
   Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
   Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
   Use `--sync` to mirror every `remotes:` entry (its `recipes.yml` plus all referenced rule files) into `~/.config/ruly/remotes/<owner>/<repo>/` before squashing. See [Sharing Recipes Across Machines](#sharing-recipes-across-machines).
 
-- **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
-  detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.
+- **Stats** (`stats [RECIPE]`): Writes `stats.md` with per-file token counts, per-recipe totals, orphaned files and circular `requires:` chains. Use `-o` to choose the output path.
 
 - **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Recipe is
   optional. Removes main output file and command files directory.
@@ -1040,12 +1014,6 @@ ruly squash -r example_mixed
 
 # Mirror shared recipes from `remotes:` first, then squash from the mirror
 ruly squash homelab --sync
-
-# Use cached version (if recipe has cache: true)
-ruly squash rails
-
-# Bypass cache for one run
-ruly squash rails --no-cache
 
 # Clean up generated files
 ruly clean
