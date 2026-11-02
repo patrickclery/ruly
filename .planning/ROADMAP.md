@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Lean Out Native Duplication** - Remove/delegate features Claude Code now does natively (completed 2026-11-02)
 - [x] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models (completed 2026-11-02)
 - [x] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard (completed 2026-11-02)
-- [ ] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format
+- [x] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format (completed 2026-11-02)
 - [ ] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance
 - [x] **Phase 7: Competitor Composition Audit** - Check Ruler/rulesync task-scoped composition (completed 2026-11-02)
 
@@ -47,7 +47,7 @@ Phases execute in numeric order.
 | 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
 | 3. Emphasize Core Advantages | 1/1 | Complete    | 2026-11-02 |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
-| 5. Claude Code Plugin Packaging | 3/3 | In Progress | - |
+| 5. Claude Code Plugin Packaging | 3/3 | Complete    | 2026-11-02 |
 | 6. Token and Compliance Benchmark | 3/3 | In Progress | - |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
 
@@ -98,7 +98,7 @@ Plans:
 **Goal:** Package squashed recipe output as a Claude Code plugin (skills/, commands/, agents/, hooks, .mcp.json) so distribution uses the native format instead of ruly-specific file writing; resolve whether plugins can carry always-on instructions.
 **Requirements**: TBD
 **Depends on:** Phase 4
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
