@@ -1,0 +1,8 @@
+recipes:
+  ruby-feature:
+    description: Building a Ruby feature
+    files:
+      - core/principles.md
+      - ruby/style.md
+    skills:
+      - skills/write-adr.md
