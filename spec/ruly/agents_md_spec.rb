@@ -37,6 +37,46 @@ RSpec.describe Ruly::Services::AgentsMd do
     end
   end
 
+  describe '.demote_headings' do
+    def demote(text) = described_class.demote_headings(text).lines.map(&:chomp)
+
+    it 'keeps a 3-backtick block nested in a 4-backtick fence untouched' do
+      text = "# Top\n\n````md\n# in outer\n```bash\n# in inner\n```\n# still code\n````\n\n# After\n"
+      expect(demote(text)).to eq(['### Top', '', '````md', '# in outer', '```bash', '# in inner', '```',
+                                  '# still code', '````', '', '### After'])
+    end
+
+    it 'keeps backtick fences inside a ~~~ block untouched and demotes the heading after it' do
+      text = "~~~\n```\n# code\n```\n~~~\n# After\n"
+      expect(demote(text)).to eq(['~~~', '```', '# code', '```', '~~~', '### After'])
+    end
+
+    it 'closes a fence only on a run at least as long as the opener' do
+      text = "~~~~\n~~~\n# code\n~~~~~\n# After\n"
+      expect(demote(text)).to eq(['~~~~', '~~~', '# code', '~~~~~', '### After'])
+    end
+
+    it 'does not close a fence on a line with an info string' do
+      text = "```\n```ruby\n# code\n```\n# After\n"
+      expect(demote(text)).to eq(['```', '```ruby', '# code', '```', '### After'])
+    end
+
+    it 'accepts up to 3 spaces of fence indent and trailing whitespace on the closer' do
+      text = "   ```\n# code\n```  \n# After\n"
+      expect(demote(text)).to eq(['   ```', '# code', '```  ', '### After'])
+    end
+
+    it 'ignores a fence-like line indented 4 spaces' do
+      text = "    ```\n# Real\n"
+      expect(demote(text)).to eq(['    ```', '### Real'])
+    end
+
+    it 'does not open a fence on a backtick run whose info string contains a backtick' do
+      text = "``` a`b\n# Real\n"
+      expect(demote(text)).to eq(['``` a`b', '### Real'])
+    end
+  end
+
   describe '.skipped_parts' do
     let(:command) { [{content: '# Ship', path: 'rules/commands/ship.md'}] }
 

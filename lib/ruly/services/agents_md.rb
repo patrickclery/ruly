@@ -15,7 +15,8 @@ module Ruly
       CLAUDE_DEFAULT_OUTPUT = 'CLAUDE.local.md'
       NOTICE_PREFIX = "\u2139\uFE0F  AGENTS.md target skips Claude-only parts: "
       FRONTMATTER = /\A---\s*\n.*?^---\s*$\n?/m
-      FENCE = /\A\s*(```|~~~)/
+      # CommonMark fence line: at most 3 spaces of indent, then 3+ backticks or tildes, then the rest.
+      FENCE = /\A {0,3}(`{3,}|~{3,})(.*)\z/
       HEADING = /\A(\#{1,6})(\s.*)?\z/
 
       # Resolve the output path for an agent.
@@ -97,19 +98,33 @@ module Ruly
       end
 
       # Demote ATX headings by two levels outside fenced code blocks.
+      # Fences follow CommonMark: a block closes only on a fence of the same character, at least
+      # as long as the opener, with nothing but whitespace after it.
       # @param text [String] markdown
       # @return [String] markdown with demoted headings
       def demote_headings(text)
-        in_fence = false
+        open_fence = nil
         text.each_line.map do |line|
-          if line.match?(FENCE)
-            in_fence = !in_fence
+          fence = line.chomp.match(FENCE)
+          if fence && fence_toggles?(open_fence, fence)
+            open_fence = open_fence ? nil : fence[1]
             next line
           end
-          next line if in_fence || !(match = line.chomp.match(HEADING))
+          next line if open_fence || !(match = line.chomp.match(HEADING))
 
           "#{'#' * [match[1].length + 2, 6].min}#{match[2]}#{line[/\R\z/]}"
         end.join
+      end
+
+      # Whether a fence line opens a block (none open) or closes the open one.
+      # @param open_fence [String, nil] the opening fence run, nil outside a block
+      # @param fence [MatchData] FENCE match: [1] the fence run, [2] the rest of the line
+      # @return [Boolean]
+      def fence_toggles?(open_fence, fence)
+        run, rest = fence.captures
+        return !(run.start_with?('`') && rest.include?('`')) if open_fence.nil?
+
+        run[0] == open_fence[0] && run.length >= open_fence.length && rest.strip.empty?
       end
 
       # Claude-only recipe parts the agents target does not emit (names and counts only).
