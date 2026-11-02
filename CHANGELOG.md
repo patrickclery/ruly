@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-02
+
+Ruly can package a recipe as a Claude Code plugin directory, to load with `claude --plugin-dir` or
+share.
+
+### Added
+
+- `ruly squash RECIPE -a claude-plugin` writes a Claude Code plugin directory (`ruly-plugin-RECIPE/`,
+  or the directory given with `-o`) with `.claude-plugin/plugin.json`, the squashed rules as the
+  skill `RECIPE-rules`, the recipe's skills (nested names flattened), commands, subagents as plugin
+  agents, `hooks/hooks.json`, `scripts/` and `.mcp.json`. Script references are rewritten to
+  `${CLAUDE_PLUGIN_ROOT}/scripts/`.
+- The `claude-plugin` target prints a notice that plugins cannot carry always-on rules, so the rules
+  ship as skill `/RECIPE:RECIPE-rules` and `ruly squash RECIPE` (CLAUDE.local.md) is still needed for
+  always-on rules.
+- The `claude-plugin` target prints one line naming what it skipped (`model`, `isolate`, subagent
+  `permissionMode`, subagent cwd hooks).
+- Squash warns when `.mcp.json` servers have literal `env` / `headers` values, naming the servers
+  only, never the values.
+- `ruly squash -a claude-plugin` refuses a directory ruly did not generate, the working directory,
+  its parents and `$HOME`. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated plugin
+  directory and never `.claude/`.
+- `-i` / `-I` add the plugin directory to `.gitignore` / `.git/info/exclude`.
+
 ## [0.3.0] - 2026-11-02
 
 Ruly can write a recipe to `AGENTS.md`, the cross-agent instruction file standard, so agents other
