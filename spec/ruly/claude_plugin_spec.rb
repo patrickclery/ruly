@@ -533,6 +533,27 @@ RSpec.describe Ruly::Services::ClaudePlugin do
     end
   end
 
+  describe 'safety notices with Ruby warnings off (-W0)' do
+    around do |example|
+      verbose = $VERBOSE
+      $VERBOSE = nil
+      example.run
+    ensure
+      $VERBOSE = verbose
+    end
+
+    it 'still prints the skill-collision, hook, MCP and clean notices' do
+      allow(Ruly::Services::MCPManager).to receive(:load_mcp_servers_from_config)
+        .and_return('s' => {'env' => {'K' => 'v'}})
+      expect do
+        described_class.check_skill_names!([{path: 'a/skills/x.md'}, {path: 'b/skills/x.md'}], 'demo')
+        described_class.hook_command('.claude/scripts/missing.sh', 'plug')
+        described_class.write_mcp('plug', ['s'])
+        described_class.files_to_clean('.', 'demo')
+      end.to output(/both map.*not a recipe script.*may be secrets.*Refusing to clean/m).to_stderr
+    end
+  end
+
   describe '.write_mcp' do
     def stub_servers(servers)
       allow(Ruly::Services::MCPManager).to receive(:load_mcp_servers_from_config).and_return(servers)
