@@ -13,7 +13,7 @@ Ruly is a mature Ruby gem and CLI tool with all foundational capabilities alread
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Platform** - Squash pipeline, recipe system, multi-agent output, GitHub integration, and CLI (existing/complete)
-- [ ] **Phase 2: Lean Out Native Duplication** - Remove/delegate features Claude Code now does natively
+- [x] **Phase 2: Lean Out Native Duplication** - Remove/delegate features Claude Code now does natively (completed 2026-11-02)
 - [ ] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models
 - [ ] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard
 - [ ] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format
@@ -44,7 +44,7 @@ Phases execute in numeric order.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Platform | N/A | Complete | Pre-existing |
-| 2. Lean Out Native Duplication | 3/3 | In Progress | - |
+| 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
 | 3. Emphasize Core Advantages | 0 | Not started | - |
 | 4. AGENTS.md Output Target | 0 | Not started | - |
 | 5. Claude Code Plugin Packaging | 0 | Not started | - |
@@ -56,7 +56,7 @@ Phases execute in numeric order.
 **Goal:** Strip ruly down to its unique strengths by removing or delegating features that Claude Code now provides natively (plugins/skills package skills, commands, agents, hooks, MCP). Audit each CLI command and output type, keep recipes + `requires:` + per-subagent model + sync/overrides + post-squash checks, and deprecate the rest.
 **Requirements**: TBD
 **Depends on:** Phase 1
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
