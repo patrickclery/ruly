@@ -134,12 +134,12 @@ module Ruly
         mappings
       end
 
-      # Copy script files to .claude/scripts/ and make them executable.
+      # Copy script files to .claude/scripts/ (or scripts_dir) and make them executable.
       # @param script_files [Array<Hash>] each with :source_path and :relative_path
-      def copy_script_files(script_files)
+      # @param scripts_dir [String] destination directory
+      def copy_script_files(script_files, scripts_dir: '.claude/scripts')
         return if script_files.empty?
 
-        scripts_dir = '.claude/scripts'
         FileUtils.mkdir_p(scripts_dir)
 
         copied_count = 0
@@ -163,7 +163,7 @@ module Ruly
           copied_count += 1
         end
 
-        puts "🚀 Copied #{copied_count} script files to .claude/scripts/ (made executable)"
+        puts "🚀 Copied #{copied_count} script files to #{scripts_dir}/ (made executable)"
       end
 
       # Copy collected scripts (local + remote) to destination and make executable.

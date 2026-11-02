@@ -34,9 +34,11 @@ module Ruly
     end
 
     desc 'squash [RECIPE]', 'Combine all markdown files into one CLAUDE.local.md (recipe optional)'
-    option :output_file, aliases: '-o', default: 'CLAUDE.local.md', desc: 'Output file path (AGENTS.md when -a agents)',
+    option :output_file, aliases: '-o', default: 'CLAUDE.local.md',
+                         desc: 'Output file path (AGENTS.md when -a agents; plugin dir when -a claude-plugin)',
                          type: :string
-    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, agents)', type: :string
+    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, agents, claude-plugin)',
+                   type: :string
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
     option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
     option :dry_run, aliases: '-d', default: false, type: :boolean
@@ -64,6 +66,7 @@ module Ruly
                     else
                       requested
                     end
+      output_file = claude_plugin_dir!(recipe_name, recipe_config) if agent == Services::ClaudePlugin::AGENT
       guard_agents_md_output!(output_file, agent)
       # Clean only after the guard, so a refused squash deletes nothing.
       invoke_clean_if_requested(recipe_name)
@@ -72,11 +75,14 @@ module Ruly
       script_mappings = Services::ScriptManager.build_script_mappings(script_files)
       Services::ShellCommandChecker.check_and_warn(sources, find_rule_file: method(:find_rule_file))
 
-      prepare_output(output_file) unless options[:dry_run]
+      prepare_output(output_file, agent) unless options[:dry_run]
       sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
-      local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
+      plugin = agent == Services::ClaudePlugin::AGENT
+      local_sources, command_files, bin_files, skill_files =
+        process_squash_sources(sources, agent, scripts_dir: (File.join(output_file, 'scripts') if plugin))
       validate_squash_dispatches(local_sources, recipe_config, recipe_name)
       announce_agents_md_skips(recipe_config, command_files, local_sources) if agent == Services::AgentsMd::AGENT
+      Services::ClaudePlugin.notices(recipe_name, recipe_config).each { |line| puts line } if plugin
 
       if options[:dry_run]
         Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
@@ -88,6 +94,8 @@ module Ruly
       if agent == Services::AgentsMd::AGENT
         write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
                                      skill_files:)
+      elsif plugin
+        write_claude_plugin(output_file, local_sources:, recipe_config:, recipe_name:, script_mappings:)
       else
         write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
         post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
@@ -260,6 +268,7 @@ module Ruly
       letters = agent&.downcase&.gsub(/[^a-z]/, '')
       return 'claude' if letters == 'claudecode'
       return Services::AgentsMd::AGENT if %w[agents agentsmd].include?(letters)
+      return Services::ClaudePlugin::AGENT if letters == 'claudeplugin'
 
       agent
     end
@@ -299,6 +308,13 @@ module Ruly
                          'Move it aside or pass -o PATH.'
     end
 
+    # Validate the recipe and resolve and guard the plugin dir (dry run included); writes nothing.
+    def claude_plugin_dir!(recipe_name, recipe_config)
+      Services::ClaudePlugin.prepare!(options[:output_file], recipe_name, recipe_config)
+    rescue Ruly::Error => e
+      raise Thor::Error, "\u274C #{e.message}"
+    end
+
     # --- Core helpers ---
 
     def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
@@ -326,7 +342,9 @@ module Ruly
 
     def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
-    def prepare_output(output_file)
+    def prepare_output(output_file, agent)
+      return Services::ClaudePlugin.reset_dir(output_file) if agent == Services::ClaudePlugin::AGENT
+
       Services::ScriptManager.ensure_parent_directory(output_file)
       FileUtils.rm_f(output_file)
     end
@@ -337,10 +355,10 @@ module Ruly
       filtered
     end
 
-    def process_squash_sources(sources, agent)
+    def process_squash_sources(sources, agent, scripts_dir: nil)
       Services::SourceProcessor.process_for_squash(
         sources, agent, dry_run: options[:dry_run], find_rule_file: method(:find_rule_file),
-                        gem_root:, keep_frontmatter: options[:front_matter], verbose: verbose?
+                        gem_root:, keep_frontmatter: options[:front_matter], scripts_dir:, verbose: verbose?
       )
     end
 
@@ -488,6 +506,13 @@ module Ruly
       )
     end
 
+    # Write the Claude Code plugin dir; never writes into the project (.claude/, CLAUDE.local.md, .mcp.json).
+    def write_claude_plugin(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:)
+      Services::ClaudePlugin.write(dir, local_sources:, recipe_config:, recipe_name:, script_mappings:,
+                                        toc: options[:toc])
+      puts "\u2705 Wrote Claude Code plugin to #{dir}", "   Load it with: claude --plugin-dir #{dir}"
+    end
+
     # --- Clean helpers ---
 
     def collect_files_to_clean(agent)
@@ -542,8 +567,8 @@ module Ruly
       nil
     end
 
-    def process_sources_for_squash(sources, agent, _recipe_config, _options)
-      process_squash_sources(sources, agent)
+    def process_sources_for_squash(sources, agent, _recipe_config, opts)
+      process_squash_sources(sources, agent, scripts_dir: opts&.[](:scripts_dir))
     end
 
     # --- Backward-compatible delegators for specs ---

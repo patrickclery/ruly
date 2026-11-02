@@ -58,9 +58,10 @@ module Ruly
       # @param verbose [Boolean] whether to show detailed output
       # @param keep_frontmatter [Boolean] whether to preserve non-metadata frontmatter
       # @param dry_run [Boolean] whether to skip side effects like copying bin files
+      # @param scripts_dir [String, nil] where bin files are copied (nil: .claude/scripts)
       # @return [Array] [local_sources, command_files, bin_files, skill_files]
       def process_for_squash(sources, agent, find_rule_file:, gem_root:, # rubocop:disable Metrics/MethodLength
-                             dry_run: false, keep_frontmatter: false, verbose: false)
+                             dry_run: false, keep_frontmatter: false, scripts_dir: nil, verbose: false)
         local_sources = []
         command_files = []
         bin_files = []
@@ -113,12 +114,22 @@ module Ruly
           index += 1
         end
 
-        # Copy script files to .claude/scripts/ if any exist
-        Services::ScriptManager.copy_script_files(bin_files) unless bin_files.empty? || dry_run
+        copy_bin_files(bin_files, scripts_dir) unless bin_files.empty? || dry_run
 
         puts if verbose
 
         [local_sources, command_files, bin_files, skill_files]
+      end
+
+      # Copy script files to .claude/scripts/, or to scripts_dir when given.
+      # @param bin_files [Array<Hash>] processed bin files
+      # @param scripts_dir [String, nil] destination override
+      def copy_bin_files(bin_files, scripts_dir)
+        if scripts_dir
+          Services::ScriptManager.copy_script_files(bin_files, scripts_dir:)
+        else
+          Services::ScriptManager.copy_script_files(bin_files)
+        end
       end
 
       # Create a unique key for source deduplication.

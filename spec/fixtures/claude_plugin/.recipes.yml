@@ -1,0 +1,29 @@
+recipes:
+  demo:
+    commands:
+      - rules/commands/ship.md
+    description: Claude Code plugin target fixture
+    files:
+      - rules/demo.md
+    hooks:
+      Stop:
+        - hooks:
+            - command: .claude/scripts/notify.sh
+              type: command
+    mcp_servers:
+      - grafana
+    scripts:
+      - rules/scripts/notify.sh
+    skills:
+      - rules/skills/deploy.md
+      - rules/skills/tdd/SKILL.md
+    subagents:
+      - model: haiku
+        name: helper
+        recipe: helper
+  helper:
+    description: Subagent fixture
+    files:
+      - rules/base.md
+    skills:
+      - rules/skills/review.md

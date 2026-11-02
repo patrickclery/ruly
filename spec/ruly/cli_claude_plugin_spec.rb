@@ -1,0 +1,166 @@
+# frozen_string_literal: true
+
+require 'spec_helper'
+require 'tmpdir'
+require 'fileutils'
+
+RSpec.describe Ruly::CLI, '.start -a claude-plugin' do
+  let(:test_dir) { Dir.mktmpdir }
+  let(:fixture_dir) { File.expand_path('../fixtures/claude_plugin', __dir__) }
+  let(:plugin_dir) { 'ruly-plugin-demo' }
+  let(:manifest_path) { File.join(plugin_dir, '.claude-plugin', 'plugin.json') }
+  let(:rules_skill_path) { File.join(plugin_dir, 'skills', 'demo-rules', 'SKILL.md') }
+
+  around do |example|
+    original_dir = Dir.pwd
+    begin
+      Dir.chdir(test_dir)
+      example.run
+    ensure
+      # CRITICAL: Always return to original directory before ANY cleanup
+      Dir.chdir(original_dir)
+      FileUtils.rm_rf(test_dir) if test_dir && Dir.exist?(test_dir)
+    end
+  end
+
+  before do
+    FileUtils.cp_r(File.join(fixture_dir, '.'), test_dir)
+    allow(Ruly::Services::RecipeLoader).to receive(:user_recipes_file)
+      .and_return(File.join(test_dir, 'no-user-recipes.yml'))
+    allow(Ruly::Services::ClaudePlugin).to receive(:git_author).and_return('Fixture Author')
+  end
+
+  def read_utf8(path) = File.read(path, encoding: 'UTF-8')
+
+  def run_cli(*args)
+    expect { described_class.start(args) }.to output.to_stdout
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def expect_exit_1(args, stderr)
+    expect do
+      expect { described_class.start(args) }.to raise_error(SystemExit) { |e| expect(e.status).to eq(1) }
+    end.to output(stderr).to_stderr
+  end
+
+  # Body of a SKILL.md after its closing frontmatter line.
+  def skill_body(path) = read_utf8(path).split(/^---$\n/, 3)[2]
+
+  # CLAUDE.local.md the claude target writes for the same recipe, squashed in a fixture copy.
+  def claude_reference
+    ref_dir = Dir.mktmpdir
+    FileUtils.cp_r(File.join(fixture_dir, '.'), ref_dir)
+    original = Dir.pwd
+    Dir.chdir(ref_dir)
+    allow(Ruly::Services::MCPManager).to receive(:update_mcp_settings)
+    capture_stdout { described_class.start(%w[squash demo -o claude.md]) }
+    read_utf8('claude.md')
+  ensure
+    Dir.chdir(original)
+    FileUtils.rm_rf(ref_dir)
+  end
+
+  context 'when squashing with -a claude-plugin' do
+    let!(:stdout) { capture_stdout { described_class.start(%w[squash demo -a claude-plugin]) } }
+    let(:manifest) { JSON.parse(read_utf8(manifest_path)) }
+
+    it 'writes the manifest name, version and description' do
+      expect(manifest.slice('name', 'version', 'description'))
+        .to eq('description' => 'Claude Code plugin target fixture', 'name' => 'demo', 'version' => Ruly::VERSION)
+    end
+
+    it 'writes the author and the ruly ownership marker' do
+      expect([manifest.dig('author', 'name'), manifest.dig('metadata', 'generator')]).to eq(['Fixture Author', 'ruly'])
+    end
+
+    it 'writes the rules skill with name frontmatter' do
+      lines = read_utf8(rules_skill_path).lines.map(&:chomp)
+      expect([lines.first, lines]).to match(['---', include('name: demo-rules')])
+    end
+
+    it 'writes the same rules body the claude target writes to CLAUDE.local.md' do
+      expect(skill_body(rules_skill_path)).to eq(claude_reference)
+    end
+
+    it 'copies the recipe scripts into the plugin, executable' do
+      expect(File.executable?(File.join(plugin_dir, 'scripts', 'notify.sh'))).to be(true)
+    end
+
+    it 'prints the always-on notice once' do
+      expect(stdout.scan('cannot carry always-on instructions').size).to eq(1)
+    end
+
+    it 'names the rules skill and the always-on alternative in the notice' do
+      expect(stdout).to include('/demo:demo-rules', '`ruly squash demo` (CLAUDE.local.md)')
+    end
+
+    it 'writes nothing into the project' do
+      %w[.claude CLAUDE.local.md .mcp.json .mcp.yml CLAUDE.md].each do |path|
+        expect(File.exist?(path)).to be(false), "expected #{path} to be absent"
+      end
+    end
+
+    it 'writes no CLAUDE.md into the plugin' do
+      expect(Dir.glob('**/CLAUDE.md', File::FNM_DOTMATCH, base: plugin_dir)).to be_empty
+    end
+  end
+
+  context 'with the claude_plugin alias' do
+    it 'writes the plugin dir' do
+      run_cli('squash', 'demo', '-a', 'claude_plugin')
+      expect(File.file?(manifest_path)).to be(true)
+    end
+  end
+
+  context 'with -o DIR' do
+    it 'writes the plugin into DIR and no default dir' do
+      run_cli('squash', 'demo', '-a', 'claude-plugin', '-o', 'out/plugin')
+      expect([File.file?('out/plugin/.claude-plugin/plugin.json'), File.exist?(plugin_dir)]).to eq([true, false])
+    end
+  end
+
+  context 'with an existing plugin dir ruly did not generate' do
+    before do
+      FileUtils.mkdir_p(plugin_dir)
+      File.write(File.join(plugin_dir, 'notes.txt'), "mine\n")
+    end
+
+    [%w[squash demo -a claude-plugin], %w[squash demo -a claude-plugin --dry-run]].each do |args|
+      it "refuses #{args.join(' ')} with exit 1 and keeps the dir" do
+        expect_exit_1(args, /not generated by ruly/)
+        expect(Dir.children(plugin_dir)).to eq(['notes.txt'])
+      end
+    end
+  end
+
+  context 'with a plugin dir ruly generated earlier' do
+    it 'wipes stale files and rewrites it' do
+      run_cli('squash', 'demo', '-a', 'claude-plugin')
+      File.write(File.join(plugin_dir, 'stale.txt'), "old\n")
+      run_cli('squash', 'demo', '-a', 'claude-plugin')
+      expect([File.exist?(File.join(plugin_dir, 'stale.txt')), File.file?(rules_skill_path)]).to eq([false, true])
+    end
+  end
+
+  context 'without a recipe' do
+    it 'exits 1 asking for a recipe' do
+      expect_exit_1(%w[squash -a claude-plugin], /needs a recipe/)
+    end
+  end
+
+  context 'with an unsafe recipe name' do
+    it 'exits 1 before writing anything' do
+      File.write('.recipes.yml', "recipes:\n  'a b':\n    files:\n      - rules/base.md\n")
+      expect_exit_1(['squash', 'a b', '-a', 'claude-plugin'], /not a valid plugin name/)
+      expect(Dir.glob('ruly-plugin-*')).to be_empty
+    end
+  end
+end
