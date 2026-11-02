@@ -124,6 +124,21 @@ module Ruly
         end
       end
 
+      # Write processed sources to an IO, separated by one empty line.
+      # @param io [IO] destination
+      # @param sources [Array<Hash>] processed sources with :content and :path
+      # @param script_mappings [Hash] absolute script path => relative name
+      # @param toc [Boolean] add anchor ids before headings
+      # @return [void]
+      def write_sources(io, sources, script_mappings, toc:)
+        sources.each_with_index do |source, i|
+          content = Services::TOCGenerator.rewrite_script_references(source[:content], script_mappings)
+          content = Services::TOCGenerator.add_anchor_ids_to_content(content, source[:path]) if toc
+          io.puts content
+          io.puts if i < sources.length - 1
+        end
+      end
+
       # Collect all local sources from the rules directory (non-recipe mode).
       # @param rules_dir [String] path to the rules directory
       # @return [Array<Hash>] source entries

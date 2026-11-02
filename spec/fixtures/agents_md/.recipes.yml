@@ -1,0 +1,23 @@
+recipes:
+  demo:
+    commands:
+      - rules/commands/ship.md
+    description: AGENTS.md target fixture
+    files:
+      - rules/demo.md
+    hooks:
+      Stop:
+        - hooks:
+            - command: echo done
+              type: command
+    mcp_servers:
+      - grafana
+    skills:
+      - rules/skills/deploy.md
+    subagents:
+      - name: helper
+        recipe: helper
+  helper:
+    description: Subagent fixture
+    files:
+      - rules/base.md

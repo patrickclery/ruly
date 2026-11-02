@@ -34,8 +34,9 @@ module Ruly
     end
 
     desc 'squash [RECIPE]', 'Combine all markdown files into one CLAUDE.local.md (recipe optional)'
-    option :output_file, aliases: '-o', default: 'CLAUDE.local.md', desc: 'Output file path', type: :string
-    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, etc.)', type: :string
+    option :output_file, aliases: '-o', default: 'CLAUDE.local.md', desc: 'Output file path (AGENTS.md when -a agents)',
+                         type: :string
+    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, agents)', type: :string
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
     option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
     option :dry_run, aliases: '-d', default: false, type: :boolean
@@ -57,11 +58,12 @@ module Ruly
       agent = normalize_agent(options[:agent])
 
       sources, recipe_config = load_sources(recipe_name)
+      requested = Services::AgentsMd.output_file(options[:output_file], agent)
       output_file = if recipe_name
                       Services::SquashHelpers.determine_output_file(recipe_name, recipe_config,
-                                                                    options)
+                                                                    {output_file: requested})
                     else
-                      options[:output_file]
+                      requested
                     end
       script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
                                                                           find_rule_file: method(:find_rule_file))
@@ -80,12 +82,16 @@ module Ruly
         return
       end
 
-      write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
-      post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
-                  script_files)
-
-      Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, local_sources, command_files,
-                                       skill_files)
+      if agent == Services::AgentsMd::AGENT
+        write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
+                                     skill_files:)
+      else
+        write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
+        post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
+                    script_files)
+        Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, local_sources,
+                                         command_files, skill_files)
+      end
       report_source_failures!
     end
 
@@ -248,7 +254,10 @@ module Ruly
       if REMOVED_AGENTS.include?(agent&.downcase)
         warn "\u26A0\uFE0F  Agent '#{agent}': shell_gpt JSON output was removed in ruly 0.2.0; writing markdown instead"
       end
-      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
+      letters = agent&.downcase&.gsub(/[^a-z]/, '')
+      return 'claude' if letters == 'claudecode'
+      return Services::AgentsMd::AGENT if %w[agents agentsmd].include?(letters)
+
       agent
     end
 
@@ -338,13 +347,22 @@ module Ruly
           output.puts Services::TOCGenerator.generate_toc_content(local_sources, command_files, agent)
           output.puts
         end
-        local_sources.each_with_index do |source, i|
-          content = Services::TOCGenerator.rewrite_script_references(source[:content], script_mappings)
-          content = Services::TOCGenerator.add_anchor_ids_to_content(content, source[:path]) if options[:toc]
-          output.puts content
-          output.puts if i < local_sources.length - 1
-        end
+        Services::SquashHelpers.write_sources(output, local_sources, script_mappings, toc: options[:toc])
       end
+    end
+
+    # Write the AGENTS.md target: squashed rules only, no Claude-only artifacts (commands,
+    # subagents, hooks, MCP config, settings). Scripts are still copied for rewritten references.
+    def write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
+                        skill_files:)
+      Services::AgentsMd.write(output_file, local_sources:, recipe_name:, script_mappings:, toc: options[:toc])
+      update_git_ignores(output_file, Services::AgentsMd::AGENT, [])
+      Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+      Ruly::Checks.run_all(local_sources, [], find_rule_file: method(:find_rule_file),
+                                              parse_frontmatter: Services::FrontmatterParser.method(:parse),
+                                              recipe_paths: build_recipe_paths(local_sources), skill_files:)
+      Services::Display.squash_summary(Services::AgentsMd::AGENT, recipe_name, recipe_config, output_file,
+                                       local_sources, [], skill_files)
     end
 
     def post_squash(output_file, agent, recipe_name, recipe_config, # rubocop:disable Metrics/ParameterLists
