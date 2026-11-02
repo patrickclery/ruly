@@ -158,6 +158,24 @@ RSpec.describe Ruly::Services::AgentsMd do
       expect(described_class.generated?(path)).to be(false)
     end
 
+    it 'is true for a header written with CRLF line endings' do
+      path = File.join(dir, 'AGENTS.md')
+      File.binwrite(path, "#{described_class.header('demo')}\r\n\r\nbody\r\n")
+      expect(described_class.generated?(path)).to be(true)
+    end
+
+    it 'is false for an empty file' do
+      path = File.join(dir, 'AGENTS.md')
+      File.write(path, '')
+      expect(described_class.generated?(path)).to be(false)
+    end
+
+    it 'is false when the marker is not on line 1' do
+      path = File.join(dir, 'AGENTS.md')
+      File.write(path, "\n#{described_class.header('demo')}\n")
+      expect(described_class.generated?(path)).to be(false)
+    end
+
     it 'is false for a missing path' do
       expect(described_class.generated?(File.join(dir, 'nope.md'))).to be(false)
     end
