@@ -20,6 +20,11 @@ RSpec.describe Ruly::Services::RecipeLoader do
       expect(warnings.first).to include("Recipe 'demo': 'tier' was removed in ruly 0.2.0 and is ignored")
     end
 
+    it 'treats cache as an unknown key, since no release read it' do
+      warnings = described_class.recipe_key_warnings('demo', {'cache' => true})
+      expect(warnings).to eq(["\u26A0\uFE0F  Recipe 'demo': unknown key 'cache' is ignored"])
+    end
+
     it 'flags an unknown key' do
       warnings = described_class.recipe_key_warnings('core-debugger', {'omitCommandPrefix' => 'workaxle'})
       expect(warnings.size).to eq(1)

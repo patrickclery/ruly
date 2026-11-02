@@ -143,7 +143,7 @@ continues.
 | `sources` | keep | Composition | - |
 | `subagents` | keep | D-05 | - |
 | `tier` | remove | D-03: only `analyze` read it; warns as removed | - |
-| `cache` | remove | D-07: documented in README but never read by code; warns as removed | - |
+| `cache` | remove | D-07: an example in the 0.1.0 README mentioned it, but no release read it; warns as an unknown key | - |
 | Any other recipe key | remove | Warns as unknown and is ignored (catches typos such as `omitCommandPrefix`) | - |
 | Config-level `recipes:` | keep | Recipe definitions | - |
 | Config-level `remotes:` | keep | Sharing across machines | - |

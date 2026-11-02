@@ -29,8 +29,9 @@ Claude Code features. Removals are immediate, with no deprecation period.
 - Unknown CLI switches now exit 1 with `Unknown switches` instead of being ignored.
 - `ruly <command> --help` and `ruly <command> -h` show that command's help (same as
   `ruly help <command>`).
-- `ruly squash` warns on stderr about removed or unknown recipe keys (for example `tier`, `cache`)
-  and continues. A top-level `tier:` in the recipes config file warns the same way.
+- `ruly squash` warns on stderr about removed or unknown recipe keys (for example `tier`, or a
+  misspelled `omitCommandPrefix`) and continues. A top-level `tier:` in the recipes config file
+  warns the same way.
 - `ruly stats` is the single token-reporting command.
 - `ruly list-recipes` no longer prints a `Tier:` line.
 

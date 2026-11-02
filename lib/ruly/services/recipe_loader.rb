@@ -526,7 +526,7 @@ module Ruly
       ].freeze
 
       # Recipe keys that earlier releases read and ruly 0.2.0 dropped.
-      REMOVED_RECIPE_KEYS = %w[cache tier].freeze
+      REMOVED_RECIPE_KEYS = %w[tier].freeze
 
       # Build stderr warnings for removed or unknown top-level recipe keys.
       # Messages name the recipe and the key only, never the key's value.
