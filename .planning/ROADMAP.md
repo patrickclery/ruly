@@ -23,6 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Core Platform
+
 **Goal**: Users can compile modular markdown rules into agent-specific instruction files reliably
 **Depends on**: Nothing (first phase)
 **Requirements**: SQSH-01, SQSH-02, SQSH-03, SQSH-04, SQSH-05, SQSH-06, RCPE-01, RCPE-02, RCPE-03, RCPE-04, AGNT-01, AGNT-02, AGNT-03, GHUB-01, GHUB-02, CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06
@@ -32,6 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can generate output for Claude, Cursor, and Shell-GPT formats from the same rule sources
   4. User can fetch remote rule files from GitHub repositories without manual downloads
   5. User can run `ruly stats`, `ruly clean`, `ruly import`, `ruly init`, and `ruly analyze` for full CLI workflow
+
 **Plans**: N/A (existing/complete)
 
 ## Progress
@@ -57,8 +59,13 @@ Phases execute in numeric order.
 **Plans:** 3 plans
 
 Plans:
+**Wave 1**
 - [ ] 02-01-PLAN.md — Remove `--cache`, TaskMaster flags and shell_gpt output; removed switches fail loudly (tracer)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 02-02-PLAN.md — Remove `import`/`mcp`, fold `analyze` into `stats`, warn-and-continue on removed/unknown recipe keys
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 02-03-PLAN.md — AUDIT.md, 0.2.0 version + CHANGELOG, retire v1 requirements, README/docs cleanup
 
 ### Phase 3: Emphasize Core Advantages
