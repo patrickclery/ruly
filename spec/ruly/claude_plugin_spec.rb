@@ -424,8 +424,33 @@ RSpec.describe Ruly::Services::ClaudePlugin do
       expect(described_class.hook_command('bash .claude/scripts/notify.sh --flag', 'plug')).to eq("bash #{root} --flag")
     end
 
-    it 'leaves a home-dir script path alone' do
-      expect(described_class.hook_command('~/.claude/scripts/x.sh', 'plug')).to eq('~/.claude/scripts/x.sh')
+    {
+      '"$HOME/.claude/scripts/x.sh" --y' => '$HOME/.claude/scripts/x.sh',
+      '~/.claude/scripts/x.sh' => '~/.claude/scripts/x.sh'
+    }.each do |command, token|
+      it "keeps #{command} and names it on stderr" do
+        result = nil
+        expect { result = described_class.hook_command(command, 'plug') }
+          .to output(/references #{Regexp.escape(token)}, which is outside the plugin; left unchanged/).to_stderr
+        expect(result).to eq(command)
+      end
+    end
+
+    {
+      '"$CLAUDE_PROJECT_DIR"/.claude/scripts/notify.sh' => '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"',
+      '"$CLAUDE_PROJECT_DIR/.claude/scripts/notify.sh" a' => '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh" a',
+      '"${CLAUDE_PROJECT_DIR}"/.claude/scripts/notify.sh --x' => '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh" --x',
+      '$CLAUDE_PROJECT_DIR/.claude/scripts/notify.sh' => '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"',
+      './.claude/scripts/notify.sh && ./.claude/scripts/notify.sh' =>
+        '"${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh" && "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"',
+      'bash -c ".claude/scripts/notify.sh --x"' => 'bash -c "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh --x"',
+      'bash -c "echo \\"a\\"; .claude/scripts/notify.sh"' =>
+        'bash -c "echo \\"a\\"; ${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"',
+      "sh -c '.claude/scripts/notify.sh'" => "sh -c '${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh'"
+    }.each do |command, rewritten|
+      it "rewrites #{command} without breaking its quoting" do
+        expect { expect(described_class.hook_command(command, 'plug')).to eq(rewritten) }.not_to output.to_stderr
+      end
     end
 
     it 'keeps and warns about a script that is not a recipe script' do

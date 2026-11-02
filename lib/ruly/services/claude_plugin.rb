@@ -33,8 +33,11 @@ module Ruly
       # `.claude/scripts/X` not preceded by a word character, '/', '.' or '~' (so `~/.claude/...`
       # and `$HOME/.claude/...` stay put); X ends in a word character (no trailing sentence dot).
       SCRIPT_REF = %r{(?<![\w/.~])\.claude/scripts/([\w./-]*\w)}
-      # SCRIPT_REF absorbing one pair of double quotes around the reference (hook commands).
-      QUOTED_SCRIPT_REF = %r{(?<![\w/.~])("?)\.claude/scripts/([\w./-]*\w)\1}
+      PROJECT_DIR_VAR = /\$(?:CLAUDE_PROJECT_DIR|\{CLAUDE_PROJECT_DIR\})/
+      # A hook command's project script: `.claude/scripts/X`, optionally after `./`, `$CLAUDE_PROJECT_DIR/`
+      # or `"$CLAUDE_PROJECT_DIR"/` (braces allowed); not preceded by a word character, '/', '.', '~'
+      # or '$' (so `~/.claude/...` and `$HOME/.claude/...` are not matched).
+      HOOK_SCRIPT_REF = %r{(?<![\w/.~$])(?:\./|"#{PROJECT_DIR_VAR}"/|#{PROJECT_DIR_VAR}/)?\.claude/scripts/([\w./-]*\w)}
 
       # Resolve the plugin directory.
       # @param requested [String, nil] the -o value (Thor default 'CLAUDE.local.md')
@@ -361,20 +364,66 @@ module Ruly
         end
       end
 
-      # Rewrite `.claude/scripts/X` in a hook command to the double-quoted
-      # `"${CLAUDE_PLUGIN_ROOT}/scripts/X"` when X was copied into DIR/scripts; other references
-      # are kept and named on stderr.
+      # Rewrite each HOOK_SCRIPT_REF in a hook command whose X was copied into DIR/scripts to
+      # `${CLAUDE_PLUGIN_ROOT}/scripts/X`: double-quoted when the reference is unquoted, bare inside
+      # a single- or double-quoted string (adding quotes there would end the string). Every other
+      # `.claude/scripts/` reference is kept and named on stderr.
       # @param command [String] hook command
       # @param dir [String] plugin directory
       # @return [String]
       def hook_command(command, dir)
-        command.gsub(QUOTED_SCRIPT_REF) do
+        rewritten = +''
+        quote = nil
+        done = 0
+        command.scan(HOOK_SCRIPT_REF) do
           match = Regexp.last_match
-          next %("#{PLUGIN_SCRIPTS}/#{match[2]}") if copied_script?(dir, match[2])
+          before = command[done...match.begin(0)]
+          quote = quote_after(before, quote)
+          rewritten << before << hook_script_ref(match, quote, dir)
+          done = match.end(0)
+        end
+        warn_unmatched_script_refs(command)
+        rewritten << command[done..]
+      end
 
-          warn "\u26A0\uFE0F  Hook command references .claude/scripts/#{match[2]}, which is not a recipe script; " \
+      # @param match [MatchData] a HOOK_SCRIPT_REF match
+      # @param quote [String, nil] the quote the match sits in ('"', "'" or nil)
+      # @return [String] the replacement for the match
+      def hook_script_ref(match, quote, dir)
+        script = match[1]
+        unless copied_script?(dir, script)
+          warn "\u26A0\uFE0F  Hook command references .claude/scripts/#{script}, which is not a recipe script; " \
                'left unchanged'
-          match[0]
+          return match[0]
+        end
+        quote ? "#{PLUGIN_SCRIPTS}/#{script}" : %("#{PLUGIN_SCRIPTS}/#{script}")
+      end
+
+      # Shell quote state after TEXT, starting in QUOTE; a backslash escapes the next character
+      # outside single quotes.
+      # @return [String, nil] '"', "'" or nil
+      def quote_after(text, quote)
+        escaped = false
+        text.each_char do |char|
+          if escaped then escaped = false
+          elsif char == '\\' && quote != "'" then escaped = true
+          elsif quote.nil? && ['"', "'"].include?(char) then quote = char
+          elsif char == quote then quote = nil
+          end
+        end
+        quote
+      end
+
+      # Name on stderr each `.claude/scripts/` reference HOOK_SCRIPT_REF does not cover (such as
+      # `~/.claude/scripts/X` or `$HOME/.claude/scripts/X`): it stays pointed outside the plugin.
+      def warn_unmatched_script_refs(command)
+        covered = command.to_enum(:scan, HOOK_SCRIPT_REF).map { Regexp.last_match.begin(0)...Regexp.last_match.end(0) }
+        command.to_enum(:scan, %r{\.claude/scripts/}).each do
+          at = Regexp.last_match.begin(0)
+          next if covered.any? { |range| range.cover?(at) }
+
+          token = "#{command[0...at][/[^\s"']*\z/]}#{command[at..][/\A[^\s"']*/]}"
+          warn "\u26A0\uFE0F  Hook command references #{token}, which is outside the plugin; left unchanged"
         end
       end
 
