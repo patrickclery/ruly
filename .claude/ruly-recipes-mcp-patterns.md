@@ -243,13 +243,13 @@ ruly squash workaxle-bug
 
 # Squash a recipe for testing (run from temp directory)
 cd $(mktemp -d)
-ruly squash --recipe workaxle-testing
+ruly squash workaxle-testing
 
 # List available recipes
 ruly list-recipes
 
-# Update installed ruly after changes
-mise install ruby
+# Update installed ruly after changes (installed to ~/ruly by setup.rb)
+cd ~/ruly && git pull && bundle install
 ```
 
 ## Key Achievements
