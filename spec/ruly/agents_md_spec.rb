@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'fileutils'
+require 'tmpdir'
 
 RSpec.describe Ruly::Services::AgentsMd do
   let(:fixture_dir) { File.expand_path('../fixtures/agents_md', __dir__) }
@@ -71,6 +73,32 @@ RSpec.describe Ruly::Services::AgentsMd do
     it 'names the parts' do
       expect(described_class.skipped_notice(['hooks']))
         .to eq('ℹ️  AGENTS.md target skips Claude-only parts: hooks')
+    end
+  end
+
+  describe '.generated?' do
+    let(:dir) { Dir.mktmpdir }
+
+    after { FileUtils.rm_rf(dir) }
+
+    it 'is true for a file with the ruly header' do
+      path = File.join(dir, 'AGENTS.md')
+      File.write(path, "#{described_class.header('demo')}\n\nbody\n")
+      expect(described_class.generated?(path)).to be(true)
+    end
+
+    it 'is false for a hand-written file' do
+      path = File.join(dir, 'AGENTS.md')
+      File.write(path, "# Team notes\n")
+      expect(described_class.generated?(path)).to be(false)
+    end
+
+    it 'is false for a missing path' do
+      expect(described_class.generated?(File.join(dir, 'nope.md'))).to be(false)
+    end
+
+    it 'is false for a directory' do
+      expect(described_class.generated?(dir)).to be(false)
     end
   end
 end
