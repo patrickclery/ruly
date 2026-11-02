@@ -14,6 +14,21 @@ RSpec.describe RulyBench::Scorer do
       expect(described_class.scope(reply, 'code')).to eq("puts 1\nputs 2")
     end
 
+    it 'reads fences indented by up to three spaces and strips that indentation from the content' do
+      reply = "I avoided puts here.\n   ```ruby\n   logger.info('x')\n     nested\n   ```\nDone.\n"
+      expect(described_class.scope(reply, 'code')).to eq("logger.info('x')\n  nested")
+      expect(described_class.score(reply, [check('forbid', 'code', '\\bputs\\b')])[:pass]).to be(true)
+    end
+
+    it 'does not treat a line indented by four spaces as a fence' do
+      expect(described_class.scope("    ```\nputs 1\n    ```\n", 'code')).to eq("    ```\nputs 1\n    ```\n")
+    end
+
+    it 'closes a fence only with the same character, at least as long, indented at most three spaces' do
+      reply = "````\na\n```\n~~~~\n    ````\nb\n   `````  \nprose\n"
+      expect(described_class.scope(reply, 'code')).to eq("a\n```\n~~~~\n    ````\nb")
+    end
+
     it 'falls back to the whole reply when there is no fence' do
       expect(described_class.scope("plain reply\n", 'code')).to eq("plain reply\n")
     end
