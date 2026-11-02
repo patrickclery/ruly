@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Emphasize Core Advantages
 status: verifying
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-11-02T10:51:46.249Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-11-02T10:55:05.792Z"
 last_activity: 2026-11-02
 last_activity_desc: Phase 7 complete, transitioned to Phase 3
-state_head: ea6acd02c44d45e84bb981efd5f896564c027c72
+state_head: 8b4897ef33cab1d9d122bd9450e7c488feae004b
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 57
 ---
 
@@ -68,6 +68,7 @@ Progress: [██████░░░░] 57% (existing work)
 | Phase 07 P01 | 6min | 3 tasks | 3 files |
 | Phase 05 P01 | 8 min | 2 tasks | 16 files |
 | Phase 05 P02 | 10 min | 2 tasks | 8 files |
+| Phase 05 P03 | 4 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,7 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-01: rules ship as skill RECIPE-rules plus always-on notice (D-09); no CLAUDE.md/SessionStart/output style in plugins
 - [Phase 05]: Plugin agent skills: are a YAML list of namespaced PLUGIN:skill names (assumption A3, post-run human check)
 - [Phase 05]: Nested skill names are flattened for the plugin only; claude target keeps nested layout
+- [Phase 05]: 0.4.0 released for the claude-plugin target; README documents that plugin rules are a skill, not always-on
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-02T10:51:46.137Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-11-02T10:55:05.647Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
