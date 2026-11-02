@@ -54,23 +54,36 @@ module Ruly
 
       # Write AGENTS.md: header, optional TOC, the squashed rules body, then skills under ## Skills.
       # @param output_file [String] destination path
+      # @param keep_frontmatter [Boolean] --front-matter: keep the frontmatter the claude target keeps
       # @param local_sources [Array<Hash>] processed rule sources
       # @param recipe_name [String, nil] recipe name for the header
       # @param script_mappings [Hash] absolute script path => relative name
       # @param skill_files [Array<Hash>] processed skill sources, inlined as plain sections
       # @param toc [Boolean] whether to write a table of contents
-      def write(output_file, local_sources:, recipe_name:, script_mappings:, skill_files:, toc:)
+      def write(output_file, keep_frontmatter:, local_sources:, recipe_name:, script_mappings:, skill_files:, toc:)
+        rules = keep_frontmatter ? local_sources : local_sources.map { |s| s.merge(content: rule_body(s[:content])) }
         rendered = skill_files.map { |skill| skill.merge(content: render_skill(skill)) }
         File.open(output_file, 'w') do |io|
           io.puts header(recipe_name)
           io.puts
           if toc
-            io.puts Services::TOCGenerator.generate_toc_content(local_sources + rendered, [], AGENT)
+            io.puts Services::TOCGenerator.generate_toc_content(rules + rendered, [], AGENT)
             io.puts
           end
-          Services::SquashHelpers.write_sources(io, local_sources, script_mappings, toc:)
+          Services::SquashHelpers.write_sources(io, rules, script_mappings, toc:)
           write_skills(io, rendered, script_mappings, toc:)
         end
+      end
+
+      # Drop the Claude Code directives (name:, description:, ...) the claude target keeps, split off
+      # as FrontmatterParser.strip_metadata does, so the body matches a rule without directives.
+      # @param content [String] processed rule content
+      # @return [String] content without leading frontmatter
+      def rule_body(content)
+        return content unless content.start_with?('---')
+
+        parts = content.split(/^---\s*$/, 3)
+        parts.length < 3 ? content : parts[2]
       end
 
       # @param io [IO] destination

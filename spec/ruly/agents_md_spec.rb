@@ -105,6 +105,20 @@ RSpec.describe Ruly::Services::AgentsMd do
     end
   end
 
+  describe '.rule_body' do
+    it 'drops kept directive frontmatter and keeps the body as strip_metadata splits it' do
+      expect(described_class.rule_body("---\ndescription: X\n---\n# R\n")).to eq("\n# R\n")
+    end
+
+    it 'returns content without frontmatter unchanged' do
+      expect(described_class.rule_body("# R\n\n---\n")).to eq("# R\n\n---\n")
+    end
+
+    it 'returns an unterminated frontmatter block unchanged' do
+      expect(described_class.rule_body("---\n# R\n")).to eq("---\n# R\n")
+    end
+  end
+
   describe '.script_ignore_patterns' do
     it 'lists each local and remote script under .claude/scripts/ once' do
       scripts = {local: [{relative_path: 'a.sh'}, {relative_path: 'a.sh'}], remote: [{filename: 'b.sh'}]}

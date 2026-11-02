@@ -250,6 +250,27 @@ RSpec.describe Ruly::CLI, '.start -a agents' do
     end
   end
 
+  context 'when a rule has name: and description: frontmatter' do
+    before do
+      File.write('rules/base.md', "---\ndescription: Base rules\nname: base\n---\n# Base Rule\n\nShared base.\n")
+      allow(Ruly::Services::MCPManager).to receive(:update_mcp_settings)
+    end
+
+    it 'strips it from AGENTS.md and leaves the claude target unchanged' do
+      run_cli('squash', 'demo', '-a', 'agents')
+      run_cli('squash', 'demo')
+      agents = read_utf8('AGENTS.md')
+      expect(agents).not_to include('description: Base rules', 'name: base')
+      expect(agents).to include("See [Base Rule](#base-rule).\n\n\n# Base Rule\n\nShared base.\n")
+      expect(read_utf8('CLAUDE.local.md')).to include("---\nname: base\ndescription: Base rules\n---\n# Base Rule")
+    end
+
+    it 'keeps it with --front-matter' do
+      run_cli('squash', 'demo', '-a', 'agents', '--front-matter')
+      expect(read_utf8('AGENTS.md')).to include('description: Base rules')
+    end
+  end
+
   context 'when a rule declares scripts:' do
     before do
       FileUtils.mkdir_p('rules/bin')

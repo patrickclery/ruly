@@ -374,8 +374,8 @@ module Ruly
     # rewritten references, and -i/-I ignore each copied script.
     def write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
                         skill_files:)
-      Services::AgentsMd.write(output_file, local_sources:, recipe_name:, script_mappings:, skill_files:,
-                                            toc: options[:toc])
+      Services::AgentsMd.write(output_file, keep_frontmatter: options[:front_matter], local_sources:, recipe_name:,
+                                            script_mappings:, skill_files:, toc: options[:toc])
       update_git_ignores(output_file, Services::AgentsMd::AGENT, [],
                          extra_patterns: Services::AgentsMd.script_ignore_patterns(script_files))
       Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
