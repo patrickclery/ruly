@@ -98,10 +98,17 @@ Plans:
 **Goal:** Package squashed recipe output as a Claude Code plugin (skills/, commands/, agents/, hooks, .mcp.json) so distribution uses the native format instead of ruly-specific file writing; resolve whether plugins can carry always-on instructions.
 **Requirements**: TBD
 **Depends on:** Phase 4
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 5 to break down)
+**Wave 1**
+- [ ] 05-01-PLAN.md — `-a claude-plugin` writes a strict-valid plugin dir: manifest + `<recipe>-rules` skill + scripts (tracer), ownership marker, guards, marker-gated clean, `-i`/`-I`, dry run
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 05-02-PLAN.md — Skills, commands, subagents (plugin frontmatter), hooks/hooks.json, .mcp.json with literal-secret warning, `${CLAUDE_PLUGIN_ROOT}` script paths, skipped-parts notice
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 05-03-PLAN.md — README Claude Code Plugin Output section (always-on finding), 0.4.0 + CHANGELOG, phase-closing gates
 
 ### Phase 6: Token and Compliance Benchmark
 
