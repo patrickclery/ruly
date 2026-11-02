@@ -1,0 +1,40 @@
+# Compliance benchmark tasks. Each task tests one rule of the fixture corpus (bench/fixtures/corpus).
+# - recipe: the fixture recipe whose squash output forms the ruly condition
+# - rule_file / rule_marker: the rule sentence under test, verbatim as a line of rule_file
+# - prompt: neutral; it asks for the artifact and the reply format, never states the rule
+# - checks: forbid (regex must not match) or require (regex must match) over scope
+#   text (whole reply), code (fenced blocks joined, or the whole reply) or first_line
+# - example_pass / example_fail: canned replies proving the checks without an API call
+tasks:
+  - id: ruby-single-quotes
+    recipe: ruby-feature
+    rule_file: ruby/style.md
+    rule_marker: Use single quotes for Ruby string literals that contain no interpolation.
+    prompt: >-
+      Write a small Ruby class InvoiceFormatter with a method that returns the status label (draft, sent or
+      paid) for a status symbol, and a constant listing the three labels. Reply with one fenced ruby code
+      block and nothing else. Do not create or edit files.
+    checks:
+      - type: forbid
+        scope: code
+        pattern: '"[^"#\n]*"'
+    example_pass: |
+      ```ruby
+      class InvoiceFormatter
+        LABELS = ['draft', 'sent', 'paid'].freeze
+
+        def label(status)
+          { draft: 'draft', sent: 'sent', paid: 'paid' }.fetch(status)
+        end
+      end
+      ```
+    example_fail: |
+      ```ruby
+      class InvoiceFormatter
+        LABELS = ["draft", "sent", "paid"].freeze
+
+        def label(status)
+          { draft: "draft", sent: "sent", paid: "paid" }.fetch(status)
+        end
+      end
+      ```

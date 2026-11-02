@@ -21,7 +21,8 @@ module RulyBench
 
     # @param corpus_dir [String] corpus root (holds recipes.yml)
     # @param recipe [String] recipe name
-    # @yieldparam result [Hash] 'claude_local_md' (String) and 'descriptors' (sorted Array<String>)
+    # @yieldparam result [Hash] 'claude_local_md' (String), 'descriptors' (sorted Array<String>) and
+    #   'workdir' (String, the squash working dir; valid only inside the block)
     # @return the block's value; the temp workspace is removed when the block returns
     # @raise [RulyBench::Error] on an invalid recipe name or a failed squash
     def run(corpus_dir:, recipe:)
@@ -64,7 +65,8 @@ module RulyBench
       claude_local = File.join(work, 'CLAUDE.local.md')
       {
         'claude_local_md' => File.file?(claude_local) ? File.read(claude_local) : '',
-        'descriptors' => (skill_descriptors(work) + command_descriptors(work)).sort
+        'descriptors' => (skill_descriptors(work) + command_descriptors(work)).sort,
+        'workdir' => work
       }
     end
 

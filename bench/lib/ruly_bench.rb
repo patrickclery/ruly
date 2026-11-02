@@ -9,6 +9,7 @@ require 'tmpdir'
 require 'fileutils'
 require 'optparse'
 require 'rbconfig'
+require 'shellwords'
 
 # Benchmark harness for ruly: token counts of squashed output versus load-all and native layouts.
 module RulyBench
@@ -24,3 +25,9 @@ require_relative 'ruly_bench/corpus'
 require_relative 'ruly_bench/squash_runner'
 require_relative 'ruly_bench/token_benchmark'
 require_relative 'ruly_bench/tokens_cli'
+require_relative 'ruly_bench/scorer'
+require_relative 'ruly_bench/native_layout'
+require_relative 'ruly_bench/claude_command'
+require_relative 'ruly_bench/compliance_tasks'
+require_relative 'ruly_bench/compliance_run'
+require_relative 'ruly_bench/compliance_cli'
