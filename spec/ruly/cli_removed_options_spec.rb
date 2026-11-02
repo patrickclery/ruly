@@ -112,4 +112,22 @@ RSpec.describe Ruly::CLI, '.start' do
       expect { described_class.start(%w[clean --dry-run]) }.to output(/Already clean/).to_stdout
     end
   end
+
+  context 'with per-command help flags' do
+    [%w[squash --help], %w[squash -h], %w[squash core --help], %w[stats --help]].each do |args|
+      it "shows help for ruly #{args.join(' ')}" do
+        expect do
+          expect { described_class.start(args) }.to output(/Usage:.*#{args.first} \[RECIPE\]/m).to_stdout
+        end.not_to output.to_stderr
+        expect(File).not_to exist('CLAUDE.local.md')
+      end
+    end
+
+    it 'still reports an unknown command given --help' do
+      expect do
+        expect { described_class.start(%w[import --help]) }
+          .to raise_error(SystemExit) { |e| expect(e.status).to eq(1) }
+      end.to output(/Could not find command "import"/).to_stderr
+    end
+  end
 end

@@ -1047,6 +1047,10 @@ ruly help
 ruly help squash
 ruly help clean
 ruly help introspect
+
+# Per-command help flags work too
+ruly squash --help
+ruly stats -h
 ```
 
 Ruly will automatically:

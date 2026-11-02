@@ -15,11 +15,22 @@ module Ruly
     MERGE_SKIP_KEYS = %w[files sources skills commands scripts].freeze
     # Agent names whose dedicated output ruly 0.2.0 dropped; they now get plain markdown.
     REMOVED_AGENTS = %w[sgpt shell_gpt].freeze
+    # Per-command help flags rewritten to `help <command>` by CLI.start.
+    HELP_FLAGS = %w[-h --help].freeze
 
     check_unknown_options!
 
     def self.exit_on_failure?
       true
+    end
+
+    # Thor maps only a leading -h/--help to `help`, so under check_unknown_options!
+    # `ruly squash --help` would fail with "Unknown switches". Rewrite it to `ruly help squash`.
+    def self.start(given_args = ARGV, config = {})
+      args = given_args.dup
+      flags = args.take_while { |arg| arg != '--' }
+      args = ['help', args.first] if flags.size >= 2 && !args.first.start_with?('-') && flags.intersect?(HELP_FLAGS)
+      super(args, config)
     end
 
     desc 'squash [RECIPE]', 'Combine all markdown files into one CLAUDE.local.md (recipe optional)'
