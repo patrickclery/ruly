@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Platform** - Squash pipeline, recipe system, multi-agent output, GitHub integration, and CLI (existing/complete)
 - [x] **Phase 2: Lean Out Native Duplication** - Remove/delegate features Claude Code now does natively (completed 2026-11-02)
-- [ ] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models
+- [x] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models (completed 2026-11-02)
 - [x] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard (completed 2026-11-02)
 - [ ] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format
 - [ ] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance
@@ -45,7 +45,7 @@ Phases execute in numeric order.
 |-------|----------------|--------|-----------|
 | 1. Core Platform | N/A | Complete | Pre-existing |
 | 2. Lean Out Native Duplication | 3/3 | Complete    | 2026-11-02 |
-| 3. Emphasize Core Advantages | 1/1 | In Progress | - |
+| 3. Emphasize Core Advantages | 1/1 | Complete    | 2026-11-02 |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
 | 5. Claude Code Plugin Packaging | 3/3 | In Progress | - |
 | 6. Token and Compliance Benchmark | 3/3 | In Progress | - |
@@ -73,7 +73,7 @@ Plans:
 **Goal:** Make ruly's verified advantages the headline: task-scoped recipe composition, `requires:` dependency resolution with cycle detection, per-subagent recipe/model selection, multi-machine `--sync` with per-machine overrides, and post-squash checks. Rewrite README/site positioning against native `.claude/rules/` (path-only scoping), `@imports` (no token savings), and symlink sharing limits.
 **Requirements**: TBD
 **Depends on:** Phase 2
-**Plans:** 1/1 plans executed
+**Plans:** 1/1 plans complete
 
 Plans:
 **Wave 1**
