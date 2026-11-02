@@ -91,6 +91,17 @@ RSpec.describe Ruly::CLI, '.start' do
     end
   end
 
+  context 'with removed commands' do
+    %w[import mcp].each do |command|
+      it "rejects #{command} as an unknown command" do
+        expect do
+          expect { described_class.start([command, 'core']) }
+            .to raise_error(SystemExit) { |e| expect(e.status).to eq(1) }
+        end.to output(/Could not find command "#{command}"/).to_stderr
+      end
+    end
+  end
+
   context 'with kept switches' do
     it 'still parses clean --dry-run' do
       expect { described_class.start(%w[clean --dry-run]) }.to output(/Already clean/).to_stdout

@@ -76,24 +76,6 @@ module Ruly
       report_source_failures!
     end
 
-    desc 'import RECIPE', 'Import a recipe and copy its scripts to ~/.claude/scripts/'
-    option :dry_run, aliases: '-d', default: false, type: :boolean
-    def import(recipe_name)
-      sources, = load_sources(recipe_name)
-      puts "\n🔄 Processing recipe: #{recipe_name}"
-      script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
-                                                                          find_rule_file: method(:find_rule_file))
-
-      if options[:dry_run]
-        Services::Display.import_dry_run(script_files, recipe_name)
-      elsif script_files[:local].any? || script_files[:remote].any?
-        Services::ScriptManager.copy_scripts(script_files)
-        puts "\n✨ Recipe imported successfully"
-      else
-        puts "No scripts found in recipe '#{recipe_name}'"
-      end
-    end
-
     desc 'clean [RECIPE]', 'Remove generated files (recipe optional, overrides metadata)'
     option :output_file, aliases: '-o', type: :string
     option :dry_run, aliases: '-d', default: false, type: :boolean
@@ -200,31 +182,6 @@ module Ruly
 
     desc 'version', 'Show version'
     def version = puts("Ruly v#{Ruly::VERSION}")
-
-    desc 'mcp [SERVERS...]', 'Generate .mcp.json with specified MCP servers'
-    option :append, aliases: '-a', default: false, type: :boolean
-    option :recipe, aliases: '-r', type: :string
-    def mcp(*servers)
-      all_servers = Services::MCPManager.load_mcp_server_definitions
-      return unless all_servers
-
-      load_recipes = -> { load_all_recipes }
-      recipe_servers = Services::MCPManager.collect_recipe_mcp_servers(
-        options[:recipe], load_all_recipes: load_recipes
-      )
-      return if recipe_servers.nil?
-
-      all_requested = (servers + recipe_servers).uniq
-      if all_requested.empty?
-        puts '❌ Error: No servers specified'
-        return puts('   Usage: ruly mcp server1 server2 ...  Or: ruly mcp -r <recipe>')
-      end
-
-      Services::MCPManager.write_mcp_json(Services::MCPManager.build_selected_servers(all_servers, all_requested),
-                                          append: options[:append])
-    rescue JSON::ParserError => e
-      puts "❌ Error parsing JSON: #{e.message}"
-    end
 
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
     option :output, aliases: '-o', default: 'stats.md', type: :string

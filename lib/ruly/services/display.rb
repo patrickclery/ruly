@@ -67,20 +67,6 @@ module Ruly
         puts "\nWould update: .git/info/exclude\n  → Add entries for generated files" if options[:git_exclude]
       end
 
-      # --- Import dry-run display ---
-
-      def import_dry_run(script_files, recipe_name)
-        puts "\n🔍 Dry run mode - no files will be copied\n\n"
-        if script_files[:local].any? || script_files[:remote].any?
-          total = script_files[:local].size + script_files[:remote].size
-          puts "Would copy #{total} scripts to .claude/scripts/:"
-          script_files[:local].each { |s| puts "  → #{s[:relative_path]} (local)" }
-          script_files[:remote].each { |s| puts "  → #{s[:filename]} (remote from GitHub)" }
-        else
-          puts "No scripts found in recipe '#{recipe_name}'"
-        end
-      end
-
       # --- Squash summary ---
 
       def squash_summary(agent, recipe_name, recipe_config, output_file, # rubocop:disable Metrics/ParameterLists
