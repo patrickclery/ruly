@@ -189,6 +189,15 @@ RSpec.describe RulyBench do
       expect(err.string).to include('bench/results/local')
     end
 
+    it 'refuses a non-fixture live run writing to a tracked repo path such as docs' do
+      write_corpus
+      write_tasks([base_task])
+      argv = ['--live', '--allow-private-corpus', '--corpus', corpus_dir, '--tasks', tasks_path,
+              '--output-dir', File.join(dir, 'docs')]
+      expect(cli(argv)).to eq(2)
+      expect(err.string).to include('outside the repository')
+    end
+
     it 'rejects an unknown --only id' do
       write_corpus
       write_tasks([base_task])
@@ -196,7 +205,7 @@ RSpec.describe RulyBench do
     end
 
     describe 'a live run with a fake executor' do
-      let(:output_dir) { File.join(dir, 'results') }
+      let(:output_dir) { File.join(dir, 'bench/results/local') }
       let(:calls) { [] }
       let(:executor) do
         lambda do |env, argv, chdir:, stdin_data:|

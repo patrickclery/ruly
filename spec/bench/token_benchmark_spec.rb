@@ -223,7 +223,7 @@ RSpec.describe RulyBench do
       described_class.new(argv, err:, out:, repo_root: root)
     end
 
-    ['bench/results', 'bench/results/other', 'bench/results/localx'].each do |target|
+    ['bench/results', 'bench/results/other', 'bench/results/localx', 'docs', '.'].each do |target|
       it "refuses (exit 2) to write a non-fixture corpus to #{target}" do
         status = cli('--corpus', dir, '--output-dir', File.join(root, target)).run
 
@@ -244,6 +244,14 @@ RSpec.describe RulyBench do
     it 'allows a non-fixture corpus to write inside bench/results/local' do
       expect(cli('--corpus', dir, '--output-dir', File.join(root, 'bench/results/local/run1')).run).to eq(0)
       expect(File).to exist(File.join(root, 'bench/results/local/run1/tokens.json'))
+    end
+
+    it 'allows a non-fixture corpus to write outside the repository' do
+      outside = Dir.mktmpdir('ruly-bench-outside')
+      expect(cli('--corpus', dir, '--output-dir', outside).run).to eq(0)
+      expect(File).to exist(File.join(outside, 'tokens.json'))
+    ensure
+      FileUtils.rm_rf(outside)
     end
 
     it 'writes the fixture corpus to bench/results by default' do

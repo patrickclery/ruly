@@ -215,7 +215,8 @@ module RulyBench
         '> These numbers come from the synthetic fixture corpus in `bench/fixtures/corpus`. ' \
           'They are not a measurement of any real rules repository.'
       else
-        '> Local run on an external corpus. Not for committing; results stay in `bench/results/local`.'
+        '> Local run on an external corpus. Not for committing: keep it in the git-ignored `bench/results/local` ' \
+          'or outside the repository.'
       end
     end
 

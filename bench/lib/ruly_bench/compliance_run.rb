@@ -13,7 +13,8 @@ module RulyBench
     WORKSPACE_ENTRIES = %w[.claude CLAUDE.local.md].freeze
     FIXTURE_NOTICE = '> These numbers come from the synthetic fixture corpus in `bench/fixtures/corpus`. ' \
                      'They are not a measurement of any real rules repository.'
-    EXTERNAL_NOTICE = '> Local run on an external corpus. Not for committing; results stay in `bench/results/local`.'
+    EXTERNAL_NOTICE = '> Local run on an external corpus. Not for committing: keep it in the git-ignored ' \
+                      '`bench/results/local` or outside the repository.'
 
     attr_reader :corpus, :env, :executor, :out, :tasks
 

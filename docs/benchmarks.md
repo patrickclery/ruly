@@ -94,7 +94,7 @@ The default model is `claude-sonnet-5-5`; pass `--model ID` to use another. A li
 - `bundle exec ruby bench/compliance.rb`: the dry run, and the default. It builds both workspaces, locates every rule, proves the checks on the canned replies and prints the exact `claude -p` commands. It makes no API calls.
 - `bundle exec ruby bench/compliance.rb --live`: the paid run, 16 calls (8 tasks x 2 conditions). Each call passes `--max-budget-usd` to claude (default 0.50 per call, changeable with `--max-budget-usd N`), and the worst-case total is printed before the first call. File-editing and shell tools are disallowed, so the model can only reply.
 - `--isolated-home`: runs claude with a temp HOME, so user-level memory and settings reach neither condition. A temp HOME has no login, so it needs `ANTHROPIC_API_KEY` in the environment; the key is inherited from the process, never written anywhere.
-- A corpus other than the fixture needs `--allow-private-corpus` before `--live` sends its rules to the API, and results from it are written only to the git-ignored `bench/results/local/`.
+- A corpus other than the fixture needs `--allow-private-corpus` before `--live` sends its rules to the API, and results from it go to the git-ignored `bench/results/local/` by default. `--output-dir` may point inside `bench/results/local/` or outside the repository; any other path inside the repository is refused.
 
 ## Methodology
 
@@ -134,4 +134,4 @@ Runs are deterministic: results contain no timestamps or absolute paths, and the
 - `bundle exec ruby bench/tokens.rb` regenerates `bench/results/tokens.json` and `bench/results/tokens.md` byte for byte.
 - `bundle exec rspec spec/bench` runs the harness specs. They never call claude.
 - `bundle exec ruby bench/compliance.rb` runs the compliance dry run; see [How to run it](#how-to-run-it) for the live run.
-- To measure your own rules, run `bundle exec ruby bench/tokens.rb --corpus <rules repo with recipes.yml at its root>`, for example a `~/.config/ruly/remotes/<owner>/<repo>` mirror. Results are written to the git-ignored `bench/results/local/`, and recipes with remote sources are skipped. Do not commit those results if the rules are private.
+- To measure your own rules, run `bundle exec ruby bench/tokens.rb --corpus <rules repo with recipes.yml at its root>`, for example a `~/.config/ruly/remotes/<owner>/<repo>` mirror. Results are written to the git-ignored `bench/results/local/` by default; an `--output-dir` elsewhere inside the repository is refused. Recipes with remote sources are skipped. Do not commit those results if the rules are private.
