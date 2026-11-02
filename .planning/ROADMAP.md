@@ -73,10 +73,11 @@ Plans:
 **Goal:** Make ruly's verified advantages the headline: task-scoped recipe composition, `requires:` dependency resolution with cycle detection, per-subagent recipe/model selection, multi-machine `--sync` with per-machine overrides, and post-squash checks. Rewrite README/site positioning against native `.claude/rules/` (path-only scoping), `@imports` (no token savings), and symlink sharing limits.
 **Requirements**: TBD
 **Depends on:** Phase 2
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 3 to break down)
+**Wave 1**
+- [ ] 03-01-PLAN.md — Why ruly + cited Ruly vs. native Claude Code table in README, site hero/cards copy (tracer), soften 85%, move Subagents reference below the fold, fix 0.2.0 command examples
 
 ### Phase 4: AGENTS.md Output Target
 
