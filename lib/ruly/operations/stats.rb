@@ -12,6 +12,30 @@ module Ruly
       # State object for DFS cycle detection to reduce parameter count
       DfsState = Struct.new(:visited, :rec_stack, :cycles, keyword_init: true)
 
+      # Format and display the result of Stats#call on the console
+      # @param result [Hash] Result hash from Operations::Stats#call
+      def self.display_result(result)
+        if result[:success]
+          data = result[:data]
+          formatted_tokens = format_number(data[:total_tokens])
+          puts "✅ Generated #{data[:output_file]}"
+          puts "   #{data[:file_count]} files, #{formatted_tokens} tokens total"
+          if data[:orphaned_count].positive?
+            puts "   ⚠️  #{data[:orphaned_count]} orphaned files (not used by any recipe)"
+          end
+        else
+          puts "❌ Error: #{result[:error]}"
+          exit 1
+        end
+      end
+
+      # Format a number with comma separators
+      # @param num [Integer] Number to format
+      # @return [String] Formatted number string
+      def self.format_number(num)
+        num.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
+      end
+
       # @param sources [Array<Hash>] Array of source hashes with :path and :type keys
       # @param output_file [String] Path to output markdown file
       # @param recipes [Hash, nil] Loaded recipes (name => config) for orphan detection
@@ -311,9 +335,7 @@ module Ruly
         file.puts
       end
 
-      def format_number(num)
-        num.to_s.gsub(/(\d)(?=(\d{3})+(?!\d))/, '\\1,')
-      end
+      def format_number(num) = self.class.format_number(num)
 
       def format_bytes(bytes)
         if bytes >= 1_048_576

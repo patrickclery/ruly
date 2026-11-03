@@ -453,14 +453,14 @@ RSpec.describe Ruly::CLI do
           File.write('.gitignore', "# Existing\n\n# Ruly generated files\nold-file.md\n\n# Other")
         end
 
-        it 'replaces existing Ruly section' do
+        it 'merges new patterns into the existing Ruly section' do
           cli.invoke(:squash, [], git_ignore: true, output_file: 'NEW.md')
 
           content = File.read('.gitignore')
           expect(content).to include('# Existing')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('NEW.md')
-          expect(content).not_to include('old-file.md')
+          expect(content).to include("# Ruly generated files\nold-file.md\nNEW.md\n")
           expect(content).to include('# Other')
         end
       end
@@ -516,14 +516,14 @@ RSpec.describe Ruly::CLI do
           File.write('.git/info/exclude', "# Git exclude\n\n# Ruly generated files\nold.md\n\n# End")
         end
 
-        it 'replaces existing Ruly section' do
+        it 'merges new patterns into the existing Ruly section' do
           cli.invoke(:squash, [], git_exclude: true, output_file: 'NEW.md')
 
           content = File.read('.git/info/exclude')
           expect(content).to include('# Git exclude')
           expect(content).to include('# Ruly generated files')
           expect(content).to include('NEW.md')
-          expect(content).not_to include('old.md')
+          expect(content).to include("# Ruly generated files\nold.md\nNEW.md\n")
           expect(content).to include('# End')
         end
       end

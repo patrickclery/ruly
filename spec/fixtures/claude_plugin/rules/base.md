@@ -1,0 +1,3 @@
+# Base Rule
+
+Shared base.

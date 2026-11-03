@@ -7,6 +7,18 @@
 ╚═╝░░╚═╝░╚═════╝░╚══════╝░░░╚═╝░░░
 ```
 
+## Why ruly
+
+Ruly compiles the rules each task needs, from one shared rules repository, into the files Claude Code reads: `CLAUDE.local.md`, `.claude/skills/`, `.claude/commands/` and `.claude/agents/`.
+
+- **Task-scoped recipes:** a named recipe lists the rule files, skills, commands and MCP servers for one kind of work, and `ruly squash <recipe>` writes only that set.
+- **`requires:` dependency resolution:** rule files declare their dependencies; ruly resolves them recursively, includes each file once, and `ruly stats` reports circular `requires:` chains.
+- **A recipe and model per subagent:** each entry under a recipe's `subagents:` gets its own recipe and model, written to `.claude/agents/`.
+- **One rules repo on every machine:** `ruly squash --sync` mirrors a shared `recipes.yml` and the files it uses; per-machine `overrides:` add to it without copying it.
+- **Checks on squash output:** every squash that writes files (not `--dry-run`) reports ambiguous anchor links, and files that several skills require but the recipe leaves out.
+
+See [Ruly vs. native Claude Code](#ruly-vs-native-claude-code) for how each of these compares with what Claude Code does on its own, and [Ruly vs. Ruler and rulesync](#ruly-vs-ruler-and-rulesync) for two cross-agent rule tools.
+
 ## 🚀 Quick Install
 
 ### One-Line Installation
@@ -77,6 +89,63 @@ $ ruly list-recipes
 $ ruly version
 ```
 
+## Ruly vs. native Claude Code
+
+Claude Code already loads `CLAUDE.md`, `.claude/rules/`, `@path` imports, skills and subagents itself. Ruly runs before that: it picks the files a task needs and writes them where Claude Code reads them.
+
+| Capability             | Native Claude Code                                                                                                                                                                                                                                                 | Ruly                                                                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per-task selection     | A rule is scoped by file path only: `paths` is the only frontmatter field a rule reads ([docs][cc-rules]). It loads every session or when a matching file is opened; the docs send task-specific instructions to skills, which load on demand ([docs][cc-memory]). | A named recipe lists the files, skills, commands and MCP servers for one task, and `ruly squash <recipe>` writes only that set.                                                                |
+| Dependency resolution  | `@path` imports pull files into a `CLAUDE.md`, up to four hops deep ([docs][cc-imports]); a rule file has no field for declaring dependencies ([docs][cc-rules]).                                                                                                  | `requires:` frontmatter is resolved recursively, each file is included once, `--strict` fails on a missing dependency, and `ruly stats` lists circular chains.                                 |
+| Token cost of includes | Imports "don't reduce its context cost, because imported files load together with the CLAUDE.md that imports them" ([docs][cc-imports]); path-scoped rules and skills defer loading instead ([docs][cc-rules]).                                                    | The squashed output holds only the recipe's files and their `requires:`, and `ruly stats` reports token counts per file and in total. On ruly's synthetic bench fixture (five recipes, cl100k_base tokens), the squashed recipe output plus its skill and command descriptions was 74.3% smaller than loading every rule (median), and 68.4% smaller than a native layout's always-loaded set (63.0% if three fixture rules that no recipe uses are left out; [benchmark details](docs/benchmarks.md)). |
+| Cross-machine sharing  | Symlinked shared rules load only after a once-per-project approval of external imports, and then only the rules without `paths` ([docs][cc-symlinks]); `~/.claude/rules/` applies to every project on one machine ([docs][cc-user-rules]).                         | `ruly squash --sync` mirrors a shared `recipes.yml` and every file it uses into `~/.config/ruly/remotes/`, and per-machine `overrides:` add to a shared recipe without copying it.             |
+| Per-subagent model     | Each subagent file sets its own `model:` and preloaded `skills:` by hand ([docs][cc-subagents]).                                                                                                                                                                   | A recipe's `subagents:` entries each name a recipe and a model; ruly writes the `.claude/agents/` files, and the model falls back from subagent to recipe to `inherit`.                        |
+| Post-squash checks     | Rules and imports are read as written, at session start or when a matching file is opened, with no compile step in between ([docs][cc-memory]).                                                                                                                    | Every squash that writes output checks for ambiguous anchor links (a heading that appears more than once) and warns when several skills require a file the recipe leaves out.                  |
+
+Native behavior is quoted from the Claude Code docs as of November 2026.
+
+[cc-memory]: https://code.claude.com/docs/en/memory
+[cc-rules]: https://code.claude.com/docs/en/memory#path-specific-rules
+[cc-imports]: https://code.claude.com/docs/en/memory#import-additional-files
+[cc-symlinks]: https://code.claude.com/docs/en/memory#share-rules-across-projects-with-symlinks
+[cc-user-rules]: https://code.claude.com/docs/en/memory#user-level-rules
+[cc-subagents]: https://code.claude.com/docs/en/sub-agents
+
+## Ruly vs. Ruler and rulesync
+
+Ruler and rulesync write one rules source to many agents. The table compares how each tool chooses which rules go into an output, where the three tools overlap.
+
+| Capability                  | Ruler                                                                                                                                                                               | rulesync                                                                                                                                                                                                                                        | Ruly                                                                                                                                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Named rule sets             | No. Every `.md` under `.ruler/` (except skills and subagents) is concatenated ([source][ruler-read]), and `ruler.toml` has no key that selects rule files ([schema][ruler-schema]). | No. The config has no profile or preset key ([schema][rulesync-config]); a rule's `targets` and `globs` pick tools and paths ([schema][rulesync-rule]), and `--input-roots` layers whole source directories per run ([docs][rulesync-overlay]). | A named recipe lists the files, skills, commands and MCP servers for one task, and `ruly squash <recipe>` writes only that set.                                                             |
+| Includes between rule files | No. Rule files are joined with source markers; there is no include syntax ([source][ruler-concat]).                                                                                 | No. Rule frontmatter has no `requires` or include field ([schema][rulesync-rule]).                                                                                                                                                              | `requires:` frontmatter is resolved recursively, for local and GitHub sources, and each file is included once.                                                                              |
+| Cycle reporting             | No. Without includes there are no include cycles to report ([source][ruler-concat]).                                                                                                | No. Without includes there are no include cycles to report ([schema][rulesync-rule]).                                                                                                                                                           | `ruly stats` lists circular `requires:` chains; squash includes each file once, so a cycle cannot loop.                                                                                     |
+| Per-subagent model          | Yes. A `.ruler/agents/*.md` subagent takes a `model` field ([source][ruler-subagent]); each subagent is one hand-written file, and the feature is marked experimental.              | Yes. A subagent file sets a model per tool, such as `claudecode.model` ([docs][rulesync-subagent]); each subagent is one hand-written file.                                                                                                     | Each `subagents:` entry names a recipe and a model; ruly compiles that recipe into the subagent's `.claude/agents/` file.                                                                   |
+| Shared source + overrides   | No. Without a local `.ruler/` it falls back to `$XDG_CONFIG_HOME/ruler` as a whole, with no remote source and no merge ([source][ruler-xdg]).                                       | Yes. `sources` installs rules from GitHub, git or npm, pinned to commit SHAs in `rulesync.lock` ([docs][rulesync-sources]), and a later `--input-roots` tree replaces same-path files ([docs][rulesync-overlay]).                               | `ruly squash --sync` mirrors a shared `recipes.yml` and its files, and `overrides:` add to a named recipe without copying it; there is no lockfile, so `--sync` mirrors the current remote. |
+| Post-compile checks         | Partial. Warns on skill directories without `SKILL.md` and on invalid subagent frontmatter ([skills][ruler-skills], [subagents][ruler-validate]); no link checks.                   | Partial. `generate --check` exits 1 on stale output ([source][rulesync-check]) and `doctor` lints config and `AGENTS.md` size ([docs][rulesync-doctor]); no link checks.                                                                        | Every squash that writes output checks for ambiguous anchor links (a heading that appears more than once) and warns when several skills require a file the recipe leaves out.               |
+| Agents                      | 32 agent targets, including `AGENTS.md` ([source][ruler-agents]).                                                                                                                   | 69 `--targets` values, 61 of them with project rules, including `agentsmd` ([docs][rulesync-tools]).                                                                                                                                            | 3 targets, `claude`, `agents` (`AGENTS.md`) and `cursor`; skills, commands and subagents are written only for Claude Code.                                                                  |
+
+Ruler and rulesync were checked by reading their source and docs at [Ruler @5e551e6][ruler-tree] (2026-10-27) and [rulesync @6e3869d][rulesync-tree] (2026-11-02), in November 2026; neither tool was run. Agent counts change often.
+
+[ruler-tree]: https://github.com/intellectronica/ruler/tree/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87
+[rulesync-tree]: https://github.com/dyoshikawa/rulesync/tree/6e3869d378066dc2f0b4cda3896e444ae7f200a7
+[ruler-concat]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/RuleProcessor.ts#L7-L28
+[ruler-schema]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/ConfigLoader.ts#L75-L129
+[ruler-read]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/FileSystemUtils.ts#L319-L436
+[ruler-subagent]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/SubagentsUtils.ts#L81-L86
+[ruler-xdg]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/FileSystemUtils.ts#L199-L237
+[ruler-skills]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/SkillsUtils.ts#L82-L85
+[ruler-validate]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/core/SubagentsUtils.ts#L42-L62
+[ruler-agents]: https://github.com/intellectronica/ruler/blob/5e551e60952fb1c81c6c5ad6f5fe8b7a412bda87/src/agents/index.ts#L39-L70
+[rulesync-rule]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/src/features/rules/rulesync-rule.ts#L34-L257
+[rulesync-config]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/src/config/config.ts#L118-L180
+[rulesync-overlay]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/docs/guide/separate-input-root.md
+[rulesync-sources]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/docs/guide/declarative-sources.md
+[rulesync-subagent]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/docs/reference/file-formats.md?plain=1#L704-L760
+[rulesync-check]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/src/cli/program.ts#L365
+[rulesync-doctor]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/docs/reference/cli-commands.md?plain=1#L765-L785
+[rulesync-tools]: https://github.com/dyoshikawa/rulesync/blob/6e3869d378066dc2f0b4cda3896e444ae7f200a7/docs/reference/supported-tools.md
+
 ## 🌟 How It Works
 
 ### Standalone CLI Tool
@@ -86,14 +155,13 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 1. **Simple Installation**: One-line install with curl
 2. **Self-Contained**: Everything runs from `~/ruly`
 3. **Recipe System**: Use pre-configured recipes or create your own
-4. **Smart Caching**: Cache compiled recipes for performance
-5. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
+4. **Multiple Formats**: Support for different AI assistants (Claude, Cursor, etc.)
 
 **Benefits:**
 
 - ✅ **Standalone**: No gem installation required
 - ✅ **Easy updates**: Just pull the latest changes
-- ✅ **No system dependencies**: Self-contained in your home directory
+- ✅ **Requirements**: Ruby 3.3+ (with Bundler), and the `gh` CLI for GitHub sources
 - ✅ **Flexible rules system**: Define your own rules repository or use remote sources
 - ✅ **Cross-platform**: Works anywhere Ruby is installed
 
@@ -104,7 +172,6 @@ Ruly is a standalone command-line tool that manages AI assistant rules:
 - ✅ Combine multiple rule files into one document
 - ✅ Use recipe collections for different contexts
 - ✅ Fetch and include remote GitHub files
-- ✅ Cache compiled recipes for performance
 - ✅ Support for Claude, Cursor, and other AI assistants
 - ✅ Clean up all agent-related files automatically
 
@@ -130,13 +197,17 @@ your-project/
 For other agents:
 
 - **Cursor**: Uses `.cursor/` directory with `.mdc` files
+- **AGENTS.md**: `-a agents` writes `AGENTS.md` for agents that read the AGENTS.md standard. See
+  [AGENTS.md Output](#agentsmd-output).
+- **Claude Code plugin**: `-a claude-plugin` packages the same skills, commands, agents, hooks and
+  MCP servers as a plugin directory. See [Claude Code Plugin Output](#claude-code-plugin-output).
 - **Custom**: Specify with `--agent` and `--output-file` options
 
 ---
 
 ## About Ruly
 
-Ruly is a powerful CLI tool that manages AI assistant rules and configurations for software development projects. It provides a framework for organizing and combining rule files from various sources - your own private repositories, public GitHub repos, or local files - into a single document for AI assistants like Claude or Cursor.
+Ruly is a CLI tool that manages AI assistant rules and configurations for software development projects. It provides a framework for organizing and combining rule files from various sources - your own private repositories, public GitHub repos, or local files - into a single document for AI assistants like Claude or Cursor.
 
 ### ⚠️ Important: Rules Not Included
 
@@ -363,7 +434,7 @@ Here's how the maintainer set up their private rules repository:
 
 ## 📝 Using Ruly Commands
 
-Ruly provides a powerful CLI for managing and compiling your AI assistant rules.
+Ruly provides a CLI for managing and compiling your AI assistant rules.
 
 ### Basic Commands
 
@@ -393,17 +464,22 @@ ruly squash -o docs/my-rules.md
 ruly squash rails -o RAILS.md
 ```
 
-**Analyze token usage:**
+**Token statistics:**
 
 ```bash
-# Analyze a specific recipe
-ruly analyze rails
-ruly analyze api
+# Token stats for every file and recipe
+ruly stats
 
-# Analyze all recipes
-ruly analyze --all
-ruly analyze -a
+# Token stats for one recipe
+ruly stats rails
+
+# Write the report somewhere else
+ruly stats rails -o tokens.md
 ```
+
+`ruly stats` writes `stats.md` (per-file token counts, per-recipe totals, orphaned files, circular
+`requires:` chains) to the rules directory unless `-o` is given. With no recipe source configured, it
+still writes the per-file counts and warns on stderr that recipe totals are skipped.
 
 **Clean up generated files:**
 
@@ -431,26 +507,483 @@ ruly squash --deepclean
 ruly squash rails --deepclean
 ```
 
-**Generate MCP server configuration:**
+MCP servers are chosen per recipe with `mcp_servers:` (definitions come from
+`~/.config/ruly/mcp.json`) and written to `.mcp.json` by `ruly squash`. For one-off servers, use
+Claude Code's `claude mcp add`.
+
+Subagents (a recipe and model per subagent, MCP server propagation and the generated agent file format) are documented under Reference: see [Subagents](#subagents).
+
+### Recipe System
+
+Recipes allow you to define collections of rules to combine, rather than always including all files.
+
+**List available recipes:**
 
 ```bash
-# Create .mcp.json with specific servers (must exist in ~/.config/ruly/mcp.json)
-ruly mcp atlassian teams playwright
-
-# Use MCP servers from a recipe
-ruly mcp -r workaxle-spike
-ruly mcp --recipe workaxle-bug
-
-# Append to existing .mcp.json instead of overwriting
-ruly mcp playwright -a
-ruly mcp --append teams
-
-# Combine recipe servers with additional servers
-ruly mcp -r workaxle-bug playwright
-
-# Append recipe servers to existing config
-ruly mcp -r workaxle-spike -a
+ruly list-recipes
 ```
+
+**Use a specific recipe:**
+
+```bash
+# Use the 'core' recipe
+ruly squash core
+
+# Use 'testing' recipe with custom output
+ruly squash testing -o testing-rules.md
+
+# Another recipe
+ruly squash minimal
+```
+
+#### Available Recipes
+
+Recipes depend on having access to rule files. The recommended setup is a `recipes.yml` at the root of your rules repository, declared under `remotes:` and mirrored with `ruly squash --sync` (see [Sharing Recipes Across Machines](#sharing-recipes-across-machines)). Alternatively, define recipes directly in `./.recipes.yml` or `~/.config/ruly/recipes.yml`.
+
+- **qa** — WorkAxle QA acceptance testing. Write and run Playwright specs in the automation-test-qa repo against dev.workaxle.com. Includes skills for running acceptance tests and syncing the QA repo.
+
+#### Custom Recipes
+
+Create a `~/.config/ruly/recipes.yml` file to define your own recipes or override existing ones:
+
+```yaml
+# ~/.config/ruly/recipes.yml
+---
+recipes:
+  # Complete development environment combining multiple sources
+  my_company_core:
+    description: Complete development environment with Ruby, testing, and workflow rules
+    sources:
+      # John's private rules repository
+      - github: john/private-rules
+        branch: main
+        rules:
+          - rules/commands/bug
+          - rules/commands/pr
+          - rules/bug
+          - rules/commands.md
+          - rules/core
+          - rules/core/debugging
+          - rules/pr
+          - rules/ruby
+          - rules/testing
+          - rules/commands/testing
+          - rules/commands/workflow
+
+      # Company's shared rules repository
+      - github: my_company/development-standards
+        branch: main
+        rules:
+          - rules/commands/jira/details.md
+          - rules/workflow
+          - rules/jira
+
+  # Local files from various projects
+  development_local:
+    description: Auto-generated from local sources
+    files:
+      - /Users/john/Projects/my_app/rules/ruby/common.md
+      - /Users/john/Projects/my_app/rules/ruby/monads.md
+      - /Users/john/Projects/my_app/rules/ruby/rspec.md
+      - /Users/john/Projects/my_app/rules/ruby/sequel.md
+      - /Users/john/Projects/my_app/rules/testing/common.md
+      - /Users/john/Projects/my_app/rules/commands.md
+      - /Users/john/Projects/my_app/rules/commands/bug/diagnose.md
+      - /Users/john/Projects/my_app/rules/commands/bug/fix.md
+      - /Users/john/Projects/my_app/rules/commands/pr/create.md
+
+  # Simple recipe for specific context
+  testing_only:
+    description: Testing and QA rules
+    files:
+      - /Users/john/Projects/my_app/rules/testing/*.md
+      - /Users/john/Projects/my_app/rules/commands/testing/*.md
+```
+
+Unknown or removed recipe keys print a warning on stderr and are ignored. A top-level `tier:` in
+`~/.config/ruly/recipes.yml` or `.recipes.yml` (removed in 0.2.0) also warns and is ignored.
+
+#### Recipe Keys: Skills, Commands, and Bins
+
+Recipes support explicit keys for files that need special treatment. Files listed under `files:` are always squashed into the main output (`CLAUDE.local.md`) regardless of their path. To output files as skills, commands, or bins, use the dedicated keys:
+
+```yaml
+recipes:
+  my-recipe:
+    description: "Example with explicit keys"
+    files:
+      # Regular rule files — squashed into CLAUDE.local.md
+      - /path/to/rules/core.md
+      - /path/to/rules/frameworks/ruby.md
+    skills:
+      # Output as .claude/skills/{name}/SKILL.md
+      - /path/to/rules/skills/debugging.md
+      - /path/to/rules/github/pr/skills/pr-review-loop.md
+    commands:
+      # Output as .claude/commands/{path}.md
+      - /path/to/rules/github/pr/commands/create.md
+      - /path/to/rules/comms/jira/commands/comment.md
+    scripts:
+      # Copied to .claude/scripts/ as executables
+      - /path/to/rules/bin/deploy.sh
+```
+
+**Key behavior:**
+
+| Recipe key  | Output location                  | What it does                                           |
+| ----------- | -------------------------------- | ------------------------------------------------------ |
+| `files:`    | `CLAUDE.local.md`                | Squashed into main output (always, regardless of path) |
+| `skills:`   | `.claude/skills/{name}/SKILL.md` | Creates individual skill files                         |
+| `commands:` | `.claude/commands/{path}.md`     | Creates slash command files                            |
+| `scripts:`  | `.claude/scripts/`               | Copies scripts as executables                          |
+
+All four keys support both individual file paths and directory paths. Directories are expanded:
+
+- `skills:` and `commands:` directories expand to all `*.md` files
+- `scripts:` directories expand to all `*.sh` files
+
+**Frontmatter `skills:` references** in individual rule files still work independently. If a rule file declares `skills:` in its frontmatter, those referenced files are automatically resolved and output as SKILL.md files during squash, regardless of which recipe key they appear under.
+
+**Remote Sources:**
+
+- Supports pulling rules directly from GitHub repositories
+- Automatically converts GitHub blob URLs to raw URLs
+- Non-Claude agents include all files in the main output
+
+**GitHub URL Formats:**
+
+- **Individual files**: Use `/blob/` URLs for specific files
+  - Example: `https://github.com/owner/repo/blob/branch/path/to/file.md`
+- **Directories**: Use `/tree/` URLs to include all `.md` files in a directory
+  - Example: `https://github.com/owner/repo/tree/branch/path/to/directory`
+  - Automatically expands to include all markdown files in that directory
+- **Important**: Files with extensions (like `.md`) in `/tree/` URLs are treated as individual files, not directories
+
+**Command File Handling:**
+
+- When `--agent claude` (default), files listed under the `commands:` recipe key are saved to `.claude/commands/`
+- For other agents (`cursor`, `agents`), command files are not written; `-a agents` lists them in
+  its skipped-parts line
+- With `-a claude-plugin`, recipe commands go to the plugin's `commands/` directory
+- Files in `/commands/` paths under `files:` are treated as regular content (squashed into main output)
+
+User recipes:
+
+- Are automatically loaded from `~/.config/ruly/recipes.yml`
+- Override base recipes with the same name
+- Are stored in your home directory configuration
+- Allow user-specific or team-specific customizations
+
+#### Recipe Inheritance (`extends:`)
+
+Recipes can extend other recipes using the `extends:` key. The child recipe inherits all keys from the parent, with:
+
+- **Array keys** (`files`, `skills`, `commands`, `scripts`, `sources`, `mcp_servers`, `omit_command_prefix`): Merged via union — parent entries first, then child entries, deduplicated
+- **Scalar keys** (`description`, `model`): Child wins — parent value only used if child doesn't define it
+- **Subagents**: Merged by `name` — child entry overrides parent entry with same name
+
+```yaml
+recipes:
+  base:
+    description: "Base development recipe"
+    files:
+      - rules/core.md
+      - rules/common.md
+    mcp_servers:
+      - teams
+
+  extended:
+    extends: base
+    description: "Extended recipe with extra tools"
+    files:
+      - rules/extra.md
+    mcp_servers:
+      - atlassian
+```
+
+After resolution, `extended` will have:
+
+- `files`: `[rules/core.md, rules/common.md, rules/extra.md]`
+- `mcp_servers`: `[teams, atlassian]`
+- `description`: `"Extended recipe with extra tools"`
+
+Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.
+
+#### Context Isolation (`isolate`)
+
+When running Claude Code in a subdirectory, it walks up the directory tree loading every `CLAUDE.md` and `CLAUDE.local.md` it finds. This can cause context bloat when worktrees or submodules are nested inside directories that have their own Claude instructions.
+
+The `isolate: true` recipe option prevents this inheritance by populating `claudeMdExcludes` in `.claude/settings.local.json` with every parent `CLAUDE.md` and `CLAUDE.local.md` file found between the output directory and the filesystem root.
+
+```yaml
+recipes:
+  my-isolated-recipe:
+    description: "Engineer with no parent context inheritance"
+    isolate: true
+    files:
+      - /path/to/rules/core.md
+      - /path/to/rules/frameworks/
+```
+
+After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.json` will contain:
+
+```json
+{
+  "claudeMdExcludes": [
+    "/Users/you/agents/orchestrator/CLAUDE.local.md",
+    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.md",
+    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.local.md"
+  ]
+}
+```
+
+**When to use:**
+
+- Worktrees nested inside parent projects with large CLAUDE files
+- Submodules that should only use their own squashed rules
+- Any recipe where you want a clean, self-contained context
+
+### AGENTS.md Output
+
+[AGENTS.md](https://agents.md) is the cross-agent instruction file standard and the
+recommended cross-agent path for sharing a ruly recipe with agents other than Claude Code.
+
+- `ruly squash RECIPE -a agents` writes `AGENTS.md`; `agents-md` and `agentsmd` are aliases, and
+  `-o PATH` writes elsewhere. There is no new command or recipe key.
+- The file starts with the header `<!-- Generated by ruly from recipe: NAME — do not edit -->`,
+  followed by the same squashed rules `CLAUDE.local.md` gets (`requires:` resolved, frontmatter
+  stripped), then the recipe's skills as plain sections under `## Skills`. The Claude Code directives
+  `CLAUDE.local.md` keeps in a rule's frontmatter (`name:`, `description:`, `permissionMode:`,
+  `allowed_tools:`) are stripped too, unless you pass `--front-matter`.
+- Commands, subagents, hooks, `mcp_servers` and the `model`/`isolate` settings are Claude Code
+  features, so they are skipped. Squash prints one line naming what it skipped
+  (`AGENTS.md target skips Claude-only parts: commands (2), subagents (1), ...`).
+- Squash refuses to overwrite an `AGENTS.md` whose first line is not the ruly header (move it aside
+  or pass `-o PATH`). The check runs before `--clean`/`--deepclean`, so a refused squash deletes
+  nothing. `ruly clean -a agents` removes `AGENTS.md` only when it has that header and
+  leaves `.claude/`, `.mcp.json` and `CLAUDE.local.md` alone; `--deepclean` still removes only Claude
+  artifacts. Adding the header to a hand-written file hands that file to ruly. A UTF-8 BOM before
+  the header (an editor re-save) is ignored.
+- `-i`/`-I` add `AGENTS.md` to `.gitignore` / `.git/info/exclude`. `AGENTS.md` is usually committed,
+  so if the recipe pulls rules from a private repository, use `-i` or `-I`. New entries are merged
+  into the existing `# Ruly generated files` section, so running `-i` for one target keeps the other
+  target's entries (`CLAUDE.local.md`, `.claude/commands/`) ignored.
+- Recipe `scripts:` are copied to `.claude/scripts/` for both targets, and `AGENTS.md` refers to them
+  there. `-i`/`-I` also add each copied script (`.claude/scripts/NAME`). `ruly clean -a agents`
+  keeps them; `ruly clean --deepclean` removes them.
+- Post-squash checks (such as ambiguous links) run over the whole `AGENTS.md`, inlined skills
+  included.
+- `-a cursor` is unchanged.
+
+### Claude Code Plugin Output
+
+`ruly squash RECIPE -a claude-plugin` writes the recipe as a
+[Claude Code plugin](https://code.claude.com/docs/en/plugins-reference) directory that you load with
+`claude --plugin-dir` or share, instead of writing into the project's `.claude/`. The default output
+is unchanged. `-o DIR` picks the directory; the default is `ruly-plugin-RECIPE/`.
+
+```
+ruly-plugin-RECIPE/
+├── .claude-plugin/plugin.json
+├── skills/RECIPE-rules/SKILL.md   # the squashed rules
+├── skills/<skill>/SKILL.md
+├── commands/
+├── agents/
+├── hooks/hooks.json
+├── scripts/
+└── .mcp.json
+```
+
+- **Manifest**: `name` is the recipe name (kebab-case recommended; `claude plugin validate` warns
+  otherwise, and names Claude Code reserves, such as `claude-*`, are refused), `version` is the ruly
+  version, `description` is the recipe description, `author` is `git config user.name` when set, and
+  `metadata.generator: ruly` marks ruly's ownership.
+- **Known limitation: `version`.** `version` is always the ruly version, whatever the rules hold.
+  Claude Code caches marketplace and git installs by version, so rules re-squashed under the same
+  ruly version reach only `--plugin-dir` and local-path installs, which load in place. Before you
+  publish updated rules, raise `version` in the generated `plugin.json` by hand (the next squash
+  resets it).
+- **Rules are not always-on.** Plugins cannot carry always-on instructions: a plugin-root
+  `CLAUDE.md` is not loaded (the docs say to ship instructions as a skill), a SessionStart hook's
+  added context is capped at 10,000 characters, a forced plugin output style replaces the user's own
+  and never reaches subagents, and a plugin `agent` setting replaces the whole system prompt. So the
+  rules become the skill `/RECIPE:RECIPE-rules`, loaded when invoked, and squash prints a notice.
+  For always-on rules keep using `ruly squash RECIPE` (CLAUDE.local.md). If you want a nudge, add
+  your own SessionStart hook that tells Claude to invoke that skill; ruly does not generate one.
+- **Skills and subagents**: nested skill paths are flattened (`skills/tdd/SKILL.md` becomes
+  `skills/tdd/`, `git/commit` becomes `git-commit`). Recipe and subagent skills are checked before
+  they are written: a skill named `RECIPE-rules`, or one whose flattened name is not letters, digits,
+  `.`, `_` and `-` (or holds `..`), is refused, and two skill files with the same flattened name get
+  a warning (the last one wins). Subagent `model:` is kept. `permissionMode`, `hooks` and `mcpServers` are left out of
+  plugin agents because Claude Code ignores them there; the recipe's hooks and MCP servers (subagent
+  servers included) go to `hooks/hooks.json` and `.mcp.json` instead. Preloaded skills are listed as
+  `RECIPE:skill`. Squash names what it left out, for example
+  `claude-plugin target skips: model, isolate, subagent permissionMode, subagent cwd hooks`.
+- **Scripts** (the recipe's and its subagents') are copied to `scripts/`, and references in skills,
+  commands, agents and hook commands are rewritten to `${CLAUDE_PLUGIN_ROOT}/scripts/...`. In hook
+  commands `.claude/scripts/X`, `./.claude/scripts/X` and `$CLAUDE_PROJECT_DIR/.claude/scripts/X`
+  (quoted or with braces) are rewritten; the result is double-quoted unless the reference already
+  sits inside a quoted string (`bash -c "..."`, `sh -c '...'`). Squash names any other
+  `.claude/scripts/` reference it leaves in a hook, such as `~/.claude/scripts/X`.
+- **MCP secrets**: `.mcp.json` copies server definitions from `~/.config/ruly/mcp.json`. Squash names
+  (never prints) the servers with literal values that may be secrets: any `env` or `headers` value,
+  `args` such as `--token VALUE`, `--api-key=VALUE`, `KEY=VALUE` or a token-shaped value, and a `url`
+  with `user:password@` or a credential query parameter. Replace those values with `${VAR}`
+  references before sharing the plugin.
+- **Safety**: squash refuses a directory ruly did not generate (no ruly metadata in
+  `.claude-plugin/plugin.json`), the working directory, its parents and `$HOME` (compared after
+  resolving symlinks, so a symlinked path or `//` is caught too), and a `-o` path starting with `~`
+  (ruly does not expand it). A ruly-generated directory is replaced only when the whole build
+  succeeds: the previous plugin is moved to a hidden `.DIR.ruly-previous-*` sibling during the build
+  and put back if the build fails. Subagent names must be letters, digits, `.`, `_` and `-` (no
+  `/` or `..`) for every target that writes subagents. `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated
+  plugin directory and never `.claude/`; `--deepclean` keeps its meaning. Adding the marker to a
+  hand-made `plugin.json` hands that directory to ruly. `-i`/`-I` add the directory to `.gitignore` /
+  `.git/info/exclude`.
+- **Check and share**: run `claude plugin validate ruly-plugin-RECIPE`. Ruly does not write a
+  `marketplace.json`; publishing is up to you.
+
+### Commands
+
+- **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
+  optional positional parameter. Supports fetching remote GitHub files.
+  Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
+  Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
+  Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
+  Use `--sync` to mirror every `remotes:` entry (its `recipes.yml` plus all referenced rule files) into `~/.config/ruly/remotes/<owner>/<repo>/` before squashing. See [Sharing Recipes Across Machines](#sharing-recipes-across-machines).
+  Use `-a agents` to write `AGENTS.md` instead. See [AGENTS.md Output](#agentsmd-output).
+  Use `-a claude-plugin` to write a Claude Code plugin directory instead. See
+  [Claude Code Plugin Output](#claude-code-plugin-output).
+
+- **Stats** (`stats [RECIPE]`): Writes `stats.md` with per-file token counts, per-recipe totals, orphaned files and circular `requires:` chains. Use `-o` to choose the output path.
+
+- **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Recipe is
+  optional. Removes main output file and command files directory.
+  Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
+  `ruly clean -a agents` removes only a ruly-generated `AGENTS.md`.
+  `ruly clean RECIPE -a claude-plugin` removes only a ruly-generated plugin directory.
+
+- **Introspect** (`introspect RECIPE SOURCE...`): Scans one or more local directories or GitHub
+  repo URLs for markdown files and creates or updates the named recipe in
+  `~/.config/ruly/recipes.yml` (or the path given with `-o`). Options: `-d`/`--description` sets the
+  recipe description, `--dry-run` prints the recipe YAML and writes nothing, and `--relative` writes
+  repo-relative paths.
+
+- **List Recipes** (`list-recipes`): Shows all available recipes, which source in the lookup chain
+  they came from (mirrored remote, `./.recipes.yml`, or `~/.config/ruly/recipes.yml`) and whether an
+  `overrides:` block was applied. Accepts `--sync` like `squash`.
+
+- **Version** (`version`): Shows the current Ruly version.
+
+### Slash Commands
+
+Slash commands are special commands that can be defined in your rule files to provide quick actions for AI assistants. When you include command files in your rules (typically in a `commands/` directory), they become available as slash commands in the generated output.
+
+For example, if you have a file `commands/bug/diagnose.md` in your rules, it would become available as `/bug:diagnose` when using the generated rules with Claude or other AI assistants.
+
+The `--toc` option will automatically generate:
+
+1. A table of contents with links to all headers in the combined document
+2. Unique anchors for headers (prefixed with the source file path) to handle duplicate header names across files
+3. A list of all available slash commands in your squashed output
+
+This ensures proper navigation even when multiple rule files contain headers with identical names (e.g., multiple files with "# Introduction" sections).
+
+#### Available Ruly Commands
+
+- `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
+- `/ruly:decompose` - Decompose a markdown file into a directory using git mv (preserves history)
+- `/run-acceptance-test` - Takes acceptance criteria (direct text, Jira ticket `WA-XXXX`, or PR number `PR:NNNN`), reads page objects from automation-test-qa, writes a Playwright spec, runs it, and reports results.
+- `/sync-qa-repo` - Pulls latest from automation-test-qa, reports new/changed page objects, specs, and API helpers.
+
+### Examples
+
+```bash
+# Generate CLAUDE.local.md with all rules
+ruly squash
+
+# Dry run - see what would be created without creating it
+ruly squash --dry-run
+ruly squash -d
+
+# Generate core rules only
+ruly squash core
+
+# Generate squashed testing rules to a custom file
+ruly squash testing -o test/testing-rules.md
+
+# Generate rules for a different agent (e.g., cursor)
+ruly squash rails --agent cursor -o CURSOR.md
+ruly squash rails -a cursor -o CURSOR.md
+
+# Generate AGENTS.md for agents that read the AGENTS.md standard
+ruly squash rails -a agents
+
+# Remove a ruly-generated AGENTS.md (a hand-written one is left alone)
+ruly clean -a agents
+
+# Package the rails recipe as a Claude Code plugin in ruly-plugin-rails/
+ruly squash rails -a claude-plugin
+
+# Load the generated plugin for one session
+claude --plugin-dir ruly-plugin-rails
+
+# Remove the ruly-generated plugin directory
+ruly clean rails -a claude-plugin
+
+# Generate with remote sources (command files go to .claude/commands/)
+ruly squash example_mixed
+
+# Mirror shared recipes from `remotes:` first, then squash from the mirror
+ruly squash homelab --sync
+
+# Clean up generated files
+ruly clean
+
+# Dry run - see what would be deleted
+ruly clean --dry-run
+ruly clean -d
+
+# Deep clean - remove all Claude artifacts
+ruly clean --deepclean
+
+# Clean specific output file
+ruly clean -o test/testing-rules.md
+
+# Preview a 'ruby' recipe built from a rules directory (writes nothing)
+ruly introspect ruby rules/ruby/ --dry-run
+
+# Write it with repo-relative paths and a description
+ruly introspect ruby rules/ruby/ --relative -d "Ruby rules"
+
+# List what recipes are available
+ruly list-recipes
+
+# Show version
+ruly version
+
+# View help
+ruly help
+ruly help squash
+ruly help clean
+ruly help introspect
+
+# Per-command help flags work too
+ruly squash --help
+ruly stats -h
+```
+
+Ruly will automatically:
+
+- Load recipes from the first of: mirrored remotes (`~/.config/ruly/remotes/`), `./.recipes.yml`, `~/.config/ruly/recipes.yml`
+- Expand a directory entry in a recipe to every `.md` file inside it
+- Create parent directories if using custom output paths
+- Display file count and output size
+- Show which recipe was used in the output
+
+## Reference
+
+This section holds detailed reference for features summarized above.
 
 ### Subagents
 
@@ -499,7 +1032,7 @@ recipes:
 
 #### How It Works
 
-When you run `ruly squash -r full`:
+When you run `ruly squash full`:
 
 1. **MCP servers collected**: Recursively collects `mcp_servers` from all subagent recipes
 2. **`.mcp.json` written**: Parent's `.mcp.json` includes all collected servers (deduplicated)
@@ -670,16 +1203,17 @@ rules/
 ```
 
 **Key distinction:**
+
 - `commands/` - User-invocable via `/command-name`
 - `agents/` - Dispatched programmatically by the orchestrator
 
 #### When to Use Subagents
 
-| Use Case | Benefit |
-|----------|---------|
-| **Specialized tasks** | Each agent has focused rules for its domain |
-| **Parallel work** | Dispatch multiple agents for independent tasks |
-| **Context isolation** | Agents only load rules they need |
+| Use Case                   | Benefit                                                     |
+| -------------------------- | ----------------------------------------------------------- |
+| **Specialized tasks**      | Each agent has focused rules for its domain                 |
+| **Parallel work**          | Dispatch multiple agents for independent tasks              |
+| **Context isolation**      | Agents only load rules they need                            |
 | **MCP server propagation** | Subagent MCP servers are automatically propagated to parent |
 
 #### Example: Development Workflow
@@ -731,361 +1265,6 @@ Claude: [Dispatches to comms agent which has Teams MCP access]
 User: "Show me my open PRs"
 Claude: [Dispatches to dashboard agent]
 ```
-
-### Recipe System
-
-Recipes allow you to define collections of rules to combine, rather than always including all files.
-
-**List available recipes:**
-
-```bash
-ruly list-recipes
-```
-
-**Use a specific recipe:**
-
-```bash
-# Use the 'core' recipe
-ruly squash --recipe core
-
-# Use 'testing' recipe with custom output
-ruly squash --recipe testing -o testing-rules.md
-
-# Short form
-ruly squash -r minimal
-```
-
-#### Available Recipes
-
-Recipes depend on having access to rule files. The recommended setup is a `recipes.yml` at the root of your rules repository, declared under `remotes:` and mirrored with `ruly squash --sync` (see [Sharing Recipes Across Machines](#sharing-recipes-across-machines)). Alternatively, define recipes directly in `./.recipes.yml` or `~/.config/ruly/recipes.yml`.
-
-- **qa** — WorkAxle QA acceptance testing. Write and run Playwright specs in the automation-test-qa repo against dev.workaxle.com. Includes skills for running acceptance tests and syncing the QA repo.
-
-#### Custom Recipes
-
-Create a `~/.config/ruly/recipes.yml` file to define your own recipes or override existing ones:
-
-```yaml
-# ~/.config/ruly/recipes.yml
----
-tier: claude_max
-recipes:
-  # Complete development environment combining multiple sources
-  my_company_core:
-    description: Complete development environment with Ruby, testing, and workflow rules
-    tier: claude_max
-    sources:
-      # John's private rules repository
-      - github: john/private-rules
-        branch: main
-        rules:
-          - rules/commands/bug
-          - rules/commands/pr
-          - rules/bug
-          - rules/commands.md
-          - rules/core
-          - rules/core/debugging
-          - rules/pr
-          - rules/ruby
-          - rules/testing
-          - rules/commands/testing
-          - rules/commands/workflow
-
-      # Company's shared rules repository
-      - github: my_company/development-standards
-        branch: main
-        rules:
-          - rules/commands/jira/details.md
-          - rules/workflow
-          - rules/jira
-
-  # Local files from various projects
-  development_local:
-    description: Auto-generated from local sources
-    files:
-      - /Users/john/Projects/my_app/rules/ruby/common.md
-      - /Users/john/Projects/my_app/rules/ruby/monads.md
-      - /Users/john/Projects/my_app/rules/ruby/rspec.md
-      - /Users/john/Projects/my_app/rules/ruby/sequel.md
-      - /Users/john/Projects/my_app/rules/testing/common.md
-      - /Users/john/Projects/my_app/rules/commands.md
-      - /Users/john/Projects/my_app/rules/commands/bug/diagnose.md
-      - /Users/john/Projects/my_app/rules/commands/bug/fix.md
-      - /Users/john/Projects/my_app/rules/commands/pr/create.md
-    tier: claude_max
-
-  # Simple recipe for specific context
-  testing_only:
-    description: Testing and QA rules
-    tier: claude_max
-    files:
-      - /Users/john/Projects/my_app/rules/testing/*.md
-      - /Users/john/Projects/my_app/rules/commands/testing/*.md
-```
-
-#### Recipe Keys: Skills, Commands, and Bins
-
-Recipes support explicit keys for files that need special treatment. Files listed under `files:` are always squashed into the main output (`CLAUDE.local.md`) regardless of their path. To output files as skills, commands, or bins, use the dedicated keys:
-
-```yaml
-recipes:
-  my-recipe:
-    description: "Example with explicit keys"
-    files:
-      # Regular rule files — squashed into CLAUDE.local.md
-      - /path/to/rules/core.md
-      - /path/to/rules/frameworks/ruby.md
-    skills:
-      # Output as .claude/skills/{name}/SKILL.md
-      - /path/to/rules/skills/debugging.md
-      - /path/to/rules/github/pr/skills/pr-review-loop.md
-    commands:
-      # Output as .claude/commands/{path}.md
-      - /path/to/rules/github/pr/commands/create.md
-      - /path/to/rules/comms/jira/commands/comment.md
-    scripts:
-      # Copied to .claude/scripts/ as executables
-      - /path/to/rules/bin/deploy.sh
-```
-
-**Key behavior:**
-
-| Recipe key | Output location | What it does |
-|------------|----------------|--------------|
-| `files:` | `CLAUDE.local.md` | Squashed into main output (always, regardless of path) |
-| `skills:` | `.claude/skills/{name}/SKILL.md` | Creates individual skill files |
-| `commands:` | `.claude/commands/{path}.md` | Creates slash command files |
-| `scripts:` | `.claude/scripts/` | Copies scripts as executables |
-
-All four keys support both individual file paths and directory paths. Directories are expanded:
-- `skills:` and `commands:` directories expand to all `*.md` files
-- `scripts:` directories expand to all `*.sh` files
-
-**Frontmatter `skills:` references** in individual rule files still work independently. If a rule file declares `skills:` in its frontmatter, those referenced files are automatically resolved and output as SKILL.md files during squash, regardless of which recipe key they appear under.
-
-**Remote Sources:**
-
-- Supports pulling rules directly from GitHub repositories
-- Automatically converts GitHub blob URLs to raw URLs
-- Non-Claude agents include all files in the main output
-
-**GitHub URL Formats:**
-
-- **Individual files**: Use `/blob/` URLs for specific files
-  - Example: `https://github.com/owner/repo/blob/branch/path/to/file.md`
-- **Directories**: Use `/tree/` URLs to include all `.md` files in a directory
-  - Example: `https://github.com/owner/repo/tree/branch/path/to/directory`
-  - Automatically expands to include all markdown files in that directory
-- **Important**: Files with extensions (like `.md`) in `/tree/` URLs are treated as individual files, not directories
-
-**Command File Handling:**
-
-- When `--agent claude` (default), files listed under the `commands:` recipe key are saved to `.claude/commands/`
-- For other agents, command files are included in the main output file
-- Files in `/commands/` paths under `files:` are treated as regular content (squashed into main output)
-
-**Caching:**
-
-- Use `--cache` flag to enable caching for any recipe
-- Cached files are stored in `cache/<agent>/` directory
-- Remote files are cached separately in `cache/remote/` (7-day expiration)
-- Cache is disabled by default
-- Use `ruly clean` to remove cache files
-
-User recipes:
-
-- Are automatically loaded from `~/.config/ruly/recipes.yml`
-- Override base recipes with the same name
-- Are stored in your home directory configuration
-- Allow user-specific or team-specific customizations
-
-#### Recipe Inheritance (`extends:`)
-
-Recipes can extend other recipes using the `extends:` key. The child recipe inherits all keys from the parent, with:
-
-- **Array keys** (`files`, `skills`, `commands`, `scripts`, `sources`, `mcp_servers`, `omit_command_prefix`): Merged via union — parent entries first, then child entries, deduplicated
-- **Scalar keys** (`description`, `model`, `tier`): Child wins — parent value only used if child doesn't define it
-- **Subagents**: Merged by `name` — child entry overrides parent entry with same name
-
-```yaml
-recipes:
-  base:
-    description: "Base development recipe"
-    files:
-      - rules/core.md
-      - rules/common.md
-    mcp_servers:
-      - teams
-
-  extended:
-    extends: base
-    description: "Extended recipe with extra tools"
-    files:
-      - rules/extra.md
-    mcp_servers:
-      - atlassian
-```
-
-After resolution, `extended` will have:
-- `files`: `[rules/core.md, rules/common.md, rules/extra.md]`
-- `mcp_servers`: `[teams, atlassian]`
-- `description`: `"Extended recipe with extra tools"`
-
-Multi-level inheritance is supported (A extends B extends C). Circular references are detected and produce an error.
-
-#### Context Isolation (`isolate`)
-
-When running Claude Code in a subdirectory, it walks up the directory tree loading every `CLAUDE.md` and `CLAUDE.local.md` it finds. This can cause context bloat when worktrees or submodules are nested inside directories that have their own Claude instructions.
-
-The `isolate: true` recipe option prevents this inheritance by populating `claudeMdExcludes` in `.claude/settings.local.json` with every parent `CLAUDE.md` and `CLAUDE.local.md` file found between the output directory and the filesystem root.
-
-```yaml
-recipes:
-  my-isolated-recipe:
-    description: "Engineer with no parent context inheritance"
-    isolate: true
-    files:
-      - /path/to/rules/core.md
-      - /path/to/rules/frameworks/
-```
-
-After `ruly squash my-isolated-recipe`, the generated `.claude/settings.local.json` will contain:
-
-```json
-{
-  "claudeMdExcludes": [
-    "/Users/you/agents/orchestrator/CLAUDE.local.md",
-    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.md",
-    "/Users/you/agents/orchestrator/workaxle-core/CLAUDE.local.md"
-  ]
-}
-```
-
-**When to use:**
-- Worktrees nested inside parent projects with large CLAUDE files
-- Submodules that should only use their own squashed rules
-- Any recipe where you want a clean, self-contained context
-
-### Commands
-
-- **Squash** (`squash [RECIPE]`): Combines all rule content into a single large file. Recipe is
-  optional positional parameter. Supports fetching remote GitHub files and caching for performance.
-  Use `--toc` or `-t` to generate a table of contents with unique anchors for all headers, ensuring proper navigation even when multiple files have identical header names. Also includes a list of available slash commands.
-  Use `--deepclean` to remove all Claude artifacts before squashing (overrides `--clean`).
-  Use `--verbose` or `-v` to show detailed per-file processing output (file paths, token counts, requires discovery). Default output shows only recipe, subagents, errors, and summary.
-  Use `--sync` to mirror every `remotes:` entry (its `recipes.yml` plus all referenced rule files) into `~/.config/ruly/remotes/<owner>/<repo>/` before squashing. See [Sharing Recipes Across Machines](#sharing-recipes-across-machines).
-
-- **Analyze** (`analyze [RECIPE]`): Analyzes token usage for recipes without generating files. Shows
-  detailed file breakdown and total token count. Use `--all` to analyze all recipes at once.
-
-- **Clean** (`clean [RECIPE]`): Deletes output files created by the squash command. Recipe is
-  optional. Removes main output file and command files directory.
-  Use `--deepclean` to remove all Claude artifacts (.claude/ directory, CLAUDE.local.md, CLAUDE.md) regardless of recipe.
-
-- **Introspect** (`introspect [FILE_PATH]`): Analyzes a markdown file to extract its frontmatter
-  metadata and identify any `requires:` dependencies. Shows the YAML frontmatter, lists required
-  files, and displays their resolved paths. Useful for understanding file dependencies and debugging
-  the requires system. If no file path is provided, it will look for a file in the current directory.
-
-- **List Recipes** (`list-recipes`): Shows all available recipes, which source in the lookup chain
-  they came from (mirrored remote, `./.recipes.yml`, or `~/.config/ruly/recipes.yml`) and whether an
-  `overrides:` block was applied. Accepts `--sync` like `squash`.
-
-- **Version** (`version`): Shows the current Ruly version.
-
-### Slash Commands
-
-Slash commands are special commands that can be defined in your rule files to provide quick actions for AI assistants. When you include command files in your rules (typically in a `commands/` directory), they become available as slash commands in the generated output.
-
-For example, if you have a file `commands/bug/diagnose.md` in your rules, it would become available as `/bug:diagnose` when using the generated rules with Claude or other AI assistants.
-
-The `--toc` option will automatically generate:
-
-1. A table of contents with links to all headers in the combined document
-2. Unique anchors for headers (prefixed with the source file path) to handle duplicate header names across files
-3. A list of all available slash commands in your squashed output
-
-This ensures proper navigation even when multiple rule files contain headers with identical names (e.g., multiple files with "# Introduction" sections).
-
-#### Available Ruly Commands
-
-- `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
-- `/ruly:decompose` - Decompose a markdown file into a directory using git mv (preserves history)
-- `/run-acceptance-test` - Takes acceptance criteria (direct text, Jira ticket `WA-XXXX`, or PR number `PR:NNNN`), reads page objects from automation-test-qa, writes a Playwright spec, runs it, and reports results.
-- `/sync-qa-repo` - Pulls latest from automation-test-qa, reports new/changed page objects, specs, and API helpers.
-
-### Examples
-
-```bash
-# Generate CLAUDE.local.md with all rules
-ruly squash
-
-# Dry run - see what would be created without creating it
-ruly squash --dry-run
-ruly squash -d
-
-# Generate core rules only
-ruly squash --recipe core
-ruly squash -r core
-
-# Generate squashed testing rules to a custom file
-ruly squash -r testing -o test/testing-rules.md
-
-# Generate rules for a different agent (e.g., cursor)
-ruly squash -r rails --agent cursor -o CURSOR.md
-ruly squash -r rails -a cursor -o CURSOR.md
-
-# Generate with remote sources (command files go to .claude/commands/)
-ruly squash -r example_mixed
-
-# Mirror shared recipes from `remotes:` first, then squash from the mirror
-ruly squash homelab --sync
-
-# Use cached version (if recipe has cache: true)
-ruly squash rails
-
-# Bypass cache for one run
-ruly squash rails --no-cache
-
-# Clean up generated files
-ruly clean
-
-# Dry run - see what would be deleted
-ruly clean --dry-run
-ruly clean -d
-
-# Deep clean - remove all Claude artifacts
-ruly clean --deepclean
-
-# Clean specific output file
-ruly clean -o test/testing-rules.md
-
-# Introspect a markdown file to see its frontmatter and requires
-ruly introspect rules/ruby/ruby-practices.md
-
-# Introspect a file in the current directory
-ruly introspect README.md
-
-# List what recipes are available
-ruly list-recipes
-
-# Show version
-ruly version
-
-# View help
-ruly help
-ruly help squash
-ruly help clean
-ruly help introspect
-```
-
-Ruly will automatically:
-
-- Load recipes from the first of: mirrored remotes (`~/.config/ruly/remotes/`), `./.recipes.yml`, `~/.config/ruly/recipes.yml`
-- Support glob patterns in recipe definitions
-- Create parent directories if using custom output paths
-- Display file count and output size
-- Show which recipe was used in the output
 
 ## Example Recipes
 
@@ -1157,11 +1336,11 @@ recipes:
 
 When a subagent has both `cwd:` and `append: true`, ruly reads from the repo directory during squash:
 
-| Source | What's read | Where it goes |
-|--------|------------|---------------|
-| `{cwd}/CLAUDE.md` | Repo's main guidance doc | Appended to agent body as `## Repository Context` |
-| `{cwd}/.claude/rules/*.md` | Repo-specific rules | Appended to agent body as `## Repository Rules` |
-| `{cwd}/.claude/settings.json` | Repo's hooks | Merged into agent frontmatter `hooks:` |
+| Source                        | What's read              | Where it goes                                     |
+| ----------------------------- | ------------------------ | ------------------------------------------------- |
+| `{cwd}/CLAUDE.md`             | Repo's main guidance doc | Appended to agent body as `## Repository Context` |
+| `{cwd}/.claude/rules/*.md`    | Repo-specific rules      | Appended to agent body as `## Repository Rules`   |
+| `{cwd}/.claude/settings.json` | Repo's hooks             | Merged into agent frontmatter `hooks:`            |
 
 Each subagent gets only its own repo's hooks — no cross-contamination between subagents.
 
@@ -1253,14 +1432,14 @@ Always use a **5-minute timeout** (300000ms) for:
 
 #### With vs Without `append`
 
-| Feature | `append: true` | No `append` |
-|---------|----------------|-------------|
-| Recipe content | Included | Included |
-| Repo CLAUDE.md | Baked into agent body | Not visible to subagent |
-| Repo .claude/rules/ | Baked into agent body | Not visible to subagent |
-| Repo hooks (settings.json) | Merged into frontmatter | Not applied |
-| Parent hooks | Always included | Always included |
-| MCP servers | From recipe (propagated to parent) | From recipe (propagated to parent) |
+| Feature                    | `append: true`                     | No `append`                        |
+| -------------------------- | ---------------------------------- | ---------------------------------- |
+| Recipe content             | Included                           | Included                           |
+| Repo CLAUDE.md             | Baked into agent body              | Not visible to subagent            |
+| Repo .claude/rules/        | Baked into agent body              | Not visible to subagent            |
+| Repo hooks (settings.json) | Merged into frontmatter            | Not applied                        |
+| Parent hooks               | Always included                    | Always included                    |
+| MCP servers                | From recipe (propagated to parent) | From recipe (propagated to parent) |
 
 > **Note:** Claude Code subagents do **not** automatically discover `CLAUDE.md`, `.claude/rules/`, or `.claude/settings.json` from their CWD. The `append` feature exists specifically to bridge this gap by baking repo configuration into the agent file at squash time.
 

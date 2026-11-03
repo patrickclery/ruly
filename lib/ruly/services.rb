@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'services/agents_md'
+require_relative 'services/claude_plugin'
 require_relative 'services/dependency_resolver'
 require_relative 'services/display'
 require_relative 'services/frontmatter_parser'

@@ -180,6 +180,36 @@ RSpec.describe Ruly::Operations::Stats do
     end
   end
 
+  describe '.format_number' do
+    it 'comma-groups large numbers' do
+      expect(described_class.format_number(1_234_567)).to eq('1,234,567')
+    end
+
+    it 'leaves numbers under a thousand unchanged' do
+      expect(described_class.format_number(999)).to eq('999')
+    end
+  end
+
+  describe '.display_result' do
+    let(:data) { {file_count: 3, orphaned_count: 0, output_file: 'stats.md', total_tokens: 12_345} }
+
+    it 'prints the generated file and the token total' do
+      expect { described_class.display_result(data:, success: true) }
+        .to output(/✅ Generated stats\.md\n\s+3 files, 12,345 tokens total\n\z/).to_stdout
+    end
+
+    it 'prints the orphaned file count when positive' do
+      expect { described_class.display_result(data: data.merge(orphaned_count: 2), success: true) }
+        .to output(/2 orphaned files/).to_stdout
+    end
+
+    it 'prints the error and exits on failure' do
+      expect do
+        expect { described_class.display_result(error: 'boom', success: false) }.to raise_error(SystemExit)
+      end.to output(/❌ Error: boom/).to_stdout
+    end
+  end
+
   describe 'number formatting' do
     it 'formats large numbers with commas' do
       # Create a large file to get a significant token count

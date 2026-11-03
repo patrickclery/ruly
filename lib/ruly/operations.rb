@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative 'operations/base'
-require_relative 'operations/analyzer'
 require_relative 'operations/stats'
 
 module Ruly

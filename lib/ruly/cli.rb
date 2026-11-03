@@ -13,15 +13,32 @@ module Ruly
   # Command Line Interface for Ruly gem
   class CLI < Thor
     MERGE_SKIP_KEYS = %w[files sources skills commands scripts].freeze
+    # Agent names whose dedicated output ruly 0.2.0 dropped; they now get plain markdown.
+    REMOVED_AGENTS = %w[sgpt shell_gpt].freeze
+    # Per-command help flags rewritten to `help <command>` by CLI.start.
+    HELP_FLAGS = %w[-h --help].freeze
+
+    check_unknown_options!
 
     def self.exit_on_failure?
       true
     end
 
+    # Thor maps only a leading -h/--help to `help`, so under check_unknown_options!
+    # `ruly squash --help` would fail with "Unknown switches". Rewrite it to `ruly help squash`.
+    def self.start(given_args = ARGV, config = {})
+      args = given_args.dup
+      flags = args.take_while { |arg| arg != '--' }
+      args = ['help', args.first] if flags.size >= 2 && !args.first.start_with?('-') && flags.intersect?(HELP_FLAGS)
+      super(args, config)
+    end
+
     desc 'squash [RECIPE]', 'Combine all markdown files into one CLAUDE.local.md (recipe optional)'
-    option :output_file, aliases: '-o', default: 'CLAUDE.local.md', desc: 'Output file path', type: :string
-    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, etc.)', type: :string
-    option :cache, default: false, desc: 'Enable caching for this recipe', type: :boolean
+    option :output_file, aliases: '-o', default: 'CLAUDE.local.md',
+                         desc: 'Output file path (AGENTS.md when -a agents; plugin dir when -a claude-plugin)',
+                         type: :string
+    option :agent, aliases: '-a', default: 'claude', desc: 'Target agent (claude, cursor, agents, claude-plugin)',
+                   type: :string
     option :clean, aliases: '-c', default: false, desc: 'Clean existing files before squashing', type: :boolean
     option :deepclean, default: false, desc: 'Deep clean all Claude artifacts before squashing', type: :boolean
     option :dry_run, aliases: '-d', default: false, type: :boolean
@@ -29,8 +46,6 @@ module Ruly
     option :git_exclude, aliases: '-I', default: false, type: :boolean
     option :toc, aliases: '-t', default: false, type: :boolean
     option :essential, aliases: '-e', default: false, type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
-    option :keep_taskmaster, default: false, type: :boolean
     option :front_matter, default: false, type: :boolean
     option :home_override, default: false, type: :boolean
     option :verbose, aliases: '-v', default: false, type: :boolean
@@ -41,64 +56,53 @@ module Ruly
     def squash(recipe_name = nil) # rubocop:disable Metrics/MethodLength
       guard_home_directory!
       Services::SourceProcessor.reset_failed_sources!
-      invoke_clean_if_requested(recipe_name)
       agent = normalize_agent(options[:agent])
 
       sources, recipe_config = load_sources(recipe_name)
+      requested = Services::AgentsMd.output_file(options[:output_file], agent)
       output_file = if recipe_name
                       Services::SquashHelpers.determine_output_file(recipe_name, recipe_config,
-                                                                    options)
+                                                                    {output_file: requested})
                     else
-                      options[:output_file]
+                      requested
                     end
+      output_file = guard_output!(output_file, agent, recipe_name, recipe_config)
+      # Clean only after the guard, so a refused squash deletes nothing.
+      invoke_clean_if_requested(recipe_name)
       script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
                                                                           find_rule_file: method(:find_rule_file))
       script_mappings = Services::ScriptManager.build_script_mappings(script_files)
       Services::ShellCommandChecker.check_and_warn(sources, find_rule_file: method(:find_rule_file))
 
-      cache_used = recipe_name && options[:cache] && !options[:dry_run] &&
-                   cached?(recipe_name, agent, output_file, recipe_config)
-
-      unless cache_used
-        prepare_output(output_file) unless options[:dry_run]
-        sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
-        local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
-        validate_squash_dispatches(local_sources, recipe_config, recipe_name)
-
-        if options[:dry_run]
-          Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
-                                           output_file, agent, recipe_name, recipe_config, options)
-          report_source_failures!
-          return
-        end
-
-        write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
-        post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
-                    script_files)
-      end
-
-      Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, cache_used,
-                                       cache_used ? nil : local_sources, cache_used ? nil : command_files,
-                                       cache_used ? nil : skill_files)
-      report_source_failures!
-    end
-
-    desc 'import RECIPE', 'Import a recipe and copy its scripts to ~/.claude/scripts/'
-    option :dry_run, aliases: '-d', default: false, type: :boolean
-    def import(recipe_name)
-      sources, = load_sources(recipe_name)
-      puts "\n🔄 Processing recipe: #{recipe_name}"
-      script_files = Services::ScriptManager.collect_scripts_from_sources(sources,
-                                                                          find_rule_file: method(:find_rule_file))
+      prepare_output(output_file, agent) unless options[:dry_run]
+      sources = filter_essential(sources) if options[:essential] && !options[:dry_run]
+      plugin = agent == Services::ClaudePlugin::AGENT
+      local_sources, command_files, bin_files, skill_files = process_squash_sources(sources, agent)
+      validate_squash_dispatches(local_sources, recipe_config, recipe_name)
+      announce_agents_md_skips(recipe_config, command_files, local_sources) if agent == Services::AgentsMd::AGENT
+      Services::ClaudePlugin.notices(recipe_name, recipe_config).each { |line| puts line } if plugin
 
       if options[:dry_run]
-        Services::Display.import_dry_run(script_files, recipe_name)
-      elsif script_files[:local].any? || script_files[:remote].any?
-        Services::ScriptManager.copy_scripts(script_files)
-        puts "\n✨ Recipe imported successfully"
-      else
-        puts "No scripts found in recipe '#{recipe_name}'"
+        Services::Display.squash_dry_run(local_sources, command_files, bin_files, skill_files, script_files,
+                                         output_file, agent, recipe_name, recipe_config, options)
+        report_source_failures!
+        return
       end
+
+      if agent == Services::AgentsMd::AGENT
+        write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
+                                     skill_files:)
+      elsif plugin
+        write_claude_plugin(output_file, bin_files:, command_files:, local_sources:, recipe_config:, recipe_name:,
+                                         script_files:, script_mappings:, skill_files:)
+      else
+        write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
+        post_squash(output_file, agent, recipe_name, recipe_config, local_sources, command_files, skill_files,
+                    script_files)
+        Services::Display.squash_summary(agent, recipe_name, recipe_config, output_file, local_sources,
+                                         command_files, skill_files)
+      end
+      report_source_failures!
     end
 
     desc 'clean [RECIPE]', 'Remove generated files (recipe optional, overrides metadata)'
@@ -106,10 +110,9 @@ module Ruly
     option :dry_run, aliases: '-d', default: false, type: :boolean
     option :agent, aliases: '-a', default: 'claude', type: :string
     option :deepclean, default: false, type: :boolean
-    option :taskmaster_config, aliases: '-T', default: false, type: :boolean
-    def clean(_recipe_name = nil)
+    def clean(recipe_name = nil)
       agent = normalize_agent(options[:agent] || 'claude')
-      files = collect_files_to_clean(agent)
+      files = collect_files_to_clean(agent, recipe_name)
 
       if files.empty? then puts '✨ Already clean - no files to remove'
       elsif options[:dry_run]
@@ -173,23 +176,6 @@ module Ruly
       def display_recipe_tree(tree, prefix = '') = Services::RecipeIntrospector.display_recipe_tree(tree, prefix)
     end
 
-    desc 'analyze [RECIPE]', 'Analyze token usage for a recipe or all recipes'
-    option :tier, aliases: '-p', type: :string
-    option :all, aliases: '-a', default: false, type: :boolean
-    def analyze(recipe_name = nil)
-      if !options[:all] && !recipe_name && puts('❌ Please specify a recipe or use -a for all recipes')
-        raise Thor::Error,
-              'Recipe required'
-      end
-
-      result = Operations::Analyzer.call(analyze_all: options[:all], gem_root:, recipe_name:, recipes_file:,
-                                         tier_override: options[:tier])
-      return if result[:success]
-
-      puts "❌ Error: #{result[:error]}"
-      exit 1
-    end
-
     desc 'init', 'Initialize Ruly with a basic configuration'
     def init
       config_dir = File.expand_path('~/.config/ruly')
@@ -209,31 +195,6 @@ module Ruly
     desc 'version', 'Show version'
     def version = puts("Ruly v#{Ruly::VERSION}")
 
-    desc 'mcp [SERVERS...]', 'Generate .mcp.json with specified MCP servers'
-    option :append, aliases: '-a', default: false, type: :boolean
-    option :recipe, aliases: '-r', type: :string
-    def mcp(*servers)
-      all_servers = Services::MCPManager.load_mcp_server_definitions
-      return unless all_servers
-
-      load_recipes = -> { load_all_recipes }
-      recipe_servers = Services::MCPManager.collect_recipe_mcp_servers(
-        options[:recipe], load_all_recipes: load_recipes
-      )
-      return if recipe_servers.nil?
-
-      all_requested = (servers + recipe_servers).uniq
-      if all_requested.empty?
-        puts '❌ Error: No servers specified'
-        return puts('   Usage: ruly mcp server1 server2 ...  Or: ruly mcp -r <recipe>')
-      end
-
-      Services::MCPManager.write_mcp_json(Services::MCPManager.build_selected_servers(all_servers, all_requested),
-                                          append: options[:append])
-    rescue JSON::ParserError => e
-      puts "❌ Error parsing JSON: #{e.message}"
-    end
-
     desc 'stats [RECIPE]', 'Generate stats.md with file token counts sorted by size'
     option :output, aliases: '-o', default: 'stats.md', type: :string
     def stats(recipe_name = nil)
@@ -242,8 +203,8 @@ module Ruly
       puts "📊 Analyzing #{resolved.size} files..."
       out = options[:output]
       out = File.join(rules_dir, out) if out == 'stats.md'
-      Operations::Analyzer.display_stats_result(Operations::Stats.call(output_file: out, recipes: recipes_for_stats,
-                                                                       rules_dir:, sources: resolved))
+      Operations::Stats.display_result(Operations::Stats.call(output_file: out, recipes: recipes_for_stats,
+                                                              rules_dir:, sources: resolved))
     end
 
     private
@@ -293,27 +254,70 @@ module Ruly
       return if options[:dry_run]
 
       if options[:deepclean]
-        invoke :clean, [], {deepclean: true, taskmaster_config: options[:taskmaster_config]}
+        invoke :clean, [], {deepclean: true}
       elsif options[:clean]
-        invoke :clean, [recipe_name], options.slice(:output_file, :agent, :taskmaster_config)
+        invoke :clean, [recipe_name], options.slice(:output_file, :agent)
       end
     end
 
     def normalize_agent(agent)
-      agent = 'shell_gpt' if agent == 'sgpt'
-      agent = 'claude' if agent&.downcase&.gsub(/[^a-z]/, '') == 'claudecode'
+      if REMOVED_AGENTS.include?(agent&.downcase)
+        warn "\u26A0\uFE0F  Agent '#{agent}': shell_gpt JSON output was removed in ruly 0.2.0; writing markdown instead"
+      end
+      letters = agent&.downcase&.gsub(/[^a-z]/, '')
+      return 'claude' if letters == 'claudecode'
+      return Services::AgentsMd::AGENT if %w[agents agentsmd].include?(letters)
+      return Services::ClaudePlugin::AGENT if letters == 'claudeplugin'
+
       agent
     end
 
     def load_sources(recipe_name)
-      if recipe_name
-        Services::RecipeLoader.load_recipe_sources(
-          recipe_name, gem_root:, recipes: load_all_recipes,
-                       scan_files_for_recipe_tags: ->(name) { Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:) }
-        )
-      else
-        [collect_local_sources, {}]
-      end
+      return [collect_local_sources, {}] unless recipe_name
+
+      sources, recipe = Services::RecipeLoader.load_recipe_sources(
+        recipe_name, gem_root:, recipes: load_all_recipes,
+                     scan_files_for_recipe_tags: ->(name) { Services::SquashHelpers.scan_files_for_recipe_tags(name, rules_dir:) }
+      )
+      warn_recipe_keys(recipe_name, recipe)
+      [sources, recipe]
+    end
+
+    # Warn on stderr about removed or unknown recipe keys, once per recipe per run.
+    # Subagent recipes reuse load_sources, so the Set stops a shared recipe warning twice.
+    def warn_recipe_keys(recipe_name, recipe)
+      @warned_recipes ||= Set.new
+      return unless @warned_recipes.add?(recipe_name)
+
+      Services::RecipeLoader.recipe_key_warnings(recipe_name, recipe).each { |message| warn message }
+    end
+
+    # Warn on stderr about removed top-level config keys (e.g. a global `tier:`), once per run.
+    def warn_config_keys
+      @warned_config_keys ||= Set.new
+      Services::RecipeLoader.config_warnings.each { |message| warn message if @warned_config_keys.add?(message) }
+    end
+
+    # Validate before anything is written (dry run included): subagent names (they become agent file
+    # names), the agents output, and for -a claude-plugin the recipe and plugin dir.
+    # @return [String] the output path (the plugin dir for -a claude-plugin)
+    def guard_output!(output_file, agent, recipe_name, recipe_config)
+      Services::SubagentProcessor.validate_agent_names!(recipe_config) unless agent == Services::AgentsMd::AGENT
+      guard_agents_md_output!(output_file, agent)
+      return output_file unless agent == Services::ClaudePlugin::AGENT
+
+      Services::ClaudePlugin.prepare!(options[:output_file], recipe_name, recipe_config)
+    rescue Ruly::Error => e
+      raise Thor::Error, "\u274C #{e.message}"
+    end
+
+    # Refuse to overwrite an existing agents output that ruly did not generate (dry run included).
+    def guard_agents_md_output!(output_file, agent)
+      return unless agent == Services::AgentsMd::AGENT
+      return unless File.exist?(output_file) && !Services::AgentsMd.generated?(output_file)
+
+      raise Thor::Error, "\u274C #{output_file} exists and was not generated by ruly (no ruly header on line 1). " \
+                         'Move it aside or pass -o PATH.'
     end
 
     # --- Core helpers ---
@@ -321,10 +325,18 @@ module Ruly
     def gem_root = @gem_root ||= ENV['RULY_HOME'] || File.expand_path('../..', __dir__)
 
     def load_all_recipes
-      Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
-                                              user_recipes_file: recipes_file)
+      load_recipes_and_warn
     rescue Ruly::Error => e
       raise Thor::Error, "\u274C #{e.message}"
+    end
+
+    # Loads recipes through the config chain and warns about removed config keys.
+    # @raise [Ruly::Error] when no recipe source exists or the config is invalid
+    def load_recipes_and_warn
+      recipes = Services::RecipeLoader.load_all_recipes(sync: sync_requested?,
+                                                        user_recipes_file: recipes_file)
+      warn_config_keys
+      recipes
     end
 
     def sync_requested? = options[:sync] ? true : false
@@ -335,18 +347,10 @@ module Ruly
 
     def collect_local_sources = Services::SquashHelpers.collect_local_sources(rules_dir)
 
-    def cached?(recipe_name, agent, output_file, _recipe_config)
-      cache_file = File.join(cache_dir, agent, "#{recipe_name}.md")
-      return false unless File.exist?(cache_file) && options[:cache]
+    # The plugin dir is replaced by ClaudePlugin.write, after its checks pass.
+    def prepare_output(output_file, agent)
+      return if agent == Services::ClaudePlugin::AGENT
 
-      puts "\n💾 Using cached version for recipe '#{recipe_name}'"
-      FileUtils.cp(cache_file, output_file)
-      true
-    end
-
-    def cache_dir = @cache_dir ||= ENV['RULY_HOME'] ? File.expand_path('~/.cache/ruly') : File.join(gem_root, 'cache')
-
-    def prepare_output(output_file)
       Services::ScriptManager.ensure_parent_directory(output_file)
       FileUtils.rm_f(output_file)
     end
@@ -357,10 +361,12 @@ module Ruly
       filtered
     end
 
-    def process_squash_sources(sources, agent)
+    # Plugin bin files are not copied here: ClaudePlugin.write copies them once the plugin dir is replaced.
+    def process_squash_sources(sources, agent, scripts_dir: nil)
       Services::SourceProcessor.process_for_squash(
-        sources, agent, dry_run: options[:dry_run], find_rule_file: method(:find_rule_file),
-                        gem_root:, keep_frontmatter: options[:front_matter], verbose: verbose?
+        sources, agent, dry_run: options[:dry_run] || agent == Services::ClaudePlugin::AGENT,
+                        find_rule_file: method(:find_rule_file),
+                        gem_root:, keep_frontmatter: options[:front_matter], scripts_dir:, verbose: verbose?
       )
     end
 
@@ -373,15 +379,10 @@ module Ruly
       Services::SquashHelpers.validate_dispatches_registered!(dispatches, recipe_config, recipe_name)
     end
 
-    def write_squash_output(output_file, agent, local_sources, command_files, script_mappings)
-      if agent == 'shell_gpt'
-        Services::SquashHelpers.write_shell_gpt_json(output_file, local_sources)
-      else
-        write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
-        if (options[:clean] || options[:deepclean]) && options[:keep_taskmaster] && agent != 'shell_gpt'
-          append_taskmaster_import(output_file)
-        end
-      end
+    def announce_agents_md_skips(recipe_config, command_files, local_sources)
+      parts = Services::AgentsMd.skipped_parts(recipe_config, command_files:, local_sources:)
+      notice = Services::AgentsMd.skipped_notice(parts)
+      puts notice if notice
     end
 
     def write_markdown_output(output_file, agent, local_sources, command_files, script_mappings)
@@ -390,29 +391,29 @@ module Ruly
           output.puts Services::TOCGenerator.generate_toc_content(local_sources, command_files, agent)
           output.puts
         end
-        local_sources.each_with_index do |source, i|
-          content = Services::TOCGenerator.rewrite_script_references(source[:content], script_mappings)
-          content = Services::TOCGenerator.add_anchor_ids_to_content(content, source[:path]) if options[:toc]
-          output.puts content
-          output.puts if i < local_sources.length - 1
-        end
+        Services::SquashHelpers.write_sources(output, local_sources, script_mappings, toc: options[:toc])
       end
     end
 
-    def append_taskmaster_import(output_file)
-      File.open(output_file, 'a') do |f|
-        f.puts "\n## Task Master AI Instructions"
-        f.puts '**Import Task Master development workflow commands and guidelines, ' \
-               'treat as if import is in the main CLAUDE.md file.**'
-        f.puts '@./.taskmaster/CLAUDE.md'
-      end
+    # Write the AGENTS.md target: squashed rules only, no Claude-only artifacts (commands,
+    # subagents, hooks, MCP config, settings). Scripts are still copied to .claude/scripts/ for
+    # rewritten references, and -i/-I ignore each copied script.
+    def write_agents_md(output_file, local_sources:, recipe_config:, recipe_name:, script_files:, script_mappings:,
+                        skill_files:)
+      Services::AgentsMd.write(output_file, keep_frontmatter: options[:front_matter], local_sources:, recipe_name:,
+                                            script_mappings:, skill_files:, toc: options[:toc])
+      update_git_ignores(output_file, Services::AgentsMd::AGENT, [],
+                         extra_patterns: Services::AgentsMd.script_ignore_patterns(script_files))
+      Services::ScriptManager.copy_scripts(script_files) if script_files[:local].any? || script_files[:remote].any?
+      run_checks(local_sources + skill_files, [], build_recipe_paths(local_sources), skill_files)
+      Services::Display.squash_summary(Services::AgentsMd::AGENT, recipe_name, recipe_config, output_file,
+                                       local_sources, [], skill_files)
     end
 
     def post_squash(output_file, agent, recipe_name, recipe_config, # rubocop:disable Metrics/ParameterLists
                     local_sources, command_files, skill_files, script_files)
       recipe_paths = build_recipe_paths(local_sources)
       update_git_ignores(output_file, agent, command_files)
-      save_to_cache(output_file, recipe_name, agent) if recipe_name && options[:cache]
       if agent == 'claude' && !command_files.empty?
         Services::ScriptManager.save_command_files(command_files, recipe_config,
                                                    gem_root:)
@@ -421,7 +422,6 @@ module Ruly
       recipe_config = merge_mcp_servers(recipe_config, local_sources)
       Services::MCPManager.update_mcp_settings(recipe_config, agent)
       Services::SettingsManager.write_settings(recipe_config)
-      Services::SquashHelpers.copy_taskmaster_config(dry_run: false) if options[:taskmaster_config]
       all_skill_files = skill_files.dup
       if recipe_config.is_a?(Hash) && recipe_config['subagents']
         subagent_skill_files = process_subagents(recipe_config, recipe_name, recipe_paths:)
@@ -458,57 +458,36 @@ module Ruly
 
     def find_rule_file(file) = Services::RecipeLoader.find_rule_file(file, gem_root:)
 
-    def update_git_ignores(output_file, agent, command_files)
+    def update_git_ignores(output_file, agent, command_files, extra_patterns: [])
       return unless options[:git_ignore] || options[:git_exclude]
 
-      patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files)
+      patterns = Services::GitIgnoreManager.generate_ignore_patterns(output_file, agent, command_files) +
+                 extra_patterns
       Services::GitIgnoreManager.update_gitignore(patterns) if options[:git_ignore]
       Services::GitIgnoreManager.update_git_exclude(patterns) if options[:git_exclude]
     end
 
-    def save_to_cache(output_file, recipe_name, agent)
-      dir = File.join(cache_dir, agent)
-      FileUtils.mkdir_p(dir)
-      FileUtils.cp(output_file, File.join(dir, "#{recipe_name}.md"))
-    end
-
-    def save_skill_files(skill_files, recipe_paths: Set.new)
+    def save_skill_files(skill_files, recipe_paths: Set.new, skills_dir: nil)
       Services::ScriptManager.save_skill_files(skill_files, find_rule_file: method(:find_rule_file),
                                                             parse_frontmatter: Services::FrontmatterParser.method(:parse),
-                                                            recipe_paths:,
+                                                            recipe_paths:, skills_dir:,
                                                             strip_metadata: Services::FrontmatterParser.method(:strip_metadata))
     end
 
     def merge_mcp_servers(recipe_config, local_sources)
-      servers = Services::MCPManager.collect_mcp_servers_from_sources(local_sources)
-      if servers.any?
-        recipe_config = {} unless recipe_config.is_a?(Hash)
-        existing = Array(recipe_config['mcp_servers'])
-        new_servers = servers - existing
-        recipe_config['mcp_servers'] = (existing + servers).uniq
-        puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
-      end
-      if recipe_config.is_a?(Hash) && recipe_config['subagents']
-        orig = Array(recipe_config['mcp_servers'])
-        all = Services::MCPManager.collect_all_mcp_servers(recipe_config, load_all_recipes: load_recipes_proc)
-        if all.any?
-          propagated = all - orig
-          recipe_config['mcp_servers'] = all
-          puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
-        end
-      end
-      recipe_config
+      Services::MCPManager.merge_recipe_servers(recipe_config, local_sources, load_all_recipes: load_recipes_proc)
     end
 
     def load_recipes_proc = -> { load_all_recipes }
 
-    def process_subagents(recipe_config, recipe_name, recipe_paths: Set.new)
+    def process_subagents(recipe_config, recipe_name, plugin_dir: nil, plugin_skills: [], recipe_paths: Set.new)
       Services::SubagentProcessor.process_subagents(
         recipe_config, recipe_name,
         find_rule_file: method(:find_rule_file),
         load_all_recipes: load_recipes_proc,
         load_recipe_sources: ->(name) { load_sources(name) },
         parse_frontmatter: Services::FrontmatterParser.method(:parse),
+        plugin_dir:, plugin_skills:,
         process_sources_for_squash: method(:process_sources_for_squash),
         recipe_paths:,
         save_skill_files: method(:save_skill_files),
@@ -516,9 +495,32 @@ module Ruly
       )
     end
 
+    # Write the Claude Code plugin dir; never writes into the project (.claude/, CLAUDE.local.md, .mcp.json).
+    # A failed build keeps the previous plugin (see ClaudePlugin.write).
+    def write_claude_plugin(dir, bin_files:, command_files:, local_sources:, recipe_config:, recipe_name:,
+                            script_files:, script_mappings:, skill_files:)
+      recipe_paths = build_recipe_paths(local_sources)
+      recipe_config = merge_mcp_servers(recipe_config, local_sources)
+      subagent_skills = Services::ClaudePlugin.write(dir, bin_files:, command_files:, gem_root:, local_sources:,
+                                                          recipe_config:, recipe_name:, script_files:, script_mappings:,
+                                                          skill_files:, toc: options[:toc]) do
+        save_skill_files(skill_files, recipe_paths:, skills_dir: File.join(dir, 'skills'))
+        process_subagents(recipe_config, recipe_name, plugin_dir: dir, plugin_skills: skill_files, recipe_paths:)
+      end
+      update_git_ignores("#{dir}/", Services::ClaudePlugin::AGENT, [])
+      run_checks(local_sources, command_files, recipe_paths, skill_files + Array(subagent_skills))
+      puts "\u2705 Wrote Claude Code plugin to #{dir}", "   Load it with: claude --plugin-dir #{dir}"
+    rescue Ruly::Error => e
+      raise Thor::Error, "\u274C #{e.message}"
+    end
+
     # --- Clean helpers ---
 
-    def collect_files_to_clean(agent)
+    def collect_files_to_clean(agent, recipe_name = nil)
+      plugin = agent == Services::ClaudePlugin::AGENT && !options[:deepclean]
+      return Services::ClaudePlugin.files_to_clean(options[:output_file], recipe_name) if plugin
+      return agents_md_files_to_clean if agent == Services::AgentsMd::AGENT && !options[:deepclean]
+
       files = []
       files << '.claude/' if Dir.exist?('.claude')
       if options[:deepclean]
@@ -531,8 +533,16 @@ module Ruly
           files << (agent == 'claude' ? '.mcp.json' : '.mcp.yml')
         end
       end
-      files << '.taskmaster/' if options[:taskmaster_config] && Dir.exist?('.taskmaster')
       files.uniq
+    end
+
+    # The agents target owns only its output file, and only when ruly generated it.
+    def agents_md_files_to_clean
+      path = Services::AgentsMd.output_file(options[:output_file], Services::AgentsMd::AGENT)
+      return [path] if Services::AgentsMd.generated?(path)
+
+      warn "\u26A0\uFE0F  Skipping #{path}: not generated by ruly (line 1 is not the ruly header)" if File.exist?(path)
+      []
     end
 
     # --- Introspect helpers ---
@@ -550,20 +560,24 @@ module Ruly
       recipe_data
     end
 
-    # Recipes for stats orphan detection; nil when no recipe source is configured.
+    # Recipes for stats orphan detection; nil when none can be loaded (e.g. no recipe source
+    # is configured), so stats.md is still written for the local rule files.
     def recipes_for_stats
-      load_all_recipes
-    rescue Ruly::Error
+      load_recipes_and_warn
+    rescue Ruly::Error => e
+      reason = e.message.lines.first.strip.delete_suffix(' Looked for:')
+      warn "\u26A0\uFE0F  Recipes not loaded, so recipe totals are skipped: #{reason}"
       nil
     end
 
-    def process_sources_for_squash(sources, agent, _recipe_config, _options)
-      process_squash_sources(sources, agent)
+    def process_sources_for_squash(sources, agent, _recipe_config, opts)
+      process_squash_sources(sources, agent, scripts_dir: opts&.[](:scripts_dir))
     end
 
     # --- Backward-compatible delegators for specs ---
     # rubocop:disable Layout/LineLength
     def load_recipe_sources(name) = load_sources(name)
+    def run_checks(sources, command_files, recipe_paths, skill_files) = Ruly::Checks.run_all(sources, command_files, find_rule_file: method(:find_rule_file), parse_frontmatter: Services::FrontmatterParser.method(:parse), recipe_paths:, skill_files:)
     def parse_frontmatter(content) = Services::FrontmatterParser.parse(content)
     def strip_metadata_from_frontmatter(content, keep_frontmatter: false) = Services::FrontmatterParser.strip_metadata(content, keep_frontmatter:)
     def convert_to_raw_url(url) = Services::GitHubClient.convert_to_raw_url(url)
@@ -582,7 +596,6 @@ module Ruly
     def fetch_remote_scripts(scripts) = Services::ScriptManager.fetch_remote_scripts(scripts)
     def copy_scripts(files, dest = nil) = Services::ScriptManager.copy_scripts(files, dest)
     def rewrite_script_references(content, mappings) = Services::TOCGenerator.rewrite_script_references(content, mappings)
-    def write_shell_gpt_json(file, sources) = Services::SquashHelpers.write_shell_gpt_json(file, sources)
     def collect_required_shell_commands(sources) = Services::ShellCommandChecker.collect_required_commands(sources, find_rule_file: method(:find_rule_file))
     def check_required_shell_commands(cmds) = Services::ShellCommandChecker.check_commands(cmds)
     def check_shell_command_available(cmd) = system("which #{cmd.shellescape} > /dev/null 2>&1")

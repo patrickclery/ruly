@@ -103,6 +103,8 @@ module Ruly
         remotes_dir ||= RemoteSync.remotes_dir
         user_config = read_config_file(user_file)
         project_config = read_config_file(project_file)
+        @config_warnings = config_key_warnings(user_file, user_config) +
+                           config_key_warnings(project_file, project_config)
 
         remotes = (Array(user_config['remotes']) + Array(project_config['remotes']))
                   .map { |r| RemoteSync.normalize_remote(r, remotes_dir:) }
@@ -516,6 +518,57 @@ module Ruly
 
       # Array keys that get merged via union (concat + uniq).
       ARRAY_MERGE_KEYS = %w[files skills commands scripts sources remote_sources mcp_servers omit_command_prefix].freeze
+
+      # Every top-level recipe key ruly reads.
+      KNOWN_RECIPE_KEYS = %w[
+        commands description extends files hooks isolate mcp_servers model omit_command_prefix remote_sources
+        scripts skills sources subagents
+      ].freeze
+
+      # Recipe keys that earlier releases read and ruly 0.2.0 dropped.
+      REMOVED_RECIPE_KEYS = %w[tier].freeze
+
+      # Build stderr warnings for removed or unknown top-level recipe keys.
+      # Messages name the recipe and the key only, never the key's value.
+      #
+      # @param recipe_name [String]
+      # @param recipe [Hash, Array] recipe config (Array agent recipes have no keys)
+      # @return [Array<String>] one message per removed or unknown key
+      def recipe_key_warnings(recipe_name, recipe)
+        return [] unless recipe.is_a?(Hash)
+
+        (recipe.keys.map(&:to_s) - KNOWN_RECIPE_KEYS).map do |key|
+          if REMOVED_RECIPE_KEYS.include?(key)
+            "\u26A0\uFE0F  Recipe '#{recipe_name}': '#{key}' was removed in ruly 0.2.0 and is ignored"
+          else
+            "\u26A0\uFE0F  Recipe '#{recipe_name}': unknown key '#{key}' is ignored"
+          end
+        end
+      end
+
+      # Top-level config keys that earlier releases read and ruly 0.2.0 dropped.
+      REMOVED_CONFIG_KEYS = %w[tier].freeze
+
+      # Stderr warnings for removed top-level keys in the user and project config files,
+      # set by the last load_all_recipes call.
+      # @return [Array<String>]
+      def config_warnings
+        @config_warnings || []
+      end
+
+      # Build stderr warnings for removed top-level keys in a recipes config file.
+      # Messages name the file and the key only, never the key's value.
+      #
+      # @param path [String] config file the keys were read from
+      # @param config [Hash] parsed config file
+      # @return [Array<String>] one message per removed key
+      def config_key_warnings(path, config)
+        return [] unless config.is_a?(Hash)
+
+        (config.keys.map(&:to_s) & REMOVED_CONFIG_KEYS).map do |key|
+          "\u26A0\uFE0F  #{path}: '#{key}' was removed in ruly 0.2.0 and is ignored"
+        end
+      end
 
       # Resolve all `extends:` declarations in the recipes hash, in-place.
       #

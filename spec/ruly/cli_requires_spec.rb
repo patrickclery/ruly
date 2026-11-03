@@ -345,7 +345,6 @@ RSpec.describe Ruly::CLI do
         # Create minimal options
         options = {
           agent: 'claude',
-          cache: false,
           clean: false,
           deepclean: false,
           dry_run: false,
@@ -388,7 +387,6 @@ RSpec.describe Ruly::CLI do
 
         options = {
           agent: 'claude',
-          cache: false,
           clean: false,
           deepclean: false,
           dry_run: false,
@@ -440,7 +438,6 @@ RSpec.describe Ruly::CLI do
 
         options = {
           agent: 'claude',
-          cache: false,
           clean: false,
           deepclean: false,
           dry_run: false,

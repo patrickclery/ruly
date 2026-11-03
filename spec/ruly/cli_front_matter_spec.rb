@@ -209,7 +209,6 @@ RSpec.describe Ruly::CLI do
       cli = described_class.new
       cli.options = {
         agent: 'claude',
-        cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
@@ -217,9 +216,7 @@ RSpec.describe Ruly::CLI do
         front_matter: false,
         git_exclude: false,
         git_ignore: false,
-        keep_taskmaster: false,
         output_file: File.join(test_dir, 'output.md'),
-        taskmaster_config: false,
         toc: false
       }
 
@@ -251,7 +248,6 @@ RSpec.describe Ruly::CLI do
       cli = described_class.new
       cli.options = {
         agent: 'claude',
-        cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
@@ -259,9 +255,7 @@ RSpec.describe Ruly::CLI do
         front_matter: true,
         git_exclude: false,
         git_ignore: false,
-        keep_taskmaster: false,
         output_file: File.join(test_dir, 'output.md'),
-        taskmaster_config: false,
         toc: false
       }
 
@@ -294,7 +288,6 @@ RSpec.describe Ruly::CLI do
       cli = described_class.new
       cli.options = {
         agent: 'claude',
-        cache: false,
         clean: false,
         deepclean: false,
         dry_run: false,
@@ -302,9 +295,7 @@ RSpec.describe Ruly::CLI do
         front_matter: true,
         git_exclude: false,
         git_ignore: false,
-        keep_taskmaster: false,
         output_file: File.join(test_dir, 'output.md'),
-        taskmaster_config: false,
         toc: false
       }
 

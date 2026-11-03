@@ -1,0 +1,44 @@
+recipes:
+  bug:
+    commands:
+      - commands/triage.md
+    description: Investigating and fixing a reported bug
+    files:
+      - core/
+      - bugs/
+      - ruby/logging.md
+    skills:
+      - skills/bug-report.md
+  frontend:
+    description: Building React user interface features
+    files:
+      - core/principles.md
+      - frontend/
+    skills:
+      - skills/deploy.md
+  pr-review:
+    commands:
+      - commands/open-pr.md
+    description: Opening and reviewing pull requests
+    files:
+      - core/principles.md
+      - review/
+      - git/
+      - security/secrets.md
+    skills:
+      - skills/release-notes.md
+  ruby-feature:
+    description: Building a Ruby feature end to end
+    files:
+      - core/principles.md
+      - ruby/
+      - database/migrations.md
+      - security/input-validation.md
+    skills:
+      - skills/write-adr.md
+  testing:
+    description: Writing and fixing automated tests
+    files:
+      - core/principles.md
+      - testing/
+      - ruby/style.md

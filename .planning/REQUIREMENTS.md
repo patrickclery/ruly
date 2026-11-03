@@ -25,7 +25,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Multi-Agent Support
 
-- [x] **AGNT-01**: Output supports Claude (markdown), Cursor (.cursorrules), Shell-GPT (JSON)
+- [x] **AGNT-01**: Output supports Claude (markdown), Cursor (.cursorrules), Shell-GPT (JSON) — Shell-GPT output removed in Phase 2
 - [x] **AGNT-02**: Subagent recipes process recursively in subdirectories
 - [x] **AGNT-03**: MCP server configuration generated from recipe `mcp_servers:`
 
@@ -39,9 +39,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CLI-01**: `ruly squash` compiles recipe to output
 - [x] **CLI-02**: `ruly stats` reports token counts per recipe
 - [x] **CLI-03**: `ruly clean` removes generated output files
-- [x] **CLI-04**: `ruly import` imports rules from files or URLs
+- [x] **CLI-04**: `ruly import` imports rules from files or URLs — removed in Phase 2 (see phase 02 AUDIT.md)
 - [x] **CLI-05**: `ruly init` initializes ruly configuration
-- [x] **CLI-06**: `ruly analyze` analyzes rule files
+- [x] **CLI-06**: `ruly analyze` analyzes rule files — removed in Phase 2 (see phase 02 AUDIT.md)
 
 ## v2 Requirements
 
@@ -55,7 +55,12 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| (None yet) | No exclusions defined |
+| `ruly import` command | `ruly squash` already copies recipe scripts; removed in 0.2.0 |
+| `ruly analyze` command | Duplicated `ruly stats`; folded into it in 0.2.0 |
+| `ruly mcp` command | Claude Code manages MCP natively (`claude mcp add`); recipe `mcp_servers:` covers per-recipe selection |
+| `--cache` squash flag | Manual-invalidation cache with little benefit since squash is fast |
+| TaskMaster flags (`-T`, `--keep-taskmaster`) | Unrelated to rule composition |
+| Shell-GPT role-JSON output | Lowest-value adapter with no skills/commands/MCP consumer |
 
 ## Traceability
 
@@ -81,9 +86,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-01 | Phase 1 | Complete |
 | CLI-02 | Phase 1 | Complete |
 | CLI-03 | Phase 1 | Complete |
-| CLI-04 | Phase 1 | Complete |
+| CLI-04 | Phase 1 | Removed (Phase 2) |
 | CLI-05 | Phase 1 | Complete |
-| CLI-06 | Phase 1 | Complete |
+| CLI-06 | Phase 1 | Removed (Phase 2) |
 
 **Coverage:**
 - v1 requirements: 21 total
@@ -92,4 +97,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after roadmap creation*
+*Last updated: 2026-11-02 after Phase 2 lean-out*

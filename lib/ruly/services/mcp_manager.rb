@@ -5,9 +5,10 @@ require 'yaml'
 
 module Ruly
   module Services
-    # Manages MCP (Model Context Protocol) server configuration.
-    # Handles loading definitions, collecting servers from recipes/sources,
-    # and writing .mcp.json output files.
+    # Recipe-driven MCP (Model Context Protocol) server selection.
+    # Collects server names from a recipe's `mcp_servers:` key, its subagent
+    # recipes and rule-file frontmatter, resolves them against
+    # ~/.config/ruly/mcp.json and writes .mcp.json (or .mcp.yml) during squash.
     # All methods are stateless module functions; external dependencies
     # (load_all_recipes, etc.) are injected via keyword arguments.
     module MCPManager # rubocop:disable Metrics/ModuleLength
@@ -57,6 +58,33 @@ module Ruly
         end
 
         servers.uniq
+      end
+
+      # Add the MCP servers named in rule-file frontmatter and in subagent recipes to the recipe's
+      # `mcp_servers`, printing the names each step adds.
+      # @param recipe_config [Hash, nil] recipe configuration (a Hash is updated in place)
+      # @param local_sources [Array<Hash>] processed rule sources
+      # @param load_all_recipes [Proc] callable returning all recipes hash
+      # @return [Hash, nil] the recipe configuration ({} when servers were found and it was not a Hash)
+      def merge_recipe_servers(recipe_config, local_sources, load_all_recipes:)
+        servers = collect_mcp_servers_from_sources(local_sources)
+        if servers.any?
+          recipe_config = {} unless recipe_config.is_a?(Hash)
+          existing = Array(recipe_config['mcp_servers'])
+          new_servers = servers - existing
+          recipe_config['mcp_servers'] = (existing + servers).uniq
+          puts "🔌 Collected MCP servers from rule files: #{new_servers.join(', ')}" if new_servers.any?
+        end
+        if recipe_config.is_a?(Hash) && recipe_config['subagents']
+          orig = Array(recipe_config['mcp_servers'])
+          all = collect_all_mcp_servers(recipe_config, load_all_recipes:)
+          if all.any?
+            propagated = all - orig
+            recipe_config['mcp_servers'] = all
+            puts "🔌 Propagated MCP servers from subagents: #{propagated.join(', ')}" if propagated.any?
+          end
+        end
+        recipe_config
       end
 
       # Update MCP settings based on recipe config, writing .mcp.json or .mcp.yml.
@@ -124,81 +152,6 @@ module Ruly
       rescue StandardError => e
         puts "\u26a0\ufe0f  Warning: Error loading MCP servers: #{e.message}"
         nil
-      end
-
-      # Load all MCP server definitions from ~/.config/ruly/mcp.json.
-      # @return [Hash, nil] full server definitions hash, or nil if missing
-      def load_mcp_server_definitions
-        mcp_config_file = File.expand_path('~/.config/ruly/mcp.json')
-
-        unless File.exist?(mcp_config_file)
-          puts "\u274c Error: ~/.config/ruly/mcp.json not found"
-          puts '   Create this file with your MCP server definitions.'
-          return nil
-        end
-
-        JSON.parse(File.read(mcp_config_file))
-      end
-
-      # Collect MCP server names from a recipe specified by name.
-      # @param recipe_name [String, nil] recipe name to look up
-      # @param load_all_recipes [Proc] callable returning all recipes hash
-      # @return [Array<String>, nil] server names, empty array if no recipe, nil if recipe not found
-      def collect_recipe_mcp_servers(recipe_name, load_all_recipes:)
-        return [] unless recipe_name
-
-        recipes = load_all_recipes.call
-        recipe_config = recipes[recipe_name]
-
-        if recipe_config.nil?
-          puts "\u274c Error: Recipe '#{recipe_name}' not found"
-          return nil
-        end
-
-        recipe_servers = recipe_config['mcp_servers'] || []
-        puts "\u26a0\ufe0f  Warning: Recipe '#{recipe_name}' has no MCP servers defined" if recipe_servers.empty?
-        recipe_servers
-      end
-
-      # Filter server definitions to only requested names, cleaning metadata.
-      # @param all_servers [Hash] full server definitions
-      # @param requested_names [Array<String>] server names to include
-      # @return [Hash] filtered server configs
-      def build_selected_servers(all_servers, requested_names)
-        selected_servers = {}
-        requested_names.each do |name|
-          if all_servers[name]
-            server_config = all_servers[name].dup
-            server_config.delete_if { |key, _| key.start_with?('_') } if server_config.is_a?(Hash)
-            server_config['type'] = 'stdio' if server_config['command'] && !server_config['type']
-            selected_servers[name] = server_config
-          else
-            puts "\u26a0\ufe0f  Warning: MCP server '#{name}' not found in ~/.config/ruly/mcp.json"
-          end
-        end
-        selected_servers
-      end
-
-      # Write selected servers to .mcp.json.
-      # @param selected_servers [Hash] server name => config
-      # @param append [Boolean] whether to merge with existing .mcp.json
-      def write_mcp_json(selected_servers, append: false)
-        existing_settings = {}
-        existing_settings = JSON.parse(File.read('.mcp.json')) if append && File.exist?('.mcp.json')
-
-        existing_servers = existing_settings['mcpServers'] || {}
-        merged_servers = existing_servers.merge(selected_servers)
-
-        output = {'mcpServers' => merged_servers}
-        File.write('.mcp.json', JSON.pretty_generate(output))
-
-        if selected_servers.empty?
-          puts "\u26a0\ufe0f  No valid servers found, created empty .mcp.json"
-        elsif append
-          puts "\u{1F50C} Appended #{selected_servers.size} server(s) to .mcp.json"
-        else
-          puts "\u{1F50C} Created .mcp.json with #{selected_servers.size} server(s)"
-        end
       end
 
       # Collect MCP servers from both recipe config and rule-file frontmatter.

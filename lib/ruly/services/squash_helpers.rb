@@ -5,9 +5,9 @@ require 'find'
 module Ruly
   module Services
     # Helper methods for the squash pipeline that don't fit into other services.
-    # Includes filtering, dispatch validation, recipe-tag scanning, output file
-    # determination, and TaskMaster config copying.
-    module SquashHelpers # rubocop:disable Metrics/ModuleLength
+    # Includes filtering, dispatch validation, recipe-tag scanning and output file
+    # determination.
+    module SquashHelpers
       module_function
 
       # Filter sources to only those marked as essential: true in frontmatter.
@@ -124,30 +124,19 @@ module Ruly
         end
       end
 
-      # Copy TaskMaster config from user config to project.
-      # @param dry_run [Boolean] if true, only print what would happen
-      def copy_taskmaster_config(dry_run: false)
-        source_config = File.expand_path('~/.config/ruly/taskmaster/config.json')
-        target_dir = '.taskmaster'
-        target_config = File.join(target_dir, 'config.json')
-
-        unless File.exist?(source_config)
-          puts "⚠️  Warning: #{source_config} not found"
-          return
+      # Write processed sources to an IO, separated by one empty line.
+      # @param io [IO] destination
+      # @param sources [Array<Hash>] processed sources with :content and :path
+      # @param script_mappings [Hash] absolute script path => relative name
+      # @param toc [Boolean] add anchor ids before headings
+      # @return [void]
+      def write_sources(io, sources, script_mappings, toc:)
+        sources.each_with_index do |source, i|
+          content = Services::TOCGenerator.rewrite_script_references(source[:content], script_mappings)
+          content = Services::TOCGenerator.add_anchor_ids_to_content(content, source[:path]) if toc
+          io.puts content
+          io.puts if i < sources.length - 1
         end
-
-        if dry_run
-          puts "\nWould copy TaskMaster config:"
-          puts "  → From: #{source_config}"
-          puts "  → To: #{target_config}"
-          return
-        end
-
-        FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
-        FileUtils.cp(source_config, target_config)
-        puts "🎯 Copied TaskMaster config to #{target_config}"
-      rescue StandardError => e
-        puts "⚠️  Warning: Could not copy TaskMaster config: #{e.message}"
       end
 
       # Collect all local sources from the rules directory (non-recipe mode).
@@ -164,26 +153,6 @@ module Ruly
         sources.sort_by { |s| s[:path] }
       end
 
-      # Write shell_gpt JSON output format.
-      # @param output_file [String] output path
-      # @param local_sources [Array<Hash>] processed sources with :content
-      def write_shell_gpt_json(output_file, local_sources)
-        require 'json'
-
-        role_name = File.basename(output_file, '.json')
-        description_parts = local_sources.map do |source|
-          content = source[:content].dup.force_encoding('UTF-8')
-          content.scrub('?')
-        end
-
-        role_json = {
-          'description' => description_parts.join("\n\n"),
-          'name' => role_name
-        }
-
-        File.write(output_file, JSON.pretty_generate(role_json))
-      end
-
       # Calculate bin file target path from relative path.
       # @param relative_path [String] source relative path
       # @return [String] target filename
@@ -193,18 +162,6 @@ module Ruly
         else
           File.basename(relative_path)
         end
-      end
-
-      # Count sections in a cached output file.
-      # @param output_file [String] path to the cached file
-      # @return [Integer] number of sections
-      def cached_file_count(output_file)
-        return 0 unless File.exist?(output_file)
-
-        content = File.read(output_file, encoding: 'UTF-8')
-        content.scan(/^## /).size
-      rescue StandardError
-        0
       end
     end
   end

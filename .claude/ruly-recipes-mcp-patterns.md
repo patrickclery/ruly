@@ -2,7 +2,7 @@
 
 ## Description
 
-This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project that achieved 85% token reduction through conditional documentation loading.
+This document captures essential patterns and rules for configuring Ruly recipes with MCP (Model Context Protocol) servers, based on the WorkAxle optimization project, which uses recipes for conditional documentation loading. On ruly's synthetic fixture corpus (not the WorkAxle rules), recipe-scoped output measured a median 74.3% smaller than loading every rule ([Benchmarks](../docs/benchmarks.md)).
 
 ## Key Patterns
 
@@ -35,13 +35,13 @@ files:
 ```yaml
 # ✅ Use directory path when including all files
 files:
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/bug/  # Includes all .md files
+  - workaxle/core/bug/  # Includes all .md files
 
 # ✅ List specific files when being selective
 files:
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-basics.md
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-sequel.md
-  - /Users/patrick/Projects/ruly/rules/workaxle/core/frameworks/rspec-factories.md
+  - workaxle/core/frameworks/rspec-basics.md
+  - workaxle/core/frameworks/rspec-sequel.md
+  - workaxle/core/frameworks/rspec-factories.md
 ```
 
 ### 3. MCP Server Selection
@@ -82,6 +82,7 @@ subagents:
 ```
 
 Recipe-level default:
+
 ```yaml
 core:
   model: sonnet           # All subagents default to sonnet
@@ -101,11 +102,11 @@ Inheritance chain: subagent `model` > recipe `model` > `inherit`
 workaxle-bug:
   description: "WorkAxle bug investigation and fixing"
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/recipes/bug-investigation.md
-    - /Users/patrick/Projects/ruly/rules/bug/
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/diagnose.md
-    - /Users/patrick/Projects/ruly/rules/workaxle/commands/fix.md
+    - workaxle/core.md
+    - workaxle/recipes/bug-investigation.md
+    - bug/
+    - workaxle/commands/diagnose.md
+    - workaxle/commands/fix.md
   mcp_servers:
     - teams           # For Teams DM notifications
     # Note: Jira uses CLI (jira issue view, jira issue move, etc.)
@@ -118,10 +119,10 @@ workaxle-bug:
 workaxle-review:
   description: "WorkAxle final review and QA stage"
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/core.md
-    - /Users/patrick/Projects/ruly/rules/github/pr/
-    - /Users/patrick/Projects/ruly/rules/workaxle/core/testing/
-    - /Users/patrick/Projects/ruly/rules/comms/  # Includes jira, confluence
+    - workaxle/core.md
+    - github/pr/
+    - workaxle/core/testing/
+    - comms/  # Includes jira, confluence
   mcp_servers:
     - atlassian       # For Confluence page creation only
   # playwright-cli is available globally via npm — no MCP server needed
@@ -152,7 +153,7 @@ workaxle-review:
 
 - **Only `core.md` should have `alwaysApply: true`** in the actual rule files
 - **Use recipes to conditionally load** documentation based on current task
-- **Achieved 85% token reduction** through this approach
+- **Measured a median 74.3% token reduction** against loading every rule with this approach, on ruly's synthetic fixture corpus rather than the WorkAxle rules ([Benchmarks](../docs/benchmarks.md))
 
 ## Anti-patterns
 
@@ -171,18 +172,10 @@ files:
 # AVOID - This defeats token optimization
 workaxle:
   files:
-    - /Users/patrick/Projects/ruly/rules/workaxle/  # Too broad for most tasks
+    - workaxle/  # Too broad for most tasks
 ```
 
-### 3. ❌ Relative Paths
-
-```yaml
-# WRONG - Must use absolute paths
-files:
-  - rules/workaxle/core.md  # Missing full path
-```
-
-### 4. ❌ Unnecessary MCP Servers
+### 3. ❌ Unnecessary MCP Servers
 
 ```yaml
 # WRONG - Including atlassian when only Jira (not Confluence) is needed
@@ -237,23 +230,23 @@ post-jira-comment.sh WA-1234 "markdown with [@Name](mention:ID)"
 ## Usage Commands
 
 ```bash
-# Import a specific recipe
-ruly import --recipe workaxle-bug
+# Squash a specific recipe (also copies its scripts)
+ruly squash workaxle-bug
 
 # Squash a recipe for testing (run from temp directory)
 cd $(mktemp -d)
-ruly squash --recipe workaxle-testing
+ruly squash workaxle-testing
 
 # List available recipes
 ruly list-recipes
 
-# Update installed ruly after changes
-mise install ruby
+# Update installed ruly after changes (installed to ~/ruly by setup.rb)
+cd ~/ruly && git pull && bundle install
 ```
 
 ## Key Achievements
 
-- **85% token reduction** from ~15,000 tokens to ~2,000 tokens base usage
+- **74.3% median token reduction** against loading every rule, measured on ruly's synthetic fixture corpus rather than the WorkAxle rules ([Benchmarks](../docs/benchmarks.md))
 - **Conditional loading** based on file patterns and task recipes
 - **MCP server integration** for automated tool availability
 - **Task-specific recipes** for focused workflows

@@ -27,6 +27,15 @@ module Ruly
         end
       end
 
+      # Derive a single-segment skill name for a Claude Code plugin's `skills/<name>/`.
+      # Drops a trailing '/SKILL' from derive_skill_name, then joins nested segments with '-'
+      # (`skills/tdd/SKILL.md` -> `tdd`, `skills/git/commit.md` -> `git-commit`).
+      # @param path [String] file path
+      # @return [String] flattened skill name
+      def flat_skill_name(path)
+        derive_skill_name(path).delete_suffix('/SKILL').tr('/', '-')
+      end
+
       # Scan all local sources for scripts declared in frontmatter.
       # @param sources [Array<Hash>] source hashes with :type and :path
       # @param find_rule_file [Proc] callable that resolves a rule path to an absolute file path
@@ -134,12 +143,12 @@ module Ruly
         mappings
       end
 
-      # Copy script files to .claude/scripts/ and make them executable.
+      # Copy script files to .claude/scripts/ (or scripts_dir) and make them executable.
       # @param script_files [Array<Hash>] each with :source_path and :relative_path
-      def copy_script_files(script_files)
+      # @param scripts_dir [String] destination directory
+      def copy_script_files(script_files, scripts_dir: '.claude/scripts')
         return if script_files.empty?
 
-        scripts_dir = '.claude/scripts'
         FileUtils.mkdir_p(scripts_dir)
 
         copied_count = 0
@@ -163,7 +172,7 @@ module Ruly
           copied_count += 1
         end
 
-        puts "🚀 Copied #{copied_count} script files to .claude/scripts/ (made executable)"
+        puts "🚀 Copied #{copied_count} script files to #{scripts_dir}/ (made executable)"
       end
 
       # Copy collected scripts (local + remote) to destination and make executable.
@@ -250,11 +259,11 @@ module Ruly
       # Write command files to .claude/commands/.
       # @param command_files [Array] either Hashes with :path/:content or String paths
       # @param recipe_config [Hash, nil] recipe configuration (for omit_command_prefix)
+      # @param commands_dir [String] target directory (a plugin passes `DIR/commands`)
       # @param gem_root [String, nil] root path of the gem (needed for import mode paths)
-      def save_command_files(command_files, recipe_config = nil, gem_root: nil) # rubocop:disable Metrics/MethodLength
+      def save_command_files(command_files, recipe_config = nil, commands_dir: '.claude/commands', gem_root: nil) # rubocop:disable Metrics/MethodLength
         return if command_files.empty?
 
-        commands_dir = '.claude/commands'
         FileUtils.mkdir_p(commands_dir)
 
         omit_prefix = recipe_config && recipe_config['omit_command_prefix'] ? recipe_config['omit_command_prefix'] : nil
@@ -383,12 +392,18 @@ module Ruly
       # @param find_rule_file [Proc] callable to resolve rule paths
       # @param parse_frontmatter [Proc] callable for frontmatter parsing
       # @param strip_metadata [Proc] callable for stripping metadata from frontmatter
-      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, recipe_paths: Set.new)
+      # @param skills_dir [String, nil] nil writes `.claude/skills/<derive_skill_name>`; a dir writes
+      #   `<skills_dir>/<flat_skill_name>` (Claude Code plugin layout)
+      def save_skill_files(skill_files, find_rule_file:, parse_frontmatter:, strip_metadata:, recipe_paths: Set.new,
+                           skills_dir: nil)
         return if skill_files.empty?
 
         skill_files.each do |file|
-          skill_name = derive_skill_name(file[:path])
-          skill_dir = ".claude/skills/#{skill_name}"
+          skill_dir = if skills_dir
+                        File.join(skills_dir, flat_skill_name(file[:path]))
+                      else
+                        ".claude/skills/#{derive_skill_name(file[:path])}"
+                      end
           FileUtils.mkdir_p(skill_dir)
 
           content = compile_skill_with_requires(file, find_rule_file:, parse_frontmatter:, strip_metadata:,
