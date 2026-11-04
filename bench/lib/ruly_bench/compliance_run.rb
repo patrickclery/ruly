@@ -227,8 +227,9 @@ module RulyBench
       {'cost_usd' => cost, 'error' => nil, 'failed' => score[:failed], 'pass' => score[:pass], 'reply' => reply}
     end
 
+    # claude writes UTF-8, but Open3 tags stdout with the locale's encoding (US-ASCII under LC_CTYPE=C).
     def parse_json(text)
-      JSON.parse(text.to_s)
+      JSON.parse(text.to_s.dup.force_encoding(Encoding::UTF_8))
     rescue JSON::ParserError
       nil
     end

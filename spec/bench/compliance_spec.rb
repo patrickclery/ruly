@@ -293,6 +293,19 @@ RSpec.describe RulyBench do
         end
       end
 
+      it 'reads a non-ASCII reply tagged US-ASCII, as Open3 tags stdout under LC_CTYPE=C' do
+        ascii_tagged = lambda do |*args, **kwargs|
+          stdout, stderr, status = executor.call(*args, **kwargs)
+          reply = {is_error: false, result: 'héllo', total_cost_usd: 0.01}.to_json
+          [(stdout.start_with?('{') ? reply : stdout).dup.force_encoding(Encoding::US_ASCII), stderr, status]
+        end
+        expect(cli(argv, executor: ascii_tagged)).to eq(0)
+
+        result = JSON.parse(File.read(File.join(output_dir, 'compliance.json'), encoding: 'UTF-8'))
+        expect(result.to_json).to include('héllo')
+        expect(result.to_json).not_to include('harness error')
+      end
+
       it 'turns any StandardError of one call into an error cell and finishes the run' do
         raising = lambda do |*args, **kwargs|
           raise ArgumentError, 'odd reply' if kwargs[:stdin_data] == 'Say bye.'
