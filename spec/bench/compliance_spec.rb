@@ -58,8 +58,8 @@ RSpec.describe RulyBench do
     end
   end
 
-  def cli(argv, env: {}, executor: ->(*) { raise 'executor must not be called' })
-    RulyBench::ComplianceCLI.new(argv, env:, err:, executor:, out:, repo_root: dir).run
+  def cli(argv, executor: ->(*) { raise 'executor must not be called' })
+    RulyBench::ComplianceCLI.new(argv, err:, executor:, out:, repo_root: dir).run
   end
 
   describe RulyBench::ComplianceTasks do
@@ -187,9 +187,8 @@ RSpec.describe RulyBench do
       expect(err.string).to include('at least 0.01')
     end
 
-    it 'refuses --isolated-home without ANTHROPIC_API_KEY' do
-      expect(cli(%w[--isolated-home], env: {'ANTHROPIC_API_KEY' => ''})).to eq(2)
-      expect(err.string).to include('ANTHROPIC_API_KEY')
+    it 'has no option that needs an API key' do
+      expect(cli(%w[--isolated-home])).to eq(2)
     end
 
     it 'refuses a non-fixture live run writing to bench/results outside bench/results/local' do
@@ -286,16 +285,12 @@ RSpec.describe RulyBench do
         expect(md).to include('not statistically significant')
       end
 
-      it 'runs claude with a temp HOME under --isolated-home and never writes the key' do
-        key = 'sk-ant-spec-secret-0123'
-        expect(cli(argv + ['--isolated-home'], env: {'ANTHROPIC_API_KEY' => key}, executor:)).to eq(0)
+      it 'unsets API credentials for every claude call, so a run only uses the subscription login' do
+        expect(cli(argv, executor:)).to eq(0)
 
-        homes = calls.map { _1[:env]['HOME'] }.uniq
-        expect(homes.size).to eq(1)
-        expect(homes.first).not_to eq(Dir.home)
-        calls.each { |call| expect(call[:env].values).not_to include(key) }
-        written = Dir.glob('**/*', base: output_dir).map { File.read(File.join(output_dir, _1)) }.join
-        expect(out.string + err.string + written).not_to include(key)
+        calls.each do |call|
+          expect(call[:env]).to include('ANTHROPIC_API_KEY' => nil, 'ANTHROPIC_AUTH_TOKEN' => nil)
+        end
       end
 
       it 'turns any StandardError of one call into an error cell and finishes the run' do

@@ -11,6 +11,8 @@ module RulyBench
     FLAGS = %w[--model --output-format --setting-sources --no-session-persistence --max-budget-usd
                --strict-mcp-config --tools].freeze
     MODEL = /\A[\w.:-]+\z/
+    # Unset for every live call: claude prefers these over the subscription login, and a run must never use the API.
+    SUBSCRIPTION_ENV = {'ANTHROPIC_API_KEY' => nil, 'ANTHROPIC_AUTH_TOKEN' => nil}.freeze
 
     module_function
 

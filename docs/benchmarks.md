@@ -59,7 +59,7 @@ The machine-readable results, including the split of each ruly total into squash
 
 Fewer tokens only help if the model still follows the rules. The compliance benchmark checks whether a model follows a rule when it reaches it through a recipe-scoped CLAUDE.local.md, compared with the native layout of the same rules.
 
-Status: pending. No live run has been made, because a live run costs API money. The harness, the task suite and the scoring are committed and tested offline; no compliance numbers are published until a live run on the fixture corpus produces them.
+Status: pending. No live run has been made yet. The harness, the task suite and the scoring are committed and tested offline; no compliance numbers are published until a live run on the fixture corpus produces them.
 
 ### Conditions
 
@@ -87,14 +87,13 @@ Eight tasks, defined in [`bench/compliance/tasks.yml`](../bench/compliance/tasks
 
 Each reply is scored by deterministic regex checks: `forbid` (the pattern must not match) or `require` (it must match), over the whole reply, the fenced code blocks, or the first line. Each task carries a canned passing reply and a canned failing reply, and the dry run proves every check against both without an API call.
 
-The default model is `claude-sonnet-5-5`; pass `--model ID` to use another. A live run writes `compliance.json` and `compliance.md` with per-condition pass counts, each reply and its cost, and the failed checks. Each finished call is also appended to `compliance.partial.jsonl` as it completes. If the run stops early (Ctrl-C or an error), the tasks finished so far are written with `"complete": false` and the journal is kept, so no paid reply is lost; a run that finishes deletes the journal. An error in a single call is recorded as an error cell and the run goes on.
+The default model is `claude-sonnet-5-5`; pass `--model ID` to use another. A live run writes `compliance.json` and `compliance.md` with per-condition pass counts, each reply and its cost, and the failed checks. Each finished call is also appended to `compliance.partial.jsonl` as it completes. If the run stops early (Ctrl-C or an error), the tasks finished so far are written with `"complete": false` and the journal is kept, so no finished reply is lost; a run that finishes deletes the journal. An error in a single call is recorded as an error cell and the run goes on.
 
 ### How to run it
 
 - `bundle exec ruby bench/compliance.rb`: the dry run, and the default. It builds both workspaces, locates every rule, proves the checks on the canned replies and prints the exact `claude -p` commands. It makes no API calls.
-- `bundle exec ruby bench/compliance.rb --live`: the paid run, 16 calls (8 tasks x 2 conditions). Each call passes `--max-budget-usd` to claude (default 0.50 per call, changeable with `--max-budget-usd N`), and the worst-case total is printed before the first call. In both conditions only the Skill tool is enabled (`--tools Skill`, so skills stay invocable) and MCP servers are off (`--strict-mcp-config` with no `--mcp-config`): the model cannot read or search files, edit, run commands, start subagents or browse, so rules reach it only through what Claude Code loads at session start and the skills it invokes.
-- `--isolated-home`: runs claude with a temp HOME, so user-level memory and settings reach neither condition. A temp HOME has no login, so it needs `ANTHROPIC_API_KEY` in the environment; the key is inherited from the process, never written anywhere.
-- A corpus other than the fixture needs `--allow-private-corpus` before `--live` sends its rules to the API, and results from it go to the git-ignored `bench/results/local/` by default. `--output-dir` may point inside `bench/results/local/` or outside the repository; any other path inside the repository is refused.
+- `bundle exec ruby bench/compliance.rb --live`: the live run, 16 calls (8 tasks x 2 conditions). It uses your logged-in Claude subscription, never the API: `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are unset for every call. Each call passes `--max-budget-usd` to claude (default 0.50 per call, changeable with `--max-budget-usd N`) as a per-call limit on claude's cost estimate, and the worst-case estimate is printed before the first call. In both conditions only the Skill tool is enabled (`--tools Skill`, so skills stay invocable) and MCP servers are off (`--strict-mcp-config` with no `--mcp-config`): the model cannot read or search files, edit, run commands, start subagents or browse, so rules reach it only through what Claude Code loads at session start and the skills it invokes.
+- A corpus other than the fixture needs `--allow-private-corpus` before `--live` sends its rules to Claude, and results from it go to the git-ignored `bench/results/local/` by default. `--output-dir` may point inside `bench/results/local/` or outside the repository; any other path inside the repository is refused.
 
 ## Methodology
 
@@ -126,7 +125,7 @@ Runs are deterministic: results contain no timestamps or absolute paths, and the
 - **One-to-one native mapping.** The native layout maps each rule file to one native rule. A native user could move more rules into skills or `paths:` scoping and get closer to ruly's numbers, so the native floor and ceiling bracket native cost rather than pin it.
 - **Path-scoped rules.** A native path-scoped rule loads only when a matching file is opened. The compliance run gives the model no file tools, so no file is opened and, under Claude Code's documented loading, three of the eight rules (`rspec-expect`, `migration-up-down`, `react-named-export`) never reach the model in the native condition, while the ruly condition holds them in CLAUDE.local.md. Those three tasks measure the cost of path scoping for text-only tasks, not how well the model follows a rule it was given.
 - **Small compliance suite.** Eight tasks with one sample per task and condition is not statistically significant. The checks are regexes, which can pass a reply that breaks the rule's intent or fail one that follows it in an unexpected form.
-- **User memory.** Without `--isolated-home`, user-level memory and settings may reach both conditions.
+- **User memory.** The run needs the real HOME for the subscription login, so user-level memory may reach both conditions.
 - **CLAUDE.local.md loading.** The ruly condition relies on Claude Code loading CLAUDE.local.md from the working directory.
 
 ## Reproduce
