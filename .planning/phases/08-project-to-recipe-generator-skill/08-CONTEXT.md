@@ -14,9 +14,12 @@ Deliver an AI skill that takes a project folder, works out which rules, skills, 
 ## Implementation Decisions
 
 ### Where the skill lives
-- Source file is `ruly/skills/recipe-from-project.md` in the rules repo clone at `~/github.com/patrickclery/rules`. `rules/` in this checkout is empty and gitignored, and `~/.config/ruly/remotes/` is generated and must never be edited.
-- It is included through a new small `ruly-tools` recipe in the rules repo's `recipes.yml`. The existing `ruly` recipe is actually a WorkAxle subagent recipe, and `core` is not touched.
+- Source file is `skills/recipe-from-project.md` at the root of THIS repo (patrickclery/ruly), tracked in git. This replaces the earlier rules-repo location by the user's explicit decision after research: "This skill would be located in a markdown file inside of this repo. When ruly is run, you can just reference the remote repo version of the file and it will fetch it from there when squash is run."
+- Recipes reference it by GitHub URL (`https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md`), and squash fetches it. No `~/.claude/skills` symlink and no separate generated install directory.
+- It is included through a new small `ruly-tools` recipe in the rules repo's `recipes.yml`, whose `skills:` entry is that URL. The existing `ruly` recipe is actually a WorkAxle subagent recipe, and `core` is not touched.
+- Squashing `ruly-tools` inside a target project overwrites that project's `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, which destroys the evidence the skill reads. The skill warns when it detects that state, and its docs say to add the URL to the project's existing recipe or run from another directory with a path.
 - Invocation takes a project path and defaults to the current folder.
+- The URL only resolves after this repo's commit is pushed to `main`, so end-to-end verification waits on the push approval below.
 
 ### What counts as "currently used"
 - Scan `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `.cursor/rules`, `.claude/skills`, `.claude/commands`, `.claude/agents`, and `.mcp.json` (which maps to `mcp_servers:`).
@@ -27,8 +30,13 @@ Deliver an AI skill that takes a project folder, works out which rules, skills, 
 ### Output and safety
 - Show the draft first, and write only after the user approves it. The target is `recipes.yml` in the rules repo, using repo-relative paths.
 - Recipe name defaults to the project folder's name. If that name is taken, the skill asks.
-- Validate by running yalphabetize, then `ruly squash <recipe> --dry-run` from a temp directory. Report any failure.
-- Leave all changes uncommitted for the user to commit.
+- Validate by running `RUBYOPT=-Eutf-8 yalphabetize -a recipes.yml`, then `ruly squash <recipe> --dry-run` from a temp directory under a temp `HOME` that symlinks the rules clone as the mirror (a plain dry run cannot see an uncommitted recipe; see 08-RESEARCH.md). Also grep the output for failure strings and preflight local paths, MCP names and subagent recipes, because exit 0 proves little. Report any failure.
+- At runtime, the skill leaves all changes uncommitted for the user to commit.
+- Drafts may use `omit_command_prefix`, only when needed to keep a project's current command names, and it is labelled in the draft.
+
+### Building this phase
+- In the rules repo, `recipes.yml` gets its own sort commit first, then a separate commit adding `ruly-tools`. Commit named paths only, never `git add -A`.
+- Ask the user before pushing either repo. The user approved commits in the rules repo and asked to be asked before pushing.
 
 ### Claude's Discretion
 - Internal structure and section wording of the skill file, following the rules repo's standard sections.
