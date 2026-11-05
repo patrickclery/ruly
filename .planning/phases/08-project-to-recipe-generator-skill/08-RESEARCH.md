@@ -10,9 +10,12 @@
 ### Locked Decisions
 
 #### Where the skill lives
-- Source file is `ruly/skills/recipe-from-project.md` in the rules repo clone at `~/github.com/patrickclery/rules`. `rules/` in this checkout is empty and gitignored, and `~/.config/ruly/remotes/` is generated and must never be edited.
-- It is included through a new small `ruly-tools` recipe in the rules repo's `recipes.yml`. The existing `ruly` recipe is actually a WorkAxle subagent recipe, and `core` is not touched.
+- Source file is `skills/recipe-from-project.md` at the root of THIS repo (patrickclery/ruly), tracked in git. This replaces the earlier rules-repo location by the user's explicit decision after research: "This skill would be located in a markdown file inside of this repo. When ruly is run, you can just reference the remote repo version of the file and it will fetch it from there when squash is run."
+- Recipes reference it by GitHub URL (`https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md`), and squash fetches it. No `~/.claude/skills` symlink and no separate generated install directory.
+- It is included through a new small `ruly-tools` recipe in the rules repo's `recipes.yml`, whose `skills:` entry is that URL. The existing `ruly` recipe is actually a WorkAxle subagent recipe, and `core` is not touched.
+- Squashing `ruly-tools` inside a target project overwrites that project's `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, which destroys the evidence the skill reads. The skill warns when it detects that state, and its docs say to add the URL to the project's existing recipe or run from another directory with a path.
 - Invocation takes a project path and defaults to the current folder.
+- The URL only resolves after this repo's commit is pushed to `main`, so end-to-end verification waits on the push approval below.
 
 #### What counts as "currently used"
 - Scan `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `.cursor/rules`, `.claude/skills`, `.claude/commands`, `.claude/agents`, and `.mcp.json` (which maps to `mcp_servers:`).
@@ -23,8 +26,13 @@
 #### Output and safety
 - Show the draft first, and write only after the user approves it. The target is `recipes.yml` in the rules repo, using repo-relative paths.
 - Recipe name defaults to the project folder's name. If that name is taken, the skill asks.
-- Validate by running yalphabetize, then `ruly squash <recipe> --dry-run` from a temp directory. Report any failure.
-- Leave all changes uncommitted for the user to commit.
+- Validate by running `RUBYOPT=-Eutf-8 yalphabetize -a recipes.yml`, then `ruly squash <recipe> --dry-run` from a temp directory under a temp `HOME` that symlinks the rules clone as the mirror (a plain dry run cannot see an uncommitted recipe; see 08-RESEARCH.md). Also grep the output for failure strings and preflight local paths, MCP names and subagent recipes, because exit 0 proves little. Report any failure.
+- At runtime, the skill leaves all changes uncommitted for the user to commit.
+- Drafts may use `omit_command_prefix`, only when needed to keep a project's current command names, and it is labelled in the draft.
+
+#### Building this phase
+- In the rules repo, `recipes.yml` gets its own sort commit first, then a separate commit adding `ruly-tools`. Commit named paths only, never `git add -A`.
+- Ask the user before pushing either repo. The user approved commits in the rules repo and asked to be asked before pushing.
 
 ### Claude's Discretion
 - Internal structure and section wording of the skill file, following the rules repo's standard sections.
@@ -38,26 +46,31 @@ No requirement IDs are mapped. ROADMAP.md lists `**Requirements**: TBD`, so the 
 
 ## Summary
 
-The decided validation step does not work as written. On this machine a mirror exists, so a plain `ruly squash <recipe> --dry-run` from a temp directory cannot see an uncommitted recipe: it fails with `Recipe 'ruly-tools' not found`, even with a temp `.recipes.yml`. The fix needs no ruly change. Point `HOME` at a temp directory where the clone is symlinked as the mirror. That runs the production code path against the working tree and writes nothing.
+*Updated after decision commit 6087bdb moved the skill to this repo. Earlier findings still hold unless changed here, and Q9 to Q13 cover the URL-sourced design.*
+
+The URL design works with no ruly change. Squash treats a `skills:` URL like any other skill, the mirror never copies it, and `--sync` ignores it, so a URL that does not exist yet cannot abort `--sync` for other recipes. Nothing caches the fetch, so each squash takes the current file from `main`. A project's generated copy only changes when that project is squashed again.
+
+Until the skill reaches `main`, the temp-`HOME` validation script gives exit 1 and its grep reports `Failed to fetch` for that URL. That is the expected pending state. Everything except the fetch can be verified before the push by using a local absolute path in a scratch recipe. Pushing alone is not enough: this checkout is on `gsd/phase-06-subscription-only`, and the URL needs the file on `main`.
+
+A plain `ruly squash <recipe> --dry-run` from a temp directory cannot see an uncommitted recipe, because a mirror exists: it fails with `Recipe 'ruly-tools' not found`, even with a temp `.recipes.yml`. The decided fix needs no ruly change. Point `HOME` at a temp directory where the clone is symlinked as the mirror. That runs the production code path against the working tree and writes nothing.
 
 Even then, exit 0 proves little. A dry run exits 0 for every missing local path, for an unknown MCP server and for a missing subagent recipe. The skill has to scan the output for the warning strings and run its own preflight on the rest.
 
 Reverse matching is more exact than CONTEXT.md assumed. On two real recipes, all squashed skill, command and rule bodies matched their source byte for byte, and subagent files name their recipe. So nearly all of the matching can be labeled exact, and judgment is only needed for hand-written files. The hard part is pruning: agile produced 6 skills and 4 rule files that its recipe never lists, because they arrive through `requires:` and `skills:` frontmatter.
 
-One gap in the decisions needs an answer. Running `ruly squash ruly-tools` inside a project overwrites its `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, which destroys the evidence the skill needs to read. The skill should be generated somewhere else and installed as a personal skill.
+Two ways of using the skill avoid destroying the evidence, and the squash output of both was tested. For a project built from a recipe, add the URL to that recipe, directly or through `overrides:`. The only difference from a fresh squash of that recipe was the new skill directory. For any other project, squash `ruly-tools` in an empty directory and pass the project path. See Q12.
 
-**Primary recommendation:** Write one self-contained markdown skill with no `requires:`, install it through a `~/.claude/skills` symlink, match by stripped body first, and validate with the temp-`HOME` mirror script plus an explicit preflight.
+**Primary recommendation:** Write one self-contained markdown skill at `skills/recipe-from-project.md` with no `requires:`, reference it by URL, match by stripped body first, and validate with the temp-`HOME` mirror script plus an explicit preflight.
 
 ### Corrections to CONTEXT.md
 
 | CONTEXT.md says | What actually happens | Evidence |
 |-----------------|-----------------------|----------|
-| Validate with `ruly squash <recipe> --dry-run` from a temp directory | Cannot see an uncommitted recipe under the real `HOME` | Experiment V0 |
-| Lookup order is mirrored remotes, then `./.recipes.yml`, then `~/.config/ruly/recipes.yml` | Correct, but it picks one source for all recipes. Any mirror shuts out `.recipes.yml` entirely | `recipe_loader.rb:147-155` |
+| The URL resolves after a push to `main` | Correct, but this checkout is on a feature branch, so it needs a merge too. A branch URL with `/` in its name cannot stand in, because the parser reads `gsd` as the branch | X10, `github_client.rb:203` |
+| The target is `recipes.yml`, using repo-relative paths | URL entries are the exception. A matched URL entry must be copied verbatim | Q13 |
+| Lookup order is mirrored remotes, then `./.recipes.yml`, then `~/.config/ruly/recipes.yml` | Correct, but it picks one source for all recipes. Any mirror shuts out the `recipes:` key of `.recipes.yml`. Its `overrides:` still apply | `recipe_loader.rb:147-155`, X8 |
 | `ruly list-recipes` covers the name-collision check | It reads the mirror, not the clone being written to. Check the clone's keys instead | `recipe_loader.rb:168-176` |
 | A pre-commit hook checks the sort order | No hook covers the rules repo, and its `recipes.yml` is currently unsorted | Q6 below |
-| `--dry-run` validates a recipe | It misses local paths, MCP names and subagent recipes by exit code | Experiment V3 |
-| Draft keys are `description`, `files`, `skills`, `commands`, `subagents`, `mcp_servers` | `omit_command_prefix` is also needed to keep command names | Q5 below, Open Question 3 |
 | `CLAUDE.local.md` loses filenames | True, but bodies stay byte-exact and rule-file `name:` frontmatter survives | Experiments A, G |
 
 ## Architectural Responsibility Map
@@ -67,7 +80,8 @@ This is a CLI and filesystem phase, so the usual web tiers do not apply.
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|--------------|----------------|-----------|
 | Inventory of the project folder | Skill (AI session) | — | Reads files only, and the decision rules out a CLI command |
-| Exact matching against the rules repo | Skill, using Bash and Ruby one-liners | Rules repo clone | Mechanical comparison against the working tree |
+| Delivering the skill file | GitHub (`main` of this repo), fetched by squash | Rules repo `ruly-tools` recipe | Decided: no local install |
+| Exact matching against the rules repo | Skill, using Bash and Ruby one-liners | Rules repo clone, plus fetches for URL entries | Mechanical comparison against the working tree |
 | Inferred matching | Skill (AI judgment) | — | The reason this is a skill |
 | Writing the recipe | Skill, with Edit, after approval | Rules repo `recipes.yml` | A text insert keeps comments |
 | Sorting | `yalphabetize` CLI | — | Existing tool |
@@ -90,7 +104,7 @@ else
 end
 ```
 
-- `ruly/skills/recipe-from-project.md` produces `.claude/skills/recipe-from-project/SKILL.md`. [VERIFIED: experiment V1]
+- A source path ending `skills/recipe-from-project.md` produces `.claude/skills/recipe-from-project/SKILL.md`, and the URL form derives the same name. [VERIFIED: experiments V1, X1 `derive=recipe-from-project`]
 - Nested paths keep their segments: `x/skills/nested/deep.md` produces `.claude/skills/nested/deep/SKILL.md`, so inventory must glob recursively. [VERIFIED: experiment B]
 - The `name:` value can differ from the directory. `x/skills/plainfile.md` with `name: different-name` lands in `.claude/skills/plainfile/`. [VERIFIED: experiment B] Three skills in the rules repo do this: `bug/skills/debugging.md` (`debugging-patterns`), `home/skills/better-display.md` (`better-display-dual-monitor-fix`), `skills/deploy-to-production.md` (`deploying-to-production`). [VERIFIED: skill index run]
 
@@ -116,8 +130,9 @@ Consequences for this skill:
 
 - **Do not use `argument-hint`, `allowed-tools` or `disable-model-invocation`.** They are silently dropped. `allowed_tools` with an underscore survives, but the Claude Code docs name the field `allowed-tools`. [CITED: code.claude.com/docs/en/skills]
 - **Keep `description` on one line.** The parser reads a single line with `/^#{key}:\s*(.+)$/`, so a block scalar is destroyed. Experiment B turned `description: >-` plus two lines into `description: >-` followed by the closing `---`. Two existing skills have this defect today: `workaxle/core/skills/code-review.md` and `workaxle/core/skills/bug-diagnosis.md`. That is out of scope here.
+- **Avoid an unquoted `: ` in `description`.** It makes the frontmatter invalid YAML. A real case appeared in X2: `Warning: Failed to parse frontmatter for scripts in .../finance/skills/estate-expense-report.md: (<unknown>): mapping values are not allowed in this context at line 3 column 216`. Prettier does not flag it (exit 0 on `description: bad: colon here`).
 - **`$ARGUMENTS` passes through the body untouched.** [VERIFIED: experiment A] The docs say it expands to the full argument string, and arguments are appended as `ARGUMENTS: <value>` when no placeholder receives them. [CITED: code.claude.com/docs/en/skills]
-- **A squashed SKILL.md keeps no trace of its source path.** `grep -rn 'ruly/skills\|remotes/patrickclery\|recipe-from-project.md' .` over the output exited 1. [VERIFIED: experiment A] Only the directory name, `name:` and the body can be traced.
+- **A squashed SKILL.md keeps no trace of its source path.** A grep for the source path and mirror path over the output exited 1. [VERIFIED: experiment A] The same holds for URL sources. [VERIFIED: X11] Only the directory name, `name:` and the body can be traced.
 - A source with no surviving frontmatter becomes a SKILL.md with none. [VERIFIED: experiment B]
 - `requires:` on a skill puts the required file into `CLAUDE.local.md`, not the skill. [VERIFIED: experiment A, script_manager.rb:415-417] Keep this skill self-contained.
 
@@ -136,7 +151,7 @@ if mirrors.any?
   @source_origin = :remotes
 ```
 
-`~/.config/ruly/recipes.yml` declares `- github: patrickclery/rules`, and that mirror exists, so `.recipes.yml` is never read for recipes. [VERIFIED: ~/.config/ruly/recipes.yml:8-9] The clone is not a lookup source at all. Its `recipes.yml` currently matches the mirror's (`diff -q` was silent), and the mirror has no `ruly/` directory yet.
+`~/.config/ruly/recipes.yml` declares `- github: patrickclery/rules`, and that mirror exists, so `.recipes.yml` is never read for recipes. [VERIFIED: ~/.config/ruly/recipes.yml:8-9] The clone is not a lookup source at all. Its `recipes.yml` currently matches the mirror's (`diff -q` was silent).
 
 Options tried:
 
@@ -192,7 +207,7 @@ RULE_KEYS = %w[files skills commands scripts].freeze
 
 The cause is that `process_recipe_files` prints the warning and drops the entry, so it never reaches `report_source_failures!`. [VERIFIED: recipe_loader.rb:286-288, cli.rb:231-251] That method's comment says a missing explicit source is an error, so this looks like a ruly bug. Decided scope adds no Ruby, so log it rather than fix it here.
 
-**A bad entry has wider damage later.** `--sync` fetches every explicit path of every recipe and aborts on any miss, so one wrong path in `recipes.yml` blocks `--sync` for all recipes. [VERIFIED: remote_sync.rb:187-200, 249, 372-377] This is why the skill must treat the warnings as failures.
+**A bad entry has wider damage later.** `--sync` fetches every explicit repo-relative path of every recipe and aborts on any miss, so one wrong relative path in `recipes.yml` blocks `--sync` for all recipes. [VERIFIED: remote_sync.rb:187-200, 249, 372-377] This is why the skill must treat the warnings as failures. URL entries are not part of this check (Q9).
 
 ### Q4. `mcp_servers:`
 
@@ -303,7 +318,7 @@ yalphabetize:
 
 This repo has no `recipes.yml` for that glob to catch. The rules repo has no non-sample hooks in `.git/hooks`, and its global `core.hooksPath` directory has no pre-commit hook and no mention of yalphabetize.
 
-**So the first run produces a noisy diff:** 317 changed lines, of which 4 are the new recipe. It moves those three recipes and a few `isolate` keys, adds a trailing space to 4 empty `mcp_servers:` lines, and removes one blank line. Once sorted, adding `ruly-tools` is a clean 4-line hunk placed right after `ruly`, and a second run is a no-op. [VERIFIED: experiment] Commit one pre-sort in this phase (Open Question 4).
+**So the first run produces a noisy diff:** 317 changed lines, of which 4 are the new recipe. It moves those three recipes and a few `isolate` keys, adds a trailing space to 4 empty `mcp_servers:` lines, and removes one blank line. Once sorted, adding `ruly-tools` is a clean 4-line hunk placed right after `ruly`, and a second run is a no-op. [VERIFIED: experiment] The decision makes the pre-sort its own commit.
 
 **`feedback_recipes_yml_yalphabetize.md` is out of date, and part of it is unsafe.** It cites `cd /Users/patrick/Projects/ruly`, `bundle exec` and `cp recipes.yml ~/.config/ruly/recipes.yml`. That last step would overwrite the machine config, which now holds only `remotes:` and `overrides:`. Do not copy it into the skill.
 
@@ -311,7 +326,11 @@ This repo has no `recipes.yml` for that glob to catch. The rules repo has no non
 
 ### Q7. Skill-authoring constraints
 
-**Frontmatter:** `name` and `description` only, on one line each. The rules repo's format is: [VERIFIED: home/skills/update-rules.md:30-37]
+**The file is public.** `patrickclery/ruly` is public and `patrickclery/rules` is private (`gh repo view` reported each). The skill must not quote private rule content, tokens or machine details.
+
+**The CLAUDE.md rule that skills go in `rules/{tag}/skills/` does not apply here.** The user's decision places this one at `skills/` in this repo.
+
+**Frontmatter:** `name` and `description` only, on one line each. The rules repo's format, which this skill still follows, is: [VERIFIED: home/skills/update-rules.md:30-37]
 
 > Every file has `name` and `description` frontmatter, then these sections as needed: Description, Key Patterns, Examples, Best Practices, Anti-patterns, Related Files.
 
@@ -335,9 +354,198 @@ The rules repo's own CLAUDE.md asks that edits go through a GSD workflow, which 
 
 ### Q8. Docs and the `core` rule
 
-**No README or CLAUDE.md change is required in this repo.** The README rules trigger on slash commands and `ruly` CLI commands, and neither changes. [VERIFIED: CLAUDE.md, this repo] The README's skills material documents the recipe key generically, and no individual rules-repo skill is listed. No gem change means no version bump or CHANGELOG entry, and no reinstall is triggered by this phase.
+**This answer changed: the README now needs an entry.** The skill ships from this repo and is invoked as `/recipe-from-project`, and CLAUDE.md says to update the README's slash command section when slash commands change. `#### Available Ruly Commands` at README.md:892 already lists `/ruly:compress` and `/ruly:decompose`, so add a bullet there, with the two usage routes from Q12. The decision also says the skill's docs must give those routes. [VERIFIED: README.md:892, CONTEXT.md decisions]
 
-**The `core` `--deepclean` rule is not triggered.** No `core` entry references `ruly/`, the output was `core refs ruly dir? []`, and the pre-sort leaves `core` parsed-equal. [VERIFIED: skill index run, semantic check] Its command could not run here anyway, because `~/agents/core` does not exist on this machine (`~/agents` holds `local`, `qa`, `workaxle`).
+No CLI command changes, and the gem's contents do not change (Q11). So there is no version bump, and no reinstall is triggered. CHANGELOG entries follow gem releases (the latest is `## [0.4.0] - 2026-11-02`), so none is needed.
+
+**The `core` `--deepclean` rule is still not triggered.** No `core` entry references this skill, and the pre-sort leaves `core` parsed-equal. [VERIFIED: skill index run, semantic check] Its command could not run here anyway, because `~/agents/core` does not exist on this machine (`~/agents` holds `local`, `qa`, `workaxle`).
+
+### Q9. `--sync` and the mirror with a URL `skills:` entry
+
+**`--sync` ignores URL entries, so it handles them correctly, and a missing one cannot abort it.** [VERIFIED: remote_sync.rb:197, 205-209]
+
+```ruby
+entries.each { |e| paths << normalize_relative(e) if relative_entry?(e) }
+...
+!(File.absolute_path?(entry) || entry.start_with?('~', 'http://', 'https://', 'github:'))
+```
+
+Run against a scratch clone holding the unpushed URL, using `fetch_closure`'s `clone:` path (X1):
+
+```text
+seeds for ruly-tools only: []
+relative_entry?(url)=false
+all seeds: 205; any http: false
+closure ok, files=251
+control, relative miss raises: Sync of patrickclery/rules aborted: 1 referenced file(s) could not be fetched:
+rebase_entry(url)=https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
+derive=recipe-from-project
+```
+
+A real `--sync` under a temp `HOME` (X2) exited 0 and mirrored 252 files from the current `recipes.yml`, which has 20 URL entries. It mirrored none of the `test-driven-development` files those URLs point to.
+
+**The other side of this:** `--sync` does not check URLs, so a wrong URL only fails when that one recipe is squashed.
+
+**No cache applies.** [VERIFIED: github_client.rb:183-197, 225-231, X5]
+
+| Layer | Behavior |
+|-------|----------|
+| Ruly 0.4.0 fetch path | No cache: 0 matches for `cache` in `github_client.rb`, `source_processor.rb` and `remote_sync.rb` |
+| Installed 0.1.0 | Only the opt-in `--cache` flag on squash (`default: false`). Its fetch services also have no cache. Do not pass `--cache` |
+| `gh api` | Caches only with its own `--cache` option, which ruly does not pass |
+| `raw.githubusercontent.com` | `cache-control: max-age=300`. Only reached if both `gh` steps fail, so an update can lag about 5 minutes there |
+| Mirror | Never holds the URL's file |
+| Project's `.claude/skills/recipe-from-project/SKILL.md` | A generated copy, unchanged until that project is squashed again |
+
+### Q10. URL entries in the validation script
+
+**The script handles a missing URL correctly, and its grep catches it.** Same output on the installed 0.1.0 and repo 0.4.0, with and without `GH_CONFIG_DIR`, under `LC_ALL=C`, in 2.1 to 2.5 seconds (X3):
+
+```text
+exit=1
+  ⚠️  Failed to fetch: https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
+⚠️  1 source(s) could not be read:
+     ✗ https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md (explicitly listed - fetch failed)
+❌ squash failed: 1 required source(s) missing - output is INCOMPLETE.
+   Fix the recipe paths (or remove the entries) and re-run.
+🔍 Dry run mode - no files will be created/modified
+Would create: CLAUDE.local.md
+  → 0 rule files combined
+  → Output size: ~0 bytes
+```
+
+The grep prints the `Failed to fetch` and `squash failed` lines. No files were written, and no `/tmp/ruly_fetch_*` directory was left behind by the clone fallback.
+
+**Unlike a missing local path, this is a real exit 1.** Remote sources reach `report_source_failures!` through `record_failed_source`. [VERIFIED: source_processor.rb:331-335, cli.rb:231-251]
+
+**How verification works around the push:**
+
+| Stage | Command | Expected |
+|-------|---------|----------|
+| Before any push, skill file | Scratch mirror whose recipe lists the local absolute path of `skills/recipe-from-project.md` (X10) | Exit 0, `.claude/skills/recipe-from-project/SKILL.md` with `name` and `description` kept |
+| Before any push, recipe | Validation script with `ruly-tools` from the rules clone | Exit 1, and exactly the one `Failed to fetch` for this URL. Any other finding is a real failure |
+| Pushed to a branch, not on `main` | Scratch recipe with a full commit SHA URL (X10 confirmed this form works) | Exit 0. A branch-name URL fails when the name contains `/` |
+| On `main` | Validation script | Exit 0, `→ .claude/skills/recipe-from-project/SKILL.md` |
+
+Reach `main` in this repo before pushing the rules repo. The reverse order leaves a pushed recipe whose squash fails and, when run in a project, wipes that project's outputs (Pitfall 1).
+
+**In the skill's runtime preflight, `test -e` must skip `http://` and `https://` entries.** The dry run checks those itself.
+
+**Authentication under a temp `HOME`:** this machine sets `XDG_CONFIG_HOME`, so `gh` stays logged in without `GH_CONFIG_DIR` (X0). That corrects an earlier note here that called experiment D's URL public: `patrickclery/rules` is private, and it fetched because `gh` kept its login. The MacBook may not set that variable, so the script now sets `GH_CONFIG_DIR` explicitly.
+
+### Q11. `skills/` at this repo's root
+
+No conflict. [VERIFIED: X6, X12]
+
+| Area | Finding |
+|------|---------|
+| `.gitignore` | `git check-ignore -v skills/recipe-from-project.md` exits 1, so it is not ignored |
+| Gemspec | `Dir.glob` lists `lib/**/*`, `rules/**/*.md`, `recipes.example.yml`, `bin/*`, `LICENSE.txt`, `README.md`, `CHANGELOG.md`. A scratch load with `skills/` present left it out. That is correct, since squash fetches it [VERIFIED: ruly.gemspec:24-34] |
+| Prettier 3.6.2 | Kept a 225-character `description` on one line. It adds a blank line after the frontmatter, reformats tables and changes `*` bullets to `-`. All are harmless, since body comparison strips whitespace at the ends and these edits happen before publishing |
+| `.prettierignore` | Does not exclude it, so `npm run prettier:all` covers it |
+| `markdown-table-prettify` 3.6.0 | Given a file argument it left the file unchanged with stdin closed, and it blocked until killed with stdin open. Run only `prettier` by hand on this file |
+| Lefthook | Its pre-commit does not run here. `.git/hooks` has only samples, the global `core.hooksPath` has `post-checkout post-commit post-merge pre-push`, and `node_modules/` is absent. Nothing reformats the file at commit |
+| Bench and specs | `skills/...` references point at `bench/fixtures/corpus` or at spec temp dirs. `FIXTURE_CORPUS` is `bench/fixtures/corpus` [VERIFIED: bench/lib/ruly_bench.rb:20] |
+| Path lookup | Mirror entries are absolute after rebasing, so they never fall through to `File.join(gem_root, file)`. The rules repo's own root `skills/` does not collide [VERIFIED: recipe_loader.rb:210-212] |
+
+### Q12. How to use the skill safely
+
+**Use one of these two routes.**
+
+**Route 1: the project is already built from a recipe.** Add the URL to that recipe and squash as usual. On this route, the default of the current folder works.
+
+```yaml
+# Every machine: add to the recipe's skills: in the rules repo's recipes.yml
+# This machine only: in ~/.config/ruly/recipes.yml
+overrides:
+  <recipe>:
+    skills:
+      - https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
+```
+
+```bash
+cd <project> && ruly squash <recipe>
+```
+
+X8 used a resolving URL under a temp `HOME`, on both binaries. `diff -r` of `homelab` against a fresh squash without the override, ignoring the agent timestamp, showed one line:
+
+```text
+Only in .../x8userinstalled/.claude/skills: deploy-to-production
+```
+
+So `CLAUDE.local.md`, `.mcp.json`, agents and other skills came out the same. `list-recipes` reported `📍 remote patrickclery/rules + overrides (...)`. `~/.config/ruly/recipes.yml` is not chezmoi-managed, so it is edited directly.
+
+To find the recipe, read `regenerate using 'ruly squash P'` in `.claude/agents/`. If there are no agent files, ask the user or use Route 2. The squash regenerates the project as any squash does, so Pitfall 5 still applies.
+
+**Route 2: any other project.** Squash in an empty directory and pass the path.
+
+```bash
+WORK=$(mktemp -d) && cd "$WORK" && ruly squash ruly-tools
+claude --add-dir <project> --add-dir ~/github.com/patrickclery/rules
+# Then invoke the skill with <project> as its argument.
+```
+
+The target project is not touched. [VERIFIED: X9 for the squash, with a resolving URL] `--add-dir` is listed in `claude --help`. The session flow itself was not run [ASSUMED].
+
+**What not to do:**
+
+| Approach | Why not |
+|----------|---------|
+| `ruly squash ruly-tools` in the target project | Destroys the evidence. `-o` protects only the markdown (F) |
+| `overrides:` in a project `.recipes.yml` | Works (X8) but leaves a new file in the project |
+| An override naming a recipe the mirror lacks | Every ruly command on that config fails with `does not match a loaded recipe`, exit 1 (X8) |
+
+**Warning signature for the skill.** After `ruly-tools` runs in a directory, all three of these hold (X9):
+
+```text
+./.claude/skills/<name>/SKILL.md   (present)
+./CLAUDE.local.md 0                (zero bytes)
+.mcp.json: {"mcpServers": {}}      (empty, 22 bytes)
+```
+
+If the target matches, the skill stops and says the folder holds no evidence. It asks for a project path, and notes that a real project's earlier files may be recoverable from git. In Route 2 this is the normal state of the working directory, which is why the path must be passed.
+
+**A not-yet-pushed URL on Route 1 fails safely.** The squash exits 1 with `Failed to fetch`, and the output otherwise matched the fresh squash (`diff -r` printed 0 lines, X8).
+
+### Q13. URL-sourced skills as evidence in a target project
+
+**Yes, through a URL index, and only for URLs already listed in the rules repo.** A URL-sourced SKILL.md keeps the same two signals as any skill, and the rules clone has no body to compare. [VERIFIED: X11]
+
+```text
+./.claude/skills/test-driven-development/SKILL/SKILL.md
+---
+name: test-driven-development
+description: Use when implementing any feature or bugfix, before writing implementation code
+---
+```
+
+A grep of the output for the source URL exited 1, so the URL itself is not recorded. The body stayed byte-exact, though: `url skill body_equal_to_fetched=true`.
+
+**The source of URLs is `recipes.yml`**, which has 20 URL entries: 17 under `files:` and 3 under `skills:`. All point at `obra/superpowers`, pinned to a commit. Matching goes:
+
+1. Collect every `http(s)://` entry from the clone's recipes and compute its derived name with the same rule as `derive_skill_name`.
+2. Compare to the project's `.claude/skills/**` directory. `.../SKILL/SKILL.md` is a strong hint, since only a source named `SKILL.md` produces it.
+3. Fetch the URL and compare stripped bodies:
+
+```bash
+gh api -H 'Accept: application/vnd.github.raw+json' "repos/<owner>/<repo>/contents/<path>?ref=<ref>"
+```
+
+This returned bytes identical to the clone's copy of a private file, and exit 1 on a missing one. [VERIFIED: exp7]
+
+| Evidence | Label |
+|----------|-------|
+| Derived name matches and the fetched body is equal | Exact |
+| Derived name or `name:` matches, but the body differs or the fetch failed | Inferred |
+| No URL in `recipes.yml` matches | Report it as unmatched. Its origin cannot be recovered |
+
+For `files:` URLs, test whether the fetched body is a substring of `CLAUDE.local.md`, as for local rules.
+
+**Write matched URLs verbatim**, including any commit pin, and label them. The "repo-relative paths" rule cannot apply to them.
+
+**Subagent-owned URL skills** carry the odd name into agent frontmatter: `skills: "[systematic-debugging/SKILL]"`. Subtract these as in Q5.
+
+**The skill should exclude itself.** A directory or `name:` of `recipe-from-project` means the tool, not the project's rules. Leave it out of the draft and mention that in the report.
 
 ## Standard Stack
 
@@ -374,10 +582,12 @@ flowchart TD
     C -->|SKILL.md, commands, CLAUDE.local.md bodies| D[Exact: stripped body match against clone]
     C -->|agents with Auto-generated line| E[Exact: recipe named in comment]
     C -->|.mcp.json keys| F[Exact: key in mcp.json]
+    C -->|no local body match, derived name is a recipes.yml URL| U[Fetch URL and compare: exact or inferred]
     C -->|CLAUDE.md, AGENTS.md, .cursor/rules, no body match| G[Name match, then judgment: inferred]
-    D --> H[Prune entries reached by requires, skills, subagents]
+    D --> H[Prune entries reached by requires, skills, subagents, and the skill itself]
     E --> H
     F --> H
+    U --> H
     G --> H
     G -->|no shared rule| R[Unmatched report]
     H --> I{Anything matched?}
@@ -396,14 +606,16 @@ flowchart TD
 ### Recommended File Layout
 
 ```text
-~/github.com/patrickclery/rules/
-├── recipes.yml                          # gains ruly-tools
-└── ruly/
-    └── skills/
-        └── recipe-from-project.md       # name + description, then standard sections
+~/github.com/patrickclery/ruly/          # public, must reach main before the URL resolves
+├── README.md                            # one bullet under Available Ruly Commands, plus usage routes
+└── skills/
+    └── recipe-from-project.md           # name + description, then standard sections
+
+~/github.com/patrickclery/rules/         # private
+└── recipes.yml                          # sort commit, then a commit adding ruly-tools
 ```
 
-Nothing else in the rules repo changes, and nothing in `lib/` of this repo changes.
+Nothing else changes in either repo, and nothing in `lib/` changes.
 
 ### Pattern 1: Exact matching order
 
@@ -411,9 +623,9 @@ Nothing else in the rules repo changes, and nothing in `lib/` of this repo chang
 
 | Project artifact | Exact signal | Fallback |
 |------------------|--------------|----------|
-| `.claude/skills/**/SKILL.md` | Stripped body equals a source body | `name:`, then directory against the derived name, then judgment |
+| `.claude/skills/**/SKILL.md` | Stripped body equals a source body in the clone, or a fetched URL entry's body (Q13) | `name:`, then directory against the derived name, then judgment |
 | `.claude/commands/**/*.md` | Stripped body equals a source body | Judgment |
-| `CLAUDE.local.md` | Source body is a substring. `name: x` lines also survive | Heading comparison, inferred |
+| `CLAUDE.local.md` | Source body is a substring, including fetched `files:` URLs. `name: x` lines also survive | Heading comparison, inferred |
 | `.claude/agents/*.md` | `# Auto-generated from recipe: X` | Hand-written, report |
 | `.mcp.json` | Key in `~/.config/ruly/mcp.json` | Report |
 | `AGENTS.md` | Line 1 `<!-- Generated by ruly from recipe: NAME — do not edit -->`, and rule bodies | Judgment. Skills there have demoted headings, so body match fails for them [VERIFIED: agents_md.rb:49-53, 105-112] |
@@ -425,7 +637,7 @@ CONTEXT.md puts `name:` ahead of content. Body match should run first for genera
 
 | Fixture | Skills | Rule files | Commands |
 |---------|--------|------------|----------|
-| `homelab` (real, read-only) | 25/25 body-exact | 7/7 substring | none |
+| `homelab` (real, read-only, measured at rules `c123968`, when it had 25 skills) | 25/25 body-exact | 7/7 substring | none |
 | `agile` (squashed in scratch) | 6/6 body-exact | 15/15 substring | 11/11 body-exact |
 | `startup` (squashed in scratch) | — | 9/9 substring | — |
 
@@ -458,7 +670,9 @@ An empty recipe passes the dry run (`t-empty`), so the skill must check for this
 ### Anti-Patterns to Avoid
 
 - **Trusting the dry run's exit code:** see Q3.
-- **Running `ruly squash` in the scanned project:** it overwrites the evidence. See Pitfall 1.
+- **Running `ruly squash ruly-tools` in the scanned project:** it overwrites the evidence. See Pitfall 1.
+- **Treating `--sync` success as proof a URL is valid:** it never looks at URLs. See Q9.
+- **Passing `--cache` on the installed gem:** it can reuse old output, which hides an updated skill.
 - **Using `ruly list-recipes` for the collision check:** it reads the mirror.
 - **Treating generic heading overlap as a match:** the standard headings are shared across the repo.
 - **Writing a `# inferred` comment into `recipes.yml`:** show labels in the draft instead. They would outlive the review and read as fact.
@@ -476,7 +690,7 @@ An empty recipe passes the dry run (`t-empty`), so the skill must check for this
 
 ## Common Pitfalls
 
-### Pitfall 1: Installing the skill destroys what it reads
+### Pitfall 1: Squashing `ruly-tools` in a project destroys what the skill reads
 **What goes wrong:** `ruly squash ruly-tools` in a project replaces `CLAUDE.local.md` and empties `mcpServers`.
 **Why it happens:** a recipe owns those outputs. Experiment A went from existing content to this, with `-o` protecting only the markdown (experiment F):
 ```text
@@ -485,8 +699,9 @@ An empty recipe passes the dry run (`t-empty`), so the skill must check for this
   "other": 1
 }
 ```
-**How to avoid:** generate `ruly-tools` in its own directory and symlink it into `~/.claude/skills/` (Open Question 1).
-**Warning signs:** an empty `CLAUDE.local.md` in a project that has `.claude/skills/recipe-from-project/`. The skill should warn when it sees this.
+It also happens when the fetch fails. With the URL unresolved, X4 exited 1 with `output is INCOMPLETE`, yet left a 0-byte `CLAUDE.local.md`, empty `mcpServers`, and no skill. A failed run therefore does not mean the project is untouched.
+**How to avoid:** use a route from [Q12](#q12-how-to-use-the-skill-safely). The README and the skill's docs state this.
+**Warning signs:** the signature in Q12. The skill stops and asks for a path.
 
 ### Pitfall 2: A false pass from the dry run
 **What goes wrong:** a path is wrong, the exit code is 0, and `--sync` later breaks for every recipe.
@@ -509,20 +724,29 @@ An empty recipe passes the dry run (`t-empty`), so the skill must check for this
 **What goes wrong:** the mirror lags the clone, so a match can point at an older body or miss a new file.
 **How to avoid:** index the clone. Also fail clearly if the clone is missing on a machine.
 
+### Pitfall 7: Reading the pending `Failed to fetch` as a real failure, or the reverse
+**What goes wrong:** before the skill reaches `main`, validating `ruly-tools` always exits 1. An executor may treat that as broken, or learn to ignore it and miss a different problem.
+**How to avoid:** before `main`, require exactly one finding pair for this exact URL, then re-run after `main` and require exit 0. See Q10.
+
+### Pitfall 8: Squash needs the network for URL recipes
+**What goes wrong:** a recipe gaining this URL now depends on GitHub at every squash. Offline, the squash exits 1, although the rest of the output is written (X8 shows the same path).
+**How to avoid:** say so in the docs, and read the exit code after a squash.
+
 ## Code Examples
 
 ### Validate a recipe written to the clone
 
-Run from anywhere. Tested on the real clone with `homelab`, and against a scratch clone with `ruly-tools` (V1, exp4).
+Run from anywhere. Tested on the real clone with `homelab`, and against a scratch clone with `ruly-tools` (V1, exp4, X3).
 
 ```bash
 RULES=~/github.com/patrickclery/rules
 RECIPE=<recipe-name>
+GH_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/gh"
 VAL=$(mktemp -d)
 mkdir -p "$VAL/home/.config/ruly/remotes/patrickclery" "$VAL/cwd"
 ln -s "$RULES" "$VAL/home/.config/ruly/remotes/patrickclery/rules"
 
-( cd "$VAL/cwd" && HOME="$VAL/home" ruly squash "$RECIPE" --dry-run > "$VAL/out.txt" 2>&1 )
+( cd "$VAL/cwd" && HOME="$VAL/home" GH_CONFIG_DIR="$GH_DIR" ruly squash "$RECIPE" --dry-run > "$VAL/out.txt" 2>&1 )
 echo "exit=$?"
 cat "$VAL/out.txt"
 
@@ -534,7 +758,21 @@ rm -rf "$VAL"   # removes the symlink, not the clone
 
 Failure strings are from `recipe_loader.rb:281,287,330,355,544`, `source_processor.rb:332` and `cli.rb:248`.
 
-Under a temp `HOME`, `gh` has no config. A public URL entry still fetched in experiment D. Add `GH_CONFIG_DIR=~/.config/gh` before `HOME=` if a draft ever includes a private URL. (Expand `~` first, since `HOME` changes on that command.)
+`GH_CONFIG_DIR` keeps `gh` logged in when `XDG_CONFIG_HOME` is not set, which matters for private URLs (Q10). `Failed to parse frontmatter` is deliberately not matched, since it is a warning about an existing file and already appears in unrelated runs (X2).
+
+### Verify the skill before any push
+
+The temp `HOME` keeps this away from real config, and a real squash writes only to the temp cwd. Tested as X10.
+
+```bash
+SKILL=~/github.com/patrickclery/ruly/skills/recipe-from-project.md   # absolute after expansion
+V=$(mktemp -d)
+mkdir -p "$V/mirror" "$V/home/.config/ruly/remotes/patrickclery" "$V/cwd"
+printf 'recipes:\n  ruly-tools:\n    description: t\n    skills:\n      - %s\n' "$SKILL" > "$V/mirror/recipes.yml"
+ln -s "$V/mirror" "$V/home/.config/ruly/remotes/patrickclery/rules"
+( cd "$V/cwd" && HOME="$V/home" ruly squash ruly-tools; echo "exit=$?"; cat .claude/skills/recipe-from-project/SKILL.md )
+rm -rf "$V"
+```
 
 ### Preflight the checks a dry run skips
 
@@ -548,6 +786,7 @@ ruby -Eutf-8 -ryaml -e 'puts YAML.safe_load_file(ARGV[0], aliases: true)["recipe
 jq -r 'keys[]' ~/.config/ruly/mcp.json
 
 # Every local path in the draft must exist: test -e "<entry>" from the clone root.
+# Skip http:// and https:// entries here. The dry run checks those.
 ```
 
 [VERIFIED: both commands run in exp4 under `LC_ALL=C`]
@@ -572,10 +811,10 @@ This exact logic gave the coverage figures in Pattern 1. Skip very short bodies 
   ruly-tools:
     description: "Ruly authoring tools"
     skills:
-      - ruly/skills/recipe-from-project.md
+      - https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
 ```
 
-[VERIFIED: experiment V1 with this exact entry and path; the skill name and recipe name are from CONTEXT.md] A fuller description is fine. With no `files:` the squash writes an empty `CLAUDE.local.md`, so the skill file must have no `requires:`.
+[VERIFIED: X3 with this exact entry, pending state only. The resolved state is verified with other URLs in X9 and must be re-run once this one is on `main`.] A fuller description is fine. With no `files:` the squash writes an empty `CLAUDE.local.md`. The skill file must have no `requires:`, since a relative `requires:` from a URL would resolve against this repo and pull that file into `CLAUDE.local.md`.
 
 ### Skill frontmatter
 
@@ -601,30 +840,17 @@ The 1,536-character figure is the listing cap for `description` plus `when_to_us
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | `ruly-tools` should be generated in its own directory and symlinked into `~/.claude/skills/` [ASSUMED] | Open Question 1 | The user wants another delivery. Small rework, no code impact |
-| A2 | A pre-sort commit is acceptable to the user [ASSUMED] | Pitfall 4 | Without it, the first draft's diff is noisy |
-| A3 | `$ARGUMENTS` and the symlinked skill load correctly in Claude Code. Docs say so, but this session did not invoke the skill [CITED, not exercised] | Q1, Open Question 1 | Caught in the first manual run |
-| A4 | `omit_command_prefix` may be added beyond the keys CONTEXT.md lists [ASSUMED] | Q5 | Without it, generated command names can change |
+| A1 | `$ARGUMENTS` and a URL-sourced skill load correctly in Claude Code. Docs say so, but this session did not invoke the skill [CITED, not exercised] | Q1, Q12 | Caught in the first manual run |
+| A2 | Route 2's Claude session, with `--add-dir`, can read the project and write the rules clone without further setup [ASSUMED] | Q12 | Adjust the documented command after the first run |
 
 ## Open Questions
 
-1. **How does the skill reach a session?**
-   - What we know: squashing `ruly-tools` in a project damages that project (Pitfall 1). `~/.claude/skills/creator-takes` is already a symlink to generated output in homelab, and the docs allow symlinked skill folders. [CITED: code.claude.com/docs/en/skills] It is not chezmoi-managed (`chezmoi: ... not managed`).
-   - What's unclear: CONTEXT.md decides the recipe but not the install.
-   - Recommendation: `mkdir -p ~/agents/ruly-tools && cd ~/agents/ruly-tools && ruly squash ruly-tools --sync`, then `ln -s ~/agents/ruly-tools/.claude/skills/recipe-from-project ~/.claude/skills/recipe-from-project`. That makes "defaults to the current folder" work everywhere. The `claude-plugin` target also avoids project writes (experiment E) but requires reinstalling the gem and adds a rules skill. Confirm with the user. The MacBook needs the same steps.
+1. **How does the skill file get to `main`?**
+   - What we know: the URL needs it on `main`, this checkout is on `gsd/phase-06-subscription-only`, and `origin/main` is at `2911706`. Pushes need the user's approval.
+   - What's unclear: whether this reaches `main` directly, through this branch's PR, or through a separate one.
+   - Recommendation: ask at the push checkpoint. Until then, mark end-to-end verification as deferred, not failed.
 
-2. **Does this phase commit and push in the rules repo?**
-   - What we know: "Leave all changes uncommitted" describes the skill's runtime behavior. The skill file itself must be pushed before `--sync` can install it, as the update-rules skill notes.
-   - Recommendation: the plan commits named paths with `git -C ~/github.com/patrickclery/rules`, never `git add -A`, and asks before pushing.
-
-3. **Is `omit_command_prefix` allowed in a draft?**
-   - What we know: it is not in the listed keys, and without it command names can change.
-   - Recommendation: include it only when needed to reproduce a matched command's existing path, and label it in the draft.
-
-4. **Pre-sort now?**
-   - Recommendation: yes, as its own commit before adding `ruly-tools`.
-
-5. **Should the ruly exit-code gaps be fixed?**
+2. **Should the ruly exit-code gaps be fixed?**
    - What we know: `report_source_failures!` documents behavior that local paths do not get, and `--strict` misses `requires:` targets.
    - Recommendation: leave them out of this phase, which adds no Ruby, and capture them as a follow-up. The skill's grep and preflight still work if they are fixed later.
 
@@ -632,7 +858,8 @@ The 1,536-character figure is the listing cap for `description` plus `when_to_us
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|-------------|-----------|---------|----------|
-| Rules repo clone | Index and write target | ✓ | `c123968`, clean, level with `origin/main` | None, blocking if absent |
+| Rules repo clone | Index and write target | ✓ | `a102dd8`, clean, `recipes.yml` same as the mirror's | None, blocking if absent |
+| Network and GitHub | Every squash of a recipe with the URL | ✓ | — | None: exit 1 and no skill |
 | `ruly` | Validation | ✓ | 0.1.0 (stale against repo 0.4.0) | `bin/ruly` from this repo |
 | `yalphabetize` | Sorting | ✓ | 0.12.1 | None needed |
 | `ruby` | YAML key read | ✓ | 4.0.1 | — |
@@ -649,12 +876,17 @@ Under temp `HOME`, `ruly` still loads, and no `GEM_PATH` is needed, because the 
 
 | Fixture | Expected |
 |---------|----------|
+| Skill file, before any push | "Verify the skill before any push" example gives exit 0, and frontmatter is intact |
+| `ruly-tools`, before `main` | Validation script gives exit 1 with only this URL's `Failed to fetch` |
+| `ruly-tools`, after `main` | Validation script gives exit 0, then Routes 1 and 2 work end to end |
+| Folder left by `ruly-tools` | The skill reports no evidence and asks for a path |
 | This repo | No matches, nothing written, report lists the 3 commands and `CLAUDE.md`, name `ruly` flagged as taken |
-| `~/github.com/patrickclery/homelab` (read-only) | 25 skills, 7 files and 2 subagents, all exact. Reported as generated from `homelab`. Name flagged as taken |
+| `~/github.com/patrickclery/homelab` (read-only) | All 26 skills (its current count), 7 files and 2 subagents exact. Reported as generated from `homelab`. Name flagged as taken |
+| Scratch squash with an `obra/superpowers` URL skill | Matched through the URL index and written verbatim with its pin |
 | Scratch squash of `agile` | The 6 frontmatter skills and 4 `requires:` files are pruned, and `omit_command_prefix` is offered |
 | Draft with a bad path | Grep finds it despite exit 0, and the failure is reported |
 | Draft with an unknown MCP name or subagent recipe | Preflight reports it |
-| Validation run | `git status` shows only `recipes.yml`, and no commit is made |
+| Validation run at runtime | `git status` shows only `recipes.yml`, and no commit is made |
 
 ## Security Domain
 
@@ -677,14 +909,16 @@ Under temp `HOME`, `ruly` still loads, and no `GEM_PATH` is needed, because the 
 |---------|--------|---------------------|
 | Instructions embedded in a scanned `CLAUDE.md` or SKILL.md | Tampering, Elevation | The skill states that scanned content is data. Writing requires approval of a displayed draft |
 | Tokens from `.mcp.json` or `mcp.json` reaching the report, transcript or public `recipes.yml` | Information Disclosure | Read keys only. The rules repo is on GitHub, and the update-rules skill already forbids secrets there |
-| A draft entry pointing outside the rules repo | Tampering | Repo-relative paths only, and each path must exist inside the clone. Absolute, `~` and `..` entries are refused |
+| A draft entry pointing outside the rules repo | Tampering | Repo-relative paths that exist inside the clone, or URLs already listed verbatim in the clone's `recipes.yml`. Absolute, `~`, `..` and any other URL are refused |
+| Text copied from a scanned project or private rule into a public file | Information Disclosure | The skill file is public. It holds instructions only, with no private rule text |
+| Squash runs whatever is on `main` of a public repo | Tampering | The repo is the user's own, and the result is reviewable in the generated SKILL.md. A commit pin is available if this ever changes |
 | A recipe name breaking YAML or the shell | Tampering | Quote in shell. Ask the user if the folder name has anything outside `[A-Za-z0-9._-]` |
 | Destructive squash in the scanned project | Tampering | The skill never runs a non-dry squash, and only runs from temp dirs |
 
 ## Project Constraints (from CLAUDE.md)
 
 - Shared recipes live in `recipes.yml` in the rules repo with repo-relative paths. `~/.config/ruly/remotes/` is generated and never edited.
-- Skills are plain `.md` files at `{tag}/skills/{skill-name}.md`, not `SKILL.md`.
+- Skills are plain `.md` files, not `SKILL.md`. The `{tag}/skills/{skill-name}.md` location is superseded for this one skill by the user's decision (`skills/` in this repo).
 - Never reference filenames of rule sources or slash command names in rules. Use anchors plus `requires:`.
 - Use `git mv` for moves. Search for references when moving or deleting rule files.
 - Test `ruly squash` from a temp dir, never the main project directory.
@@ -692,13 +926,14 @@ Under temp `HOME`, `ruly` still loads, and no `GEM_PATH` is needed, because the 
 - Use Mermaid for diagrams in rules.
 - Never edit `CLAUDE.local.md`.
 - After `core` recipe changes, run the `--deepclean` command. Not triggered here (Q8).
-- Update the README only for slash command or `ruly` CLI changes. Not triggered here (Q8).
-- Edit dotfiles through chezmoi. `~/.claude/skills/creator-takes` is not managed, so a plain symlink matches current practice.
+- Update the README for slash command or `ruly` CLI changes. **Triggered here** (Q8).
+- Edit dotfiles through chezmoi. `~/.config/ruly/recipes.yml` is not chezmoi-managed, so Route 1's override is a direct edit.
+- From memory: never use the Anthropic API. The skill calls none, and it runs inside the user's Claude session.
 - From memory: one mechanism per need, with no unrequested flags or config sources. This is why the plan has one validation route and adds no ruly options.
 
 ## Experiment Log
 
-All runs were in `mktemp -d` dirs under the session scratchpad. The rules repo clone and `~/.config/ruly/` were read only. `git -C rules status --short` stayed empty, and `ruly stats` was never run. `$E` is the scratch root, `$C` a scratch copy of the clone with a fixture skill and the `ruly-tools` entry added, and `$H` a temp home holding `$C` at `.config/ruly/remotes/patrickclery/rules`.
+All runs were in `mktemp -d` dirs under the session scratchpad. The rules repo clone and `~/.config/ruly/` were read only: `git -C rules status --short` stayed empty, `sha256sum -c` on `~/.config/ruly/recipes.yml` passed, and `ruly stats` was never run. `$E` is the scratch root, `$C` a scratch copy of the clone with a fixture entry, and `$H` a temp home holding `$C` at `.config/ruly/remotes/patrickclery/rules`. V0 to G predate the decision change, so their `ruly-tools` fixture used a local skill path. Those results about loading and frontmatter still apply.
 
 | ID | Command (from a temp cwd) | Result |
 |----|---------------------------|--------|
@@ -711,18 +946,32 @@ All runs were in `mktemp -d` dirs under the session scratchpad. The rules repo c
 | A | `HOME=$H bin/ruly squash ruly-tools` in a project with existing files | `CLAUDE.local.md` replaced, `mcpServers` emptied, frontmatter as in Q1 |
 | B | Squash of fixture skills | Directory from path, block scalar broken |
 | C | Squash of a fixture parent recipe with a subagent, and the same with `--dry-run` | Agent file as in Q5. The dry run reports no subagent or MCP problem |
-| D | `d` recipe with GitHub URLs, with and without `GH_CONFIG_DIR` | Missing URL gives exit 1. Public URL fetched in both |
+| D | `d` recipe with GitHub URLs, with and without `GH_CONFIG_DIR` | Missing URL gives exit 1. A private-repo URL fetched in both, since `gh` stays logged in through `XDG_CONFIG_HOME` (X0) |
 | E | `bin/ruly squash ruly-tools -a claude-plugin -o $E/plug` | Plugin written, project files untouched. The 0.1.0 gem does not support this |
 | F | `HOME=$H bin/ruly squash ruly-tools -o $E/throwaway.md` | `CLAUDE.local.md` kept, `mcpServers` still emptied |
 | G | `HOME=$H bin/ruly squash startup` | Agent format, 9/9 rule bodies are exact substrings |
 | agile | `HOME=$H ruly squash agile` | Rule files 15/15, commands 11/11, skills 6/6, plus 4 unlisted rule files |
 | exp3 | Yalphabetize runs on scratch copies, and `homelab` compared read-only | Q6 and Pattern 1 |
 | exp4 | Recommended script against the real clone, `homelab`, `LC_ALL=C` | Exit 0, no findings, no files written |
+| X0 | `HOME=$T gh auth status`, with and without `GH_CONFIG_DIR`; `gh repo view ... visibility` | Logged in both ways. `XDG_CONFIG_HOME` is set here. `ruly` public, `rules` private |
+| X1 | Ruby: `RemoteSync.collect_seed_paths` and `fetch_closure(..., clone: $C)` with the unpushed URL | Output in Q9. URL not seeded, closure succeeds, relative control raises |
+| X2 | `HOME=$HS bin/ruly squash homelab --sync --dry-run` with `remotes:` and a URL override, real network | Exit 0 in 36 s, `Mirrored 252 files`, no URL-target file mirrored |
+| X3 | Validation script with `ruly-tools` and the unpushed URL, both binaries, with and without `GH_CONFIG_DIR`, `LC_ALL=C` | Output in Q10. Exit 1, grep catches it, no files written |
+| X4 | `HOME=$H bin/ruly squash ruly-tools` with the unpushed URL, in a project with existing files | Exit 1, yet `CLAUDE.local.md` is 0 bytes, `mcpServers` empty, no skill |
+| X5 | `curl -sI` on raw URL; grep for `cache` in fetch services of both versions; `gh api --help` | `cache-control: max-age=300`; only opt-in `--cache` on 0.1.0 |
+| X6 | `npx prettier@3.6.2 --write` and `npx markdown-table-prettify@3.6.0` on a fixture, npm cache in scratch | Long `description` stays on one line. The table tool ignored its file argument, and blocked on open stdin |
+| X7 | `LC_ALL=C HOME=$HX <both binaries> squash rx` with non-ASCII `creator-takes` by URL | `valid_utf8=true body_equal=true` on both, and with a single URL |
+| X8 | `homelab` with `overrides:` from the user file and from project `.recipes.yml`, a bad recipe name, and the unpushed URL; `diff -r` against a fresh squash | Results in Q12 |
+| X9 | `HOME=$hz2 ruly squash ruly-tools` with a resolving URL in an empty dir | `SKILL.md`, `CLAUDE.local.md` 0 bytes, `.mcp.json` 22 bytes |
+| X10 | Scratch mirror with a local absolute skill path; a commit SHA URL; a slash-branch URL | Absolute path gives exit 0 with correct SKILL.md. SHA URL resolves. Slash branch gives `Failed to fetch`, exit 1, parsed as `branch=gsd` |
+| X11 | `HOME=$hu2 ruly squash p` with `obra/superpowers` URL skills, one through a subagent | Output in Q13. `body_equal_to_fetched=true` |
+| X12 | Scratch gemspec load with `skills/` present; `git grep` for root `skills/` references; `git check-ignore` | Results in Q11 |
+| exp7 | `gh api -H 'Accept: application/vnd.github.raw+json'` on an existing and a missing path | Bytes identical to the clone's copy. Missing gives `Not Found`, exit 1 |
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- This repo, read this session: `lib/ruly/cli.rb`, `services/recipe_loader.rb`, `remote_sync.rb`, `script_manager.rb`, `subagent_processor.rb`, `source_processor.rb`, `frontmatter_parser.rb`, `mcp_manager.rb`, `squash_helpers.rb`, `agents_md.rb`, `settings_manager.rb`, `shell_command_checker.rb`, `dependency_resolver.rb`, `display.rb`, `checks.rb`, `checks/ambiguous_links.rb`, `checks/duplicate_skill_requires.rb`, `lefthook.yml`, `.yalphabetize.yml`
+- This repo, read this session: `lib/ruly/cli.rb`, `services/recipe_loader.rb`, `remote_sync.rb`, `script_manager.rb`, `subagent_processor.rb`, `source_processor.rb`, `frontmatter_parser.rb`, `mcp_manager.rb`, `squash_helpers.rb`, `agents_md.rb`, `settings_manager.rb`, `shell_command_checker.rb`, `dependency_resolver.rb`, `display.rb`, `checks.rb`, `checks/ambiguous_links.rb`, `checks/duplicate_skill_requires.rb`, `github_client.rb`, `ruly.gemspec`, `.prettierignore`, `lefthook.yml`, `.yalphabetize.yml`
 - Rules repo: `recipes.yml`, `home/skills/update-rules.md`, `CLAUDE.md`
 - `yalphabetize-0.12.1/lib/yalphabetize.rb`
 - The experiments above
@@ -739,7 +988,8 @@ None.
 - Recipe loading and validation: HIGH, read from source and run
 - Reverse matching: HIGH, measured on 3 real recipes
 - Claude Code loading behavior: LOW to MEDIUM, from official docs and not exercised
-- Install path: MEDIUM, reasoned from precedent and pending confirmation
+- URL fetch, sync and overrides: HIGH, run with real URLs, but this skill's own URL is only tested in its unresolved state
+- Usage routes: HIGH for the squash output, LOW for the Claude session steps, which were not run
 
-**Research date:** 2026-11-04
+**Research date:** 2026-11-04, updated after decision commit 6087bdb
 **Valid until:** 2026-12-04, or sooner if ruly's loader or `--dry-run` changes
