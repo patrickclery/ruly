@@ -11,7 +11,7 @@ updated: 2026-11-05T03:06:02Z
 number: 3
 name: "Files in no recipe" detection on a second corpus
 expected: |
-  I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), so it misses none I could find and over-reports none. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
+  I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), and a separate walk of the recipes and their `requires:` reached the same 26 files, so it neither misses nor over-reports. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
 awaiting: user response
 
 ## Tests
@@ -26,7 +26,7 @@ expected: In the two live runs, bug-root-cause followed the skill's `Root cause:
 result: pass
 
 ### 3. "Files in no recipe" detection on a second corpus
-expected: I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), so it misses none I could find and over-reports none. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
+expected: I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), and a separate walk of the recipes and their `requires:` reached the same 26 files, so it neither misses nor over-reports. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
 result: [pending]
 
 ## Summary

@@ -167,11 +167,6 @@ module RulyBench
       outputs.any? { |text, descriptors| text.include?(body) || descriptors.include?(descriptor) }
     end
 
-    # @return [Boolean] true for a skill or command, which every condition counts by its descriptor
-    def described?(rel)
-      DESCRIBED_KINDS.include?(corpus.kind(rel))
-    end
-
     # Corpus files that no measured recipe's squash output holds. They count in every baseline (a native
     # layout loads every rule without `paths:`) but can never appear in a ruly output, so the result also
     # gives the baselines and reductions with them left out.
@@ -195,6 +190,11 @@ module RulyBench
       files.sum do |f|
         TokenCounter.count(described?(f) ? corpus.source_descriptor(f) : corpus.body(f))
       end
+    end
+
+    # @return [Boolean] true for a skill or command, which every condition counts by its descriptor
+    def described?(rel)
+      DESCRIBED_KINDS.include?(corpus.kind(rel))
     end
 
     def header_lines
