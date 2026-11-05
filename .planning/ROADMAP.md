@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models (completed 2026-11-02)
 - [x] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard (completed 2026-11-02)
 - [x] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format (completed 2026-11-02)
-- [ ] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance
+- [x] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance (completed 2026-11-04)
 - [x] **Phase 7: Competitor Composition Audit** - Check Ruler/rulesync task-scoped composition (completed 2026-11-02)
 
 ## Phase Details
@@ -48,7 +48,7 @@ Phases execute in numeric order.
 | 3. Emphasize Core Advantages | 1/1 | Complete    | 2026-11-02 |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
 | 5. Claude Code Plugin Packaging | 3/3 | Complete    | 2026-11-02 |
-| 6. Token and Compliance Benchmark | 3/3 | In Progress | - |
+| 6. Token and Compliance Benchmark | 3/3 | Complete    | 2026-11-04 |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
 
 ### Phase 2: Lean Out Native Duplication
@@ -115,7 +115,7 @@ Plans:
 **Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
 **Requirements**: TBD
 **Depends on:** Phase 5
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 06-01-PLAN.md
