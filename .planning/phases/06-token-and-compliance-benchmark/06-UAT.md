@@ -1,18 +1,14 @@
 ---
-status: testing
+status: complete
 phase: 06-token-and-compliance-benchmark
 source: [06-VERIFICATION.md]
 started: 2026-11-02T12:15:15Z
-updated: 2026-11-05T03:06:02Z
+updated: 2026-11-05T03:43:03.441Z
 ---
 
 ## Current Test
 
-number: 3
-name: "Files in no recipe" detection on a second corpus
-expected: |
-  I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), and a separate walk of the recipes and their `requires:` reached the same 26 files, so it neither misses nor over-reports. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -27,14 +23,14 @@ result: pass
 
 ### 3. "Files in no recipe" detection on a second corpus
 expected: I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), and a separate walk of the recipes and their `requires:` reached the same 26 files, so it neither misses nor over-reports. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 3
-passed: 2
+passed: 3
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
