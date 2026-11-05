@@ -157,14 +157,14 @@ module RulyBench
       @unreferenced_files ||= corpus.files.reject { |f| referenced?(f) }
     end
 
+    # A file reaches an output as body text or as a skill/command descriptor. Its path doesn't say which: a recipe
+    # can list a commands/ file under `files:` (inlined) or a plain rule under `skills:` (written as a skill).
     def referenced?(rel)
-      if described?(rel)
-        descriptor = corpus.source_descriptor(rel)
-        return outputs.any? { |_, descriptors| descriptors.include?(descriptor) }
-      end
-
       body = corpus.body(rel).strip
-      body.empty? || outputs.any? { |text, _| text.include?(body) }
+      return true if body.empty?
+
+      descriptor = corpus.source_descriptor(rel)
+      outputs.any? { |text, descriptors| text.include?(body) || descriptors.include?(descriptor) }
     end
 
     # @return [Boolean] true for a skill or command, which every condition counts by its descriptor

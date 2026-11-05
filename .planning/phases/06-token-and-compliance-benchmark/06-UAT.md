@@ -3,15 +3,15 @@ status: testing
 phase: 06-token-and-compliance-benchmark
 source: [06-VERIFICATION.md]
 started: 2026-11-02T12:15:15Z
-updated: 2026-11-04T22:53:23Z
+updated: 2026-11-05T03:06:02Z
 ---
 
 ## Current Test
 
-number: 2
-name: Skill invocation and quote scorer behave on real replies
+number: 3
+name: "Files in no recipe" detection on a second corpus
 expected: |
-  In the two live runs, bug-root-cause followed the skill's `Root cause:` rule in neither condition on run 1 and in both on run 2, so the skill can be invoked (`--tools Skill` works) but doesn't trigger every time. The quote scorer's single-quotes results matched the replies in the run I checked (no plain double-quoted strings in either). Pass means you accept this, and the published results will state the skill task varied between runs.
+  I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), so it misses none I could find and over-reports none. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
 awaiting: user response
 
 ## Tests
@@ -23,18 +23,18 @@ note: run on Max subscription. First run lost 2 tasks to a harness encoding bug 
 
 ### 2. Skill invocation and quote scorer behave on real replies
 expected: In the two live runs, bug-root-cause followed the skill's `Root cause:` rule in neither condition on run 1 and in both on run 2, so the skill can be invoked (`--tools Skill` works) but doesn't trigger every time. The quote scorer's single-quotes results matched the replies in the run I checked (no plain double-quoted strings in either). Pass means you accept this, and the published results will state the skill task varied between runs.
-result: [pending]
+result: pass
 
 ### 3. "Files in no recipe" detection on a second corpus
-expected: Run against a second corpus, the verbatim-substring detection (WR-01) neither misses nor over-reports files that no recipe references.
+expected: I ran the "files in no recipe" check on your real rules (237 files, private results kept outside the repo). It wrongly flagged 13 files whose recipes do use them, and I fixed that. It now flags 26, and each one is used only by recipes the benchmark skips (8 with remote sources, plus `full`, which fails to squash), so it misses none I could find and over-reports none. The fix leaves the published fixture numbers unchanged. Pass means you accept this.
 result: [pending]
 
 ## Summary
 
 total: 3
-passed: 1
+passed: 2
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 

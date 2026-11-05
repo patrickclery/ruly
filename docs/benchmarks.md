@@ -59,7 +59,13 @@ The machine-readable results, including the split of each ruly total into squash
 
 Fewer tokens only help if the model still follows the rules. The compliance benchmark checks whether a model follows a rule when it reaches it through a recipe-scoped CLAUDE.local.md, compared with the native layout of the same rules.
 
-Status: pending. No live run has been made yet. The harness, the task suite and the scoring are committed and tested offline; no compliance numbers are published until a live run on the fixture corpus produces them.
+Status: one live run on the fixture corpus, model `claude-sonnet-5-5`, one sample per task and condition: **ruly 8/8, native 6/8**. This does not show that ruly beats native:
+
+- The 4 always-loaded rules passed in both conditions.
+- The 3 path-scoped rules can't load in the native condition, because the run gives the model no file tools (see [Limitations](#limitations)). `migration-up-down` and `react-named-export` failed there. `rspec-expect` passed anyway, so the model follows that rule without being told and the task can't separate the conditions.
+- The skill task, `bug-root-cause`, varied between runs. In an earlier run it failed in both conditions, and in this one it passed in both. The skill can trigger, but doesn't always, and the harness doesn't record tool use, so this is inferred from the reply's first line.
+
+The earlier run also lost `frozen-string-literal` in both conditions to a harness encoding bug, since fixed; its numbers are not reported. Results: [`bench/results/compliance.md`](../bench/results/compliance.md) and [`compliance.json`](../bench/results/compliance.json). The dollar figures there are claude's cost estimates, not charges: the run used a Claude subscription, not the API.
 
 ### Conditions
 
@@ -103,7 +109,7 @@ Token counts matter because instruction following degrades as instructions and c
 - Chroma's context-rot study ([research.trychroma.com/context-rot](https://research.trychroma.com/context-rot)) finds that performance drops as input length grows, across 18 LLMs.
 - Claude Code's own docs say imports "don't reduce its context cost, because imported files load together with the CLAUDE.md that imports them" ([docs](https://code.claude.com/docs/en/memory#import-additional-files)), so splitting rules into imported files does not by itself save tokens.
 
-Token savings alone do not show that the rules help. Gloaguen et al., ICLR 2026 ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988)), find that AGENTS.md and CLAUDE.md files do not generally raise task success (about +4% for developer-written files, -0.5% to -3% for LLM-generated ones) and add more than 20% inference cost. That is why the harness measures compliance as well as tokens, and why the compliance result is reported as pending rather than assumed.
+Token savings alone do not show that the rules help. Gloaguen et al., ICLR 2026 ([arXiv:2602.11988](https://arxiv.org/abs/2602.11988)), find that AGENTS.md and CLAUDE.md files do not generally raise task success (about +4% for developer-written files, -0.5% to -3% for LLM-generated ones) and add more than 20% inference cost. That is why the harness measures compliance as well as tokens, and why the compliance result is reported from a live run rather than assumed.
 
 How each condition is built:
 

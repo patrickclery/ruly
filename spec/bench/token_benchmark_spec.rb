@@ -52,6 +52,17 @@ RSpec.describe RulyBench do
       end
     end
 
+    it 'counts a commands/ file inlined through files: and a rule written as a skill as referenced' do
+      write('recipes.yml', "recipes:\n  r:\n    files:\n      - commands/inlined.md\n    " \
+                           "skills:\n      - core/as_skill.md\n")
+      write('commands/inlined.md', "---\ndescription: Inline me.\n---\n# Inlined\nInlined body.\n")
+      write('core/as_skill.md', "---\ndescription: Skill me.\n---\n# As Skill\nSkill body.\n")
+      write('core/orphan.md', "# Orphan\nNobody wants this.\n")
+      result = described_class.new(corpus: RulyBench::Corpus.new(dir), label: 'spec').result
+
+      expect(result['excluding_unreferenced']['files']).to eq(%w[core/orphan.md])
+    end
+
     it 'discloses files no measured recipe includes and the baselines without them' do
       write_small_corpus
       corpus = RulyBench::Corpus.new(dir)
