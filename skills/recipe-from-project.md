@@ -26,7 +26,10 @@ Check that the folder still holds evidence.
 
 ```bash
 # evidence-check
+others="$(find "${PROJECT}/.claude/skills" "${PROJECT}/.claude/commands" "${PROJECT}/.claude/agents" \
+  -name '*.md' ! -path '*/recipe-from-project/*' 2>/dev/null | head -1)"
 if [ -f "${PROJECT}/.claude/skills/recipe-from-project/SKILL.md" ] &&
+  [ -z "${others}" ] && [ ! -e "${PROJECT}/AGENTS.md" ] &&
   [ -f "${PROJECT}/CLAUDE.local.md" ] && [ ! -s "${PROJECT}/CLAUDE.local.md" ] &&
   [ -f "${PROJECT}/.mcp.json" ] &&
   jq -e '(.mcpServers // {}) | length == 0' "${PROJECT}/.mcp.json" > /dev/null 2>&1; then
@@ -345,7 +348,7 @@ Nothing matches, and shared headings in `CLAUDE.md` do not count. The skill list
 
 ### A folder left by the tool's own recipe
 
-The folder has this skill, an empty `CLAUDE.local.md` and no MCP servers. The evidence check prints `no-evidence`, and the skill asks for the real project path.
+The folder has this skill, an empty `CLAUDE.local.md`, no MCP servers, no `AGENTS.md`, and no other skills, commands or agents. The evidence check prints `no-evidence`, and the skill asks for the real project path.
 
 ### A draft with a bad path
 
