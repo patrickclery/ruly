@@ -156,6 +156,9 @@ end
 row = ->(*cols) { puts cols.join("\t") }
 
 urls['skills'].uniq.sort.each do |url|
+  # This skill is reported once, as the exact-match block's self row.
+  next if derive[url] == 'recipe-from-project'
+
   rel = ".claude/skills/#{derive[url]}/SKILL.md"
   path = File.join(project, rel)
   next unless File.file?(path)
