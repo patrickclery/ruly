@@ -891,10 +891,33 @@ This ensures proper navigation even when multiple rule files contain headers wit
 
 #### Available Ruly Commands
 
+- `/recipe-from-project` - Drafts a recipe from a project folder's current rules, skills, commands, subagents and MCP servers, and writes it to the rules repo's `recipes.yml` only after you approve the draft.
 - `/ruly:compress` - Analyze markdown rules to find redundancies and make them more DRY
 - `/ruly:decompose` - Decompose a markdown file into a directory using git mv (preserves history)
 - `/run-acceptance-test` - Takes acceptance criteria (direct text, Jira ticket `WA-XXXX`, or PR number `PR:NNNN`), reads page objects from automation-test-qa, writes a Playwright spec, runs it, and reports results.
 - `/sync-qa-repo` - Pulls latest from automation-test-qa, reports new/changed page objects, specs, and API helpers.
+
+#### Drafting a Recipe From a Project
+
+The skill is not installed with the gem. `ruly squash` fetches it from `https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md`, so any recipe that lists this URL needs the network at squash time and exits 1 offline.
+
+There are two ways to run it:
+
+- **A project already built from a recipe.** Add the URL to that recipe's `skills:`, or add it under `overrides:` in `~/.config/ruly/recipes.yml` for one machine, then squash as usual. The skill defaults to the current folder.
+- **Any other project.** Run `ruly squash ruly-tools` in an empty directory (add `--sync` the first time so the mirror has the recipe). Start Claude there with `claude --add-dir <project> --add-dir <rules clone>`, and pass the project path to the skill.
+
+The `ruly-tools` recipe has one entry, so you can define it in your own recipes file:
+
+```yaml
+ruly-tools:
+  description: "Ruly authoring tools"
+  skills:
+    - https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
+```
+
+Do not squash `ruly-tools` inside the project you want to scan. Squashing there overwrites `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, even when the fetch fails, which destroys the files the skill reads.
+
+Every match in the draft is labelled exact or inferred. Content that matches nothing in the rules repo is reported and left out. The skill shows the draft first, and once you approve it, writes and validates the recipe and leaves the change uncommitted.
 
 ### Examples
 
