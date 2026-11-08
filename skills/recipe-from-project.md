@@ -29,19 +29,28 @@ Check that the folder still holds evidence.
 PROJECT="${PROJECT/#\~/${HOME}}"
 others="$(find "${PROJECT}/.claude/skills" "${PROJECT}/.claude/commands" "${PROJECT}/.claude/agents" \
   -name '*.md' ! -path '*/recipe-from-project/*' 2>/dev/null | head -1)"
+servers="$(jq -r '(.mcpServers // {}) | length' "${PROJECT}/.mcp.json" 2>/dev/null || echo 0)"
+left=""
+if [ -n "${others}" ] || [ -e "${PROJECT}/AGENTS.md" ] || [ -s "${PROJECT}/CLAUDE.md" ] ||
+  [ -n "$(find "${PROJECT}/.cursor/rules" -type f 2>/dev/null | head -1)" ]; then
+  left=yes
+fi
 if [ -f "${PROJECT}/.claude/skills/recipe-from-project/SKILL.md" ] &&
-  [ -z "${others}" ] && [ ! -e "${PROJECT}/AGENTS.md" ] && [ ! -s "${PROJECT}/CLAUDE.md" ] &&
-  [ -z "$(find "${PROJECT}/.cursor/rules" -type f 2>/dev/null | head -1)" ] &&
   [ -f "${PROJECT}/CLAUDE.local.md" ] && [ ! -s "${PROJECT}/CLAUDE.local.md" ] &&
-  [ -f "${PROJECT}/.mcp.json" ] &&
-  jq -e '(.mcpServers // {}) | length == 0' "${PROJECT}/.mcp.json" > /dev/null 2>&1; then
+  [ -f "${PROJECT}/.mcp.json" ] && [ "${servers}" = 0 ]; then
+  if [ -n "${left}" ]; then echo clobbered-partial; else echo no-evidence; fi
+elif [ -z "${left}" ] && [ ! -s "${PROJECT}/CLAUDE.local.md" ] && [ "${servers}" = 0 ]; then
   echo no-evidence
 else
   echo evidence-ok
 fi
 ```
 
-On `no-evidence`, stop. Say the folder holds no evidence because squashing the tool's own recipe overwrote it, ask for a project path, and note that a real project's earlier files may be recoverable from git.
+The block first looks for the mark a squash of this tool's own recipe leaves: this skill, an empty `CLAUDE.local.md` and a `.mcp.json` with no servers. A hand-written `CLAUDE.md` or other files do not hide that mark. They only decide whether anything is left to read.
+
+- On `no-evidence`, stop and ask for a project path. If the folder has this skill and an empty `CLAUDE.local.md`, say that squashing the tool's own recipe overwrote the evidence, and that a real project's earlier files may be recoverable from git. Otherwise, say that none of the files Step 2 scans hold anything.
+- On `clobbered-partial`, warn before scanning. Say that `CLAUDE.local.md` and `.mcp.json` look overwritten by a squash of this tool's own recipe, so the rule files and MCP servers the project used are no longer visible, and that git may recover them. Name what is left, such as `CLAUDE.md`, `.cursor/rules`, `AGENTS.md`, or skills, commands and agents. Then ask whether to draft from that alone. Without a clear yes, stop. If the user goes on, treat `CLAUDE.local.md` and `.mcp.json` as missing, not as empty, and put the warning at the top of the report.
+- On `evidence-ok`, go on to Step 2.
 
 ### 2. Inventory the project
 
@@ -246,7 +255,7 @@ Unmatched content is listed in the report and left out of the recipe. Never crea
 
 A command source lands in the project under the folders that hold it, so a source under `<folder>/commands/` lands in `.claude/commands/<folder>/`. If a matched command sits at a shorter project path, add `omit_command_prefix` with the folder to strip, so its name stays the same, and label it with that reason. Otherwise leave the key out.
 
-Below the draft, show the report: unmatched content, hand-written agents, skills not from the rules repo, the recipe the project was generated from, and what the next squash of this recipe will lose. That covers MCP servers left out of `mcp_servers:`, any unmatched content in `CLAUDE.local.md`, and every `body-differs` skill, whose project copy the next squash overwrites.
+Below the draft, show the report: unmatched content, hand-written agents, skills not from the rules repo, the recipe the project was generated from, and what the next squash of this recipe will lose. That covers MCP servers left out of `mcp_servers:`, any unmatched content in `CLAUDE.local.md`, and every `body-differs` skill, whose project copy the next squash overwrites. After a `clobbered-partial` check, start the report with its warning, and say that the losses from `CLAUDE.local.md` and `.mcp.json` cannot be known.
 
 Check the name against the clone's recipe keys, not the mirror:
 
@@ -354,6 +363,10 @@ Nothing matches, and shared headings in `CLAUDE.md` do not count. The skill list
 ### A folder left by the tool's own recipe
 
 The folder has this skill, an empty `CLAUDE.local.md`, no MCP servers, no `AGENTS.md`, no non-empty `CLAUDE.md`, nothing under `.cursor/rules`, and no other skills, commands or agents. The evidence check prints `no-evidence`, and the skill asks for the real project path.
+
+### A project the tool's own recipe squashed over
+
+The project has a hand-written `CLAUDE.md` and its own commands, but `ruly-tools` was squashed inside it. That left this skill, an empty `CLAUDE.local.md` and a `.mcp.json` with no servers. The evidence check prints `clobbered-partial`. The skill says the rule files and MCP servers are gone from `CLAUDE.local.md` and `.mcp.json`, and that git may recover them. It asks before drafting from `CLAUDE.md` and the commands, and if the user goes on, the report starts with that warning.
 
 ### A draft with a bad path
 
