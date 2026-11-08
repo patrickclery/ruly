@@ -1,6 +1,6 @@
 ---
 phase: 06-token-and-compliance-benchmark
-verified: 2026-11-04T12:00:00Z
+verified: 2026-11-08T00:00:00Z
 status: passed
 score: 6/6 must-haves verified
 covered_files:
@@ -30,14 +30,13 @@ covered_files:
   - "spec/bench/compliance_spec.rb"
   - "spec/bench/published_figures_spec.rb"
   - "spec/bench/token_benchmark_spec.rb"
-covered_digest: "v3:sha256:1e466e58561105d4a90d57052dbd836a7aeb162d0cbc46c5066f76abf7c977be"
+covered_digest: "v3:sha256:bbd0bc165d79e50c580833e6e3578c9e2ae4609d89e0b8ceb3b07920c1224be3"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
-  previous_status: human_needed
-  previous_score: 5/6
-  gaps_closed:
-    - "Measured compliance / task-success numbers (truth 6): live run published, UAT 3/3 passed"
+  previous_status: passed
+  previous_score: 6/6
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
 ---
@@ -45,11 +44,15 @@ re_verification:
 # Phase 6: Token and Compliance Benchmark Verification Report
 
 **Phase Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
-**Verified:** 2026-11-04
+**Verified:** 2026-11-08
 **Status:** passed
-**Re-verification:** Yes. The prior report (2026-11-02, human_needed) is stale: bench code, docs/benchmarks.md and results changed. All three prior human_verification items are resolved by 06-UAT.md (3/3 passed).
+**Re-verification:** Yes. The 2026-11-04 report (passed, 6/6) went stale only because README.md changed: phase 8 (PRs #5 and #6) added the `/recipe-from-project` command bullet and the "Drafting a Recipe From a Project" section. The three human items from 06-UAT.md (3/3 passed) are carried forward unchanged; the README change does not touch them.
 
-Both halves of the goal are now measured and published. The published compliance numbers match the committed JSON, the docs' caveats match the data, and the token results and figures are unchanged and still correct.
+Both halves of the goal remain measured and published. The published compliance numbers match the committed JSON, the docs' caveats match the data, and the token results and figures are unchanged and still correct.
+
+## README Change Since the Last Report
+
+`git diff 52cc940 HEAD -- README.md` adds 24 lines, all phase 8: one "Available Ruly Commands" bullet for `/recipe-from-project` and a "Drafting a Recipe From a Project" section. Neither mentions tokens, compliance or the benchmark. The phase-6 claim at README line 100 is intact and correct. `git log --since` shows no bench, docs/benchmarks.md, spec/bench or patterns-note commit after the 2026-11-04 compliance publish, and the working tree has no uncommitted change to them. No `85%` remains in README, docs or the patterns note (the one `85%` in `.claude/commands/ruly/compress.md` is an unrelated similarity threshold).
 
 ## Goal Achievement
 
@@ -58,9 +61,9 @@ Both halves of the goal are now measured and published. The published compliance
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | Token harness measures every fixture recipe with cl100k_base against 4 conditions and writes tokens.json/tokens.md | VERIFIED | `bench/tokens.rb` run to a scratch dir: 5 recipes, exit 0. |
-| 2 | Token results are deterministic and the committed results are current | VERIFIED | Fresh run to the scratchpad: `cmp` byte-identical for tokens.json and tokens.md. `git diff 52cc940 HEAD` shows no change to tokens.* or bench/fixtures since the last verification. |
-| 3 | Published token figures in docs, README and the patterns note match tokens.json | VERIFIED | tokens.json summary: median 74.3% (69.8-83.8) vs load-all and vs ceiling, 68.4% (62.8-80.0) vs floor. `excluding_unreferenced`: 8,797 / 6,923 tokens, medians 70.9 / 63.0 / 70.9, 3 files, 1,175 tokens. docs lines 7-9 and 28-52 match exactly. 1,175/8,098 = 14.5% holds. The `referenced?` change (body OR descriptor, regardless of path) did not change the result: the same 3 files are flagged and the output is byte-identical. `published_figures_spec` passes. No `85%` remains in README, docs or the patterns note. |
-| 4 | Compliance harness: dry run by default, 8 tasks x 2 conditions, prints argv, no API call; live and private-corpus guards hold | VERIFIED | Logging fake `claude` (exit 99) first on PATH: `dry run ok: 8 tasks, 16 commands`; argv shows `--tools Skill --strict-mcp-config --setting-sources project,local --max-budget-usd 0.50`; the fake's call log was never created. `--live --corpus bench/fixtures` exits 2; `--isolated-home` exits 2 (option removed; a spec asserts the rejection). |
+| 2 | Token results are deterministic and the committed results are current | VERIFIED | Fresh run to the scratchpad on 2026-11-08: exit 0, `cmp` byte-identical for tokens.json and tokens.md. |
+| 3 | Published token figures in docs, README and the patterns note match tokens.json | VERIFIED | README line 100 (the only benchmark claim in README): 74.3% vs load-all (median), 68.4% vs native floor, 63.0% excluding the 3 unused fixture rules, links to docs/benchmarks.md. All four match tokens.json and docs lines 32-52. The phase-8 README additions (recipe-from-project bullet and section) contain no benchmark figures. tokens.json summary: median 74.3% (69.8-83.8) vs load-all and vs ceiling, 68.4% (62.8-80.0) vs floor. `excluding_unreferenced`: 8,797 / 6,923 tokens, medians 70.9 / 63.0 / 70.9, 3 files, 1,175 tokens. docs lines 7-9 and 28-52 match exactly. 1,175/8,098 = 14.5% holds. The `referenced?` change (body OR descriptor, regardless of path) did not change the result: the same 3 files are flagged and the output is byte-identical. `published_figures_spec` passes. No `85%` remains in README, docs or the patterns note. |
+| 4 | Compliance harness: dry run by default, 8 tasks x 2 conditions, prints argv, no API call; live and private-corpus guards hold | VERIFIED | Fake `claude` (exit 99) first on PATH: the dry run prints `would run:` argv lines and the fake was never invoked (its call marker was not created); argv shows `--tools Skill --strict-mcp-config --setting-sources project,local --max-budget-usd 0.50`; the fake's call log was never created. `--live --corpus bench/fixtures` exits 2 (rechecked); `--isolated-home` rejection is asserted by the passing spec. |
 | 5 | Docs describe methodology (IFScale, Chroma, Gloaguen), limitations, reproduction | VERIFIED | docs/benchmarks.md Methodology, Limitations and Reproduce sections present. The stale "pending" status and `--isolated-home` text are gone (no match for either in README, docs, bench). |
 | 6 | Measured compliance / task-success numbers, recipe-scoped vs native, published | VERIFIED | `bench/results/compliance.json` (complete: true, schema 2, model claude-sonnet-5-5): ruly 8/8, native 6/8, 0 errors each. Published in docs/benchmarks.md line 62 and in compliance.md. See the check below. |
 
@@ -93,8 +96,8 @@ Both halves of the goal are now measured and published. The published compliance
 | Behavior | Command | Result | Status |
 |---|---|---|---|
 | Token run reproducible | `bundle exec ruby bench/tokens.rb --output-dir <scratch>`; `cmp` | byte-identical | PASS |
-| Compliance dry run, no API | fake `claude` first on PATH | 8 tasks, 16 commands, 0 fake calls | PASS |
-| Guards | `--live --corpus bench/fixtures`; `--isolated-home` | both exit 2 | PASS |
+| Compliance dry run, no API | fake `claude` first on PATH | argv printed, 0 fake calls | PASS |
+| Guards | `--live --corpus bench/fixtures` | exit 2 | PASS |
 | Bench specs | `bundle exec rspec spec/bench` | 137 examples, 0 failures | PASS |
 | RuboCop | `bundle exec rubocop bench spec/bench` | 22 files, no offenses | PASS |
 
@@ -119,9 +122,9 @@ None. The three prior items are resolved by 06-UAT.md: (1) the live run complete
 
 ### Gaps Summary
 
-No gaps. Token figures are unchanged, reproducible and correctly published. Compliance numbers are published and exactly match compliance.json, and the docs' caveats describe the data accurately. One caveat cannot be checked from artifacts: the earlier-run skill failure, which relies on the accepted UAT record.
+No gaps. The README change from phase 8 is unrelated to the benchmark and the README benchmark claim still matches tokens.json. Token figures are unchanged, reproducible and correctly published. Compliance numbers are published and exactly match compliance.json, and the docs' caveats describe the data accurately. One caveat cannot be checked from artifacts: the earlier-run skill failure, which relies on the accepted UAT record.
 
 ---
 
-_Verified: 2026-11-04_
+_Verified: 2026-11-08_
 _Verifier: Claude (gsd-verifier)_
