@@ -217,7 +217,7 @@ Unmatched content is listed in the report and left out of the recipe. Never crea
 
 ### 6. Show the draft and wait for approval
 
-`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. List every entry in full, with no shorthand, so the draft is exactly what will be written. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
+`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, plus `omit_command_prefix` when the command rule below calls for it, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. List every entry in full, with no shorthand, so the draft is exactly what will be written. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
 
 ```yaml
 <recipe-name>:
@@ -233,6 +233,8 @@ Unmatched content is listed in the report and left out of the recipe. Never crea
       recipe: <recipe-name>
   mcp_servers:
     - <server-name>
+  omit_command_prefix: # only when the command rule below requires it
+    - <folder>
 ```
 
 | Entry                  | Label    | Evidence                   |
