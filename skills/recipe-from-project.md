@@ -251,15 +251,15 @@ Show `git -C "${RULES}" status --short -- recipes.yml`. If it prints anything, t
 
 Before writing, check every entry. Allow only paths relative to the clone that stay inside it, and URLs already listed verbatim in the clone's `recipes.yml`. Refuse an absolute path, a path starting with `~`, a path with a `..` segment and any other URL, and tell the user which entry was refused.
 
-Insert the approved recipe as text with the Edit tool, directly under the `recipes:` line, indented to match the other recipes. Never load and re-dump the file through a YAML library, because that rewrites comments and quoting across the whole file. Keep labels out of the file.
+Insert the approved recipe as text with the Edit tool at its alphabetical position among the recipes, directly above the first recipe key that sorts after `RECIPE`, or after the last recipe if none does. Indent it to match the other recipes. Never load and re-dump the file through a YAML library, because that rewrites comments and quoting across the whole file. Keep labels out of the file.
 
-Then sort it from the clone root:
+Then check the sort from the clone root and show the diff:
 
 ```bash
-cd "${RULES}" && RUBYOPT=-Eutf-8 yalphabetize -a recipes.yml
+cd "${RULES}" && RUBYOPT=-Eutf-8 yalphabetize -a recipes.yml && git -C "${RULES}" diff -- recipes.yml
 ```
 
-Run `yalphabetize` directly, not through Bundler.
+Run `yalphabetize` directly, not through Bundler. With the recipe at its sorted position, it reports `Offences: 0` and leaves the file unchanged. If it reports an offence, it re-emits the whole file, which re-indents comments and changes whitespace in other recipes. The diff must hold only the new recipe's lines, so point out any hunk outside it and ask before going on.
 
 ### 8. Preflight and validate
 
@@ -328,7 +328,7 @@ Any preflight row, and any line between `--- findings` and `--- end findings`, i
 
 Report what changed in `recipes.yml`, every failure from Step 8, and the label of each entry. Then list the user's next steps: commit and push the rules repo, run `ruly squash --sync` on each machine, then squash the recipe in the project.
 
-This skill never commits, never runs a squash without `--dry-run`, and never passes `--sync`, `--deepclean` or `--cache`. Its only write is the approved insert into `recipes.yml`.
+This skill never commits, never runs a squash without `--dry-run`, and never passes `--sync`, `--deepclean` or `--cache`. Its only write is the approved insert into `recipes.yml`, plus any re-sort by `yalphabetize`, which Step 7 shows and asks about.
 
 ## Examples
 
