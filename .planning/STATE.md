@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 current_phase: 07
 status: completed
 stopped_at: Phase 07 complete — all phases complete
-last_updated: "2026-11-08T07:50:52.850Z"
+last_updated: "2026-11-08T18:36:32.324Z"
 last_activity: 2026-11-08
 last_activity_desc: Phase 07 complete
-state_head: 5afd0dc72524c427699e697375d7e7f46283520e
+state_head: 31ceba0345b0272c83006956fdc47b63089f7ba3
 progress:
   total_phases: 8
   completed_phases: 8
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-11-02)
 Phase: 07
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-11-08 — Phase 07 complete
+Last activity: 2026-11-08 - Completed quick task 261108-fxc: Update demo site for phases 4-8 and merge to main
 
 Progress: [██████████] 100% (existing work)
 
@@ -133,6 +133,12 @@ None yet.
 - ⚠️ [Phase 2] patrickclery/rules `core-debugger` recipe uses misspelled `omitCommandPrefix` (now warns); top-level `tier:` in ~/.config/ruly/recipes.yml is inert (now warns)
 - ⚠️ [Phase 2] Installed `ruly` binary not refreshed with 0.2.0 changes (per CLAUDE.md: update after changes)
 - ⚠️ [Phase 2] Pre-existing: 15 baseline rspec failures; `ruly stats` writes stats.md into gem rules/ dir regardless of cwd
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261108-fxc | Update demo site for phases 4-8 and merge to main | 2026-11-08 | 31ceba0 | [261108-fxc-update-demo-site-for-phases-4-8-and-merg](./quick/261108-fxc-update-demo-site-for-phases-4-8-and-merg/) |
 
 ## Deferred Verification
 
