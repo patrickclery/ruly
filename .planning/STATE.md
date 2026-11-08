@@ -1,19 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 06
-current_phase_name: Token and Compliance Benchmark
-status: verifying
-stopped_at: Phase 05 complete, ready to verify Phase 06
-last_updated: "2026-11-02T17:58:51.800Z"
-last_activity: 2026-11-02
-last_activity_desc: Phase 05 complete, transitioned to Phase 06
-state_head: ecb5ffcb7ff815069087d07fdc46839e69c762e0
+current_phase: 07
+status: completed
+stopped_at: Phase 07 complete — all phases complete
+last_updated: "2026-11-08T07:50:52.850Z"
+last_activity: 2026-11-08
+last_activity_desc: Phase 07 complete
+state_head: 5afd0dc72524c427699e697375d7e7f46283520e
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 86
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 16
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State
@@ -23,21 +22,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Rules get squashed correctly into agent instruction files every time
-**Current focus:** Phase 4 — AGENTS.md Output Target
+**Current focus:** Phase 08 — Project-to-recipe generator skill
 
 ## Current Position
 
-Phase: 06 — Token and Compliance Benchmark
-Plan: 3
-Status: Phase complete — ready for verification
-Last activity: 2026-11-02 — Phase 05 complete, transitioned to Phase 06
+Phase: 07
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-11-08 — Phase 07 complete
 
-Progress: [█████████░] 86% (existing work)
+Progress: [██████████] 100% (existing work)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (brownfield -- no tracked plans yet)
+- Total plans completed: 16 (brownfield -- no tracked plans yet)
 - Average duration: -
 - Total execution time: -
 
@@ -46,11 +45,13 @@ Progress: [█████████░] 86% (existing work)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. Core Platform | N/A | N/A | N/A |
-| 2 | 3 | - | - |
-| 4 | 2 | - | - |
-| 7 | 1 | - | - |
+| 02 | 3 | - | - |
+| 04 | 2 | - | - |
+| 07 | 1 | - | - |
 | 03 | 1 | - | - |
 | 05 | 3 | - | - |
+| 06 | 3 | - | - |
+| 08 | 3 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: N/A
@@ -74,6 +75,9 @@ Progress: [█████████░] 86% (existing work)
 | Phase 06 P01 | 10min | 3 tasks | 47 files |
 | Phase 06 P02 | 10min | 2 tasks | 15 files |
 | Phase 06 P03 | 3min | 2 tasks | 3 files |
+| Phase 08 P01 | Tasks 2-3 ~30min (continuation) | 3 tasks | 1 files |
+| Phase 08 P02 | 15min | 3 tasks | 2 files |
+| Phase 08 P03 | 4min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -85,6 +89,7 @@ Progress: [█████████░] 86% (existing work)
 - Phase 5 added: Claude Code Plugin Packaging (from 2026-11-01 competitive research)
 - Phase 6 added: Token and Compliance Benchmark (from 2026-11-01 competitive research)
 - Phase 7 added: Competitor Composition Audit (from 2026-11-01 competitive research)
+- Phase 8 added: Project-to-recipe generator skill
 
 ### Decisions
 
@@ -113,6 +118,10 @@ Recent decisions affecting current work:
 - [Phase 06]: bench/ harness runs real bin/ruly squash with isolated HOME/RULY_HOME; non-fixture corpora write only to git-ignored bench/results/local
 - [Phase 06]: Compliance harness: dry run default; --live runs claude -p (claude-sonnet-5-5) with per-call budget cap; OutputDir guard shared with TokensCLI
 - [Phase 06]: Benchmark docs publish the fixture median (76.9% vs load-all, 68.4% vs native floor), always labeled fixture-based; compliance marked pending a paid live run
+- [Phase 08]: recipe-from-project: match order stays name first, then content, per CONTEXT
+- [Phase 08]: recipe-from-project: no-match report includes the name collision check; drafts list entries in full
+- [Phase 08]: 08-02: rules repo sort commit restores yalphabetize's comment reindents and whitespace so it reorders lines only
+- [Phase 08]: 08-03: separate-pr with merge and rules-push yes, chosen by the orchestrator under the user's standing bypass instruction; PR #5 merged (0d91b71), rules main pushed after gates
 
 ### Pending Todos
 
@@ -129,10 +138,9 @@ None yet.
 
 | Phase | State | Resume |
 |-------|-------|--------|
-| 06 | verification_deferred_human | /gsd-verify-work 06 |
 
 ## Session Continuity
 
-Last session: 2026-11-02T11:51:45.847Z
-Stopped at: Phase 05 complete, ready to verify Phase 06
+Last session: 2026-11-08T03:09:17.659Z
+Stopped at: Phase 07 complete — all phases complete
 Resume file: None

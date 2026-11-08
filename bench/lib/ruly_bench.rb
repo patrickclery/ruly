@@ -12,6 +12,9 @@ require 'rbconfig'
 require 'shellwords'
 
 # Benchmark harness for ruly: token counts of squashed output versus load-all and native layouts.
+# Rule files and claude output are UTF-8, whatever the locale says (LC_CTYPE=C would make them US-ASCII).
+Encoding.default_external = Encoding::UTF_8
+
 module RulyBench
   REPO_ROOT = File.expand_path('../..', __dir__)
   FIXTURE_CORPUS = File.join(REPO_ROOT, 'bench/fixtures/corpus')

@@ -17,8 +17,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Emphasize Core Advantages** - Reposition around recipes, requires, sync, per-subagent models (completed 2026-11-02)
 - [x] **Phase 4: AGENTS.md Output Target** - Cross-agent reach via the standard (completed 2026-11-02)
 - [x] **Phase 5: Claude Code Plugin Packaging** - Ship output in native plugin format (completed 2026-11-02)
-- [ ] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance
+- [x] **Phase 6: Token and Compliance Benchmark** - Verify the 85% claim and compliance (completed 2026-11-04)
 - [x] **Phase 7: Competitor Composition Audit** - Check Ruler/rulesync task-scoped composition (completed 2026-11-02)
+- [x] **Phase 8: Project-to-recipe generator skill** - Draft a recipe from a project's current rules and skills (completed 2026-11-08)
 
 ## Phase Details
 
@@ -48,8 +49,9 @@ Phases execute in numeric order.
 | 3. Emphasize Core Advantages | 1/1 | Complete    | 2026-11-02 |
 | 4. AGENTS.md Output Target | 2/2 | Complete    | 2026-11-02 |
 | 5. Claude Code Plugin Packaging | 3/3 | Complete    | 2026-11-02 |
-| 6. Token and Compliance Benchmark | 3/3 | In Progress | - |
+| 6. Token and Compliance Benchmark | 3/3 | Complete    | 2026-11-04 |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
+| 8. Project-to-recipe generator skill | 3/3 | Complete    | 2026-11-08 |
 
 ### Phase 2: Lean Out Native Duplication
 
@@ -115,7 +117,7 @@ Plans:
 **Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
 **Requirements**: TBD
 **Depends on:** Phase 5
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 06-01-PLAN.md
@@ -132,3 +134,20 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md
+
+### Phase 8: Project-to-recipe generator skill
+
+**Goal:** A Ruly skill takes a project folder and drafts a recipe from the rules, skills and other agent configuration that project currently uses. Built as an AI skill rather than a CLI command because matching a project's setup to shared rules takes judgment; `ruly introspect` only lists markdown files.
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 3/3 plans complete
+
+Plans:
+**Wave 1**
+- [x] 08-01-PLAN.md — `skills/recipe-from-project.md`: draft from a project's generated skills (tracer), every scan-list source, pruning and report, approved write, preflight and validation
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 08-02-PLAN.md — README bullet and usage routes; rules repo sort commit, then `ruly-tools` commit; pending fetch recorded
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 08-03-PLAN.md — Checkpoint on route to `main` and rules repo push, take the route, verify the URL end to end, or record a deferral

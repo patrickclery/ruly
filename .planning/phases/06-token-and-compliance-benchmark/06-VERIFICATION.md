@@ -1,8 +1,8 @@
 ---
 phase: 06-token-and-compliance-benchmark
-verified: 2026-11-02T07:00:00Z
-status: human_needed
-score: 5/6 must-haves verified
+verified: 2026-11-08T00:00:00Z
+status: passed
+score: 6/6 must-haves verified
 covered_files:
   - ".claude/ruly-recipes-mcp-patterns.md"
   - ".planning/phases/06-token-and-compliance-benchmark/06-01-PLAN.md"
@@ -14,39 +14,45 @@ covered_files:
   - "README.md"
   - "bench/compliance.rb"
   - "bench/compliance/tasks.yml"
+  - "bench/lib/ruly_bench.rb"
   - "bench/lib/ruly_bench/claude_command.rb"
+  - "bench/lib/ruly_bench/compliance_cli.rb"
   - "bench/lib/ruly_bench/compliance_run.rb"
   - "bench/lib/ruly_bench/output_dir.rb"
   - "bench/lib/ruly_bench/scorer.rb"
   - "bench/lib/ruly_bench/token_benchmark.rb"
+  - "bench/results/compliance.json"
+  - "bench/results/compliance.md"
   - "bench/results/tokens.json"
   - "bench/results/tokens.md"
   - "bench/tokens.rb"
   - "docs/benchmarks.md"
+  - "spec/bench/compliance_spec.rb"
   - "spec/bench/published_figures_spec.rb"
-covered_digest: "v3:sha256:a819633e7a284c947a6822dcd807787b87594781d4a1889d183d7b97179c6326"
+  - "spec/bench/token_benchmark_spec.rb"
+covered_digest: "v3:sha256:bbd0bc165d79e50c580833e6e3578c9e2ae4609d89e0b8ceb3b07920c1224be3"
 behavior_unverified: 0
 overrides_applied: 0
-human_verification:
-  - test: "Run the live compliance benchmark once: `bundle exec ruby bench/compliance.rb --live` (paid, fixture corpus, default model claude-sonnet-5-5)"
-    expected: "bench/results/compliance.json and compliance.md are written; the ruly vs native pass rates for the 8 tasks can then be published in docs/benchmarks.md. This is the only way to satisfy the 'rule compliance/task success' half of the phase goal."
-    why_human: "Costs API money; locked out of this phase by 06-CONTEXT.md. Compliance numbers are documented as pending."
-  - test: "During that live run, confirm `--tools Skill` actually lets the model invoke skills (the bug-root-cause task, skill condition) and that the single-quotes regex in tasks.yml scores real replies correctly"
-    expected: "The skill is invoked in both conditions; no false pass/fail from the scorer"
-    why_human: "06-REVIEW-FIX.md WR-06 and WR-09 both flag these as unverifiable without a live call. Offline specs cover the regex on 9 fixed cases only."
-  - test: "Spot-check detection of 'files in no recipe' (WR-01) against a second corpus"
-    expected: "Verbatim-substring detection neither misses nor over-reports unreferenced files"
-    why_human: "Review-fix flagged it for human verification; the fixture's 3 hits are right but the method is heuristic."
+re_verification:
+  previous_status: passed
+  previous_score: 6/6
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 6: Token and Compliance Benchmark Verification Report
 
 **Phase Goal:** Independently measure the self-reported 85% token-reduction claim and rule compliance/task success of recipe-scoped output vs. native path-scoped rules + skills.
-**Verified:** 2026-11-02
-**Status:** human_needed
-**Re-verification:** No, initial verification
+**Verified:** 2026-11-08
+**Status:** passed
+**Re-verification:** Yes. The 2026-11-04 report (passed, 6/6) went stale only because README.md changed: phase 8 (PRs #5 and #6) added the `/recipe-from-project` command bullet and the "Drafting a Recipe From a Project" section. The three human items from 06-UAT.md (3/3 passed) are carried forward unchanged; the README change does not touch them.
 
-The token half of the goal is measured, published, and reproducible. The compliance half has a working, guarded harness but no measured numbers. That is the locked scope (06-CONTEXT.md), so it is routed to human verification (a paid manual run), not failed.
+Both halves of the goal remain measured and published. The published compliance numbers match the committed JSON, the docs' caveats match the data, and the token results and figures are unchanged and still correct.
+
+## README Change Since the Last Report
+
+`git diff 52cc940 HEAD -- README.md` adds 24 lines, all phase 8: one "Available Ruly Commands" bullet for `/recipe-from-project` and a "Drafting a Recipe From a Project" section. Neither mentions tokens, compliance or the benchmark. The phase-6 claim at README line 100 is intact and correct. `git log --since` shows no bench, docs/benchmarks.md, spec/bench or patterns-note commit after the 2026-11-04 compliance publish, and the working tree has no uncommitted change to them. No `85%` remains in README, docs or the patterns note (the one `85%` in `.claude/commands/ruly/compress.md` is an unrelated similarity threshold).
 
 ## Goal Achievement
 
@@ -54,63 +60,71 @@ The token half of the goal is measured, published, and reproducible. The complia
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Token benchmark harness measures every fixture recipe with tiktoken cl100k_base against 4 conditions (ruly, load-all, native floor, native ceiling) and writes tokens.json/tokens.md | VERIFIED | `bench/tokens.rb` run to a scratch dir: 5 recipes, 4 counts each. |
-| 2 | Results are deterministic and the committed results are current | VERIFIED | Fresh `bundle exec ruby bench/tokens.rb --output-dir <scratch>`: `cmp` byte-identical for tokens.json and tokens.md (ruly_version 0.4.0 matches too, so no ignore needed). |
-| 3 | Published figures in docs/benchmarks.md, README token row and .claude/ruly-recipes-mcp-patterns.md match tokens.json after the review fixes | VERIFIED | tokens.json: median 74.3% (69.8-83.8) vs load-all; 68.4% (62.8-80.0) vs native floor; 74.3% vs ceiling; without the 3 unreferenced rules 70.9% / 63.0% / 70.9%; baselines 9,972 / 8,098 / 9,972. docs tables (lines 30-52), README line 100 (74.3%, 68.4%, 63.0%) and patterns note lines 5, 156, 249 (74.3%) all agree. The 14.5% (1,175/8,098) checks out. `spec/bench/published_figures_spec.rb` enforces the ties and passes. The old self-reported 85% figure is gone from every tracked file outside .planning (only the unrelated `0.85` similarity threshold in compress.md remains). |
-| 4 | Compliance harness: dry-run by default, 8 tasks x 2 conditions, prints argv, no API call; live mode and private corpus are guarded | VERIFIED | With a logging fake `claude` (exit 99) first on PATH: `dry run ok: 8 tasks, 16 commands`, fake call log never created. `--live --corpus bench/fixtures` exits 2 with the private-corpus message; `--isolated-home` without ANTHROPIC_API_KEY exits 2. Task prompts do not state the rule sentence. |
-| 5 | docs describe the methodology (IFScale, Chroma, Gloaguen), limitations, reproduction, and state compliance results are pending | VERIFIED | docs/benchmarks.md has Methodology (lines 99-107 cite all three), Limitations (120), Reproduce (132), and "Status: pending. No live run has been made" (line 62). |
-| 6 | Measured compliance / task-success numbers for recipe-scoped vs native (the second half of the phase goal) | HUMAN_NEEDED | `bench/results/compliance.*` does not exist, by design. Requires a paid live run. See human verification. |
+| 1 | Token harness measures every fixture recipe with cl100k_base against 4 conditions and writes tokens.json/tokens.md | VERIFIED | `bench/tokens.rb` run to a scratch dir: 5 recipes, exit 0. |
+| 2 | Token results are deterministic and the committed results are current | VERIFIED | Fresh run to the scratchpad on 2026-11-08: exit 0, `cmp` byte-identical for tokens.json and tokens.md. |
+| 3 | Published token figures in docs, README and the patterns note match tokens.json | VERIFIED | README line 100 (the only benchmark claim in README): 74.3% vs load-all (median), 68.4% vs native floor, 63.0% excluding the 3 unused fixture rules, links to docs/benchmarks.md. All four match tokens.json and docs lines 32-52. The phase-8 README additions (recipe-from-project bullet and section) contain no benchmark figures. tokens.json summary: median 74.3% (69.8-83.8) vs load-all and vs ceiling, 68.4% (62.8-80.0) vs floor. `excluding_unreferenced`: 8,797 / 6,923 tokens, medians 70.9 / 63.0 / 70.9, 3 files, 1,175 tokens. docs lines 7-9 and 28-52 match exactly. 1,175/8,098 = 14.5% holds. The `referenced?` change (body OR descriptor, regardless of path) did not change the result: the same 3 files are flagged and the output is byte-identical. `published_figures_spec` passes. No `85%` remains in README, docs or the patterns note. |
+| 4 | Compliance harness: dry run by default, 8 tasks x 2 conditions, prints argv, no API call; live and private-corpus guards hold | VERIFIED | Fake `claude` (exit 99) first on PATH: the dry run prints `would run:` argv lines and the fake was never invoked (its call marker was not created); argv shows `--tools Skill --strict-mcp-config --setting-sources project,local --max-budget-usd 0.50`; the fake's call log was never created. `--live --corpus bench/fixtures` exits 2 (rechecked); `--isolated-home` rejection is asserted by the passing spec. |
+| 5 | Docs describe methodology (IFScale, Chroma, Gloaguen), limitations, reproduction | VERIFIED | docs/benchmarks.md Methodology, Limitations and Reproduce sections present. The stale "pending" status and `--isolated-home` text are gone (no match for either in README, docs, bench). |
+| 6 | Measured compliance / task-success numbers, recipe-scoped vs native, published | VERIFIED | `bench/results/compliance.json` (complete: true, schema 2, model claude-sonnet-5-5): ruly 8/8, native 6/8, 0 errors each. Published in docs/benchmarks.md line 62 and in compliance.md. See the check below. |
 
-**Score:** 5/6 truths verified (1 needs a paid manual run; locked scope, not a failure).
+**Score:** 6/6 truths verified.
+
+### Published compliance figures against compliance.json
+
+| Claim in docs/benchmarks.md | Source check | Result |
+|---|---|---|
+| ruly 8/8, native 6/8, one sample per task and condition | JSON `conditions`; recounted from `tasks[].pass`: ruly 8, native 6, errors 0 | Match |
+| The 4 always-loaded rules passed in both | `ruby-single-quotes`, `frozen-string-literal`, `no-puts-in-library`, `commit-subject` (tasks.yml placement "always"): pass in ruly and native | Match |
+| 3 path-scoped rules cannot load in native; `migration-up-down` and `react-named-export` failed there | Native failures are exactly these two. Native migration reply uses `def change`; native React reply ends `export default UserBadge;`. Both are correct fails. Ruly passes both. | Match |
+| `rspec-expect` passed anyway | Passes in both conditions | Match |
+| `bug-root-cause` passes in both in this run | Both replies start `Root cause:` | Match |
+| Skill task varied between runs (earlier run failed in both) | The earlier run is not in the repo (journal deleted on completion). It rests on the 06-UAT.md note, which the user accepted. | Not checkable from artifacts; consistent with UAT |
+| compliance.md dollar figures are cost estimates | Per-task `cost_usd` sums to 0.8966615; JSON total 0.896662; compliance.md prints $0.8967 | Match |
+| Scoring is deterministic regex | I re-read the 16 replies against the rule checks (commit-subject first lines are 64 and 62 chars, lower-case `type(scope):`) | No scorer error found |
 
 ### Prohibitions
 
 | Prohibition | Status | Evidence |
 |---|---|---|
-| No live API calls in verify/spec/benchmark | HELD | Fake-`claude` tripwire log never created across the dry run, guard checks and the full rspec run. I made no live call. |
-| No non-fixture results committed | HELD | `git ls-files bench/results` is only tokens.json and tokens.md; `bench/results/local/` is gitignored (`.gitignore:9`) and absent. |
-| Fixture label on results | HELD | tokens.md H1 and "not a measurement of any real rules repository" note; `"label": "fixture"` in JSON; docs and README say "synthetic". |
-| No lib/ or bin/ changes by this phase | HELD | Files changed by the `(06` / `06-0x` commits include none under lib/, bin/, site/, rules/ or any dependency manifest. (lib/ diffs in the branch belong to Phases 4/5.) |
-| No compliance results committed | HELD | No `bench/results/compliance*` file. |
-| README change confined to the one row | HELD for Phase 6 | The Phase 6 hunk is the single "Token cost of includes" cell. Other README diffs are Phase 4/5/7. |
-| No `rules` directory under bench/ | HELD | `find bench -name rules` returns nothing. |
+| No Anthropic API use | HELD | `SUBSCRIPTION_ENV` unsets `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`; `compliance_cli.rb:119` passes it to the live run, whose executor receives `env`. No `--isolated-home`. Docs state "never the API". I made no live call. |
+| No non-fixture results committed | HELD | `git ls-files bench/results` is compliance.json, compliance.md, tokens.json, tokens.md; the corpus field is `bench/fixtures/corpus` and `bench/results/local/` is gitignored. |
+| Fixture label on results | HELD | compliance.md opens with the "synthetic fixture corpus, not any real rules repository" note and states the results are not statistically significant. |
+| No lib/, bin/, rules/ or dependency-manifest changes by this phase | HELD | `git diff 52cc940 HEAD --stat -- lib bin rules Gemfile` is empty. (The working-tree Gemfile.lock edit belongs to another session and is untouched.) |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
 | Token run reproducible | `bundle exec ruby bench/tokens.rb --output-dir <scratch>`; `cmp` | byte-identical | PASS |
-| Compliance dry run | fake `claude` first on PATH, `bundle exec ruby bench/compliance.rb` | `dry run ok: 8 tasks, 16 commands`, 0 fake calls | PASS |
-| Live/private guards | `--live --corpus bench/fixtures`; `--isolated-home` unset key | both exit 2 | PASS |
-| rspec | `bundle exec rspec` | 908 examples, 15 failures, 1 pending; all 15 match `02-rspec-baseline.txt` by full description, 0 new (`comm -13` empty) | PASS |
+| Compliance dry run, no API | fake `claude` first on PATH | argv printed, 0 fake calls | PASS |
+| Guards | `--live --corpus bench/fixtures` | exit 2 | PASS |
+| Bench specs | `bundle exec rspec spec/bench` | 137 examples, 0 failures | PASS |
 | RuboCop | `bundle exec rubocop bench spec/bench` | 22 files, no offenses | PASS |
 
 ### Anti-Patterns Found
 
-None blocking. Advisory notes:
+No TBD/FIXME/XXX/TODO markers in bench/ or docs/benchmarks.md. Advisory notes only:
 
 | File | Pattern | Severity | Impact |
 |---|---|---|---|
-| bench/results/tokens.md | load-all and native ceiling are now identical columns (9,972) | Info | Redundant, disclosed in the docs and as a follow-up in 06-REVIEW-FIX.md. |
-| 06-01-SUMMARY.md:49 | Stale mixed-baseline range "62.8% to 85.4%" | Info | Historical SUMMARY (WR-02 skipped on purpose); published docs are correct. |
-| Fixture corpus | Padded to a target size; figures depend on corpus makeup | Info | Disclosed under Limitations. The 74.3% describes the fixture only, not a real repository. |
-| Native condition | The 3 path-scoped compliance tasks never load their rules natively, since no file is opened | Info | Documented in docs and follow-ups; interpret as path-scoping cost when the live run happens. |
+| spec/bench/published_figures_spec.rb | Guards token figures only; nothing ties the hand-copied compliance numbers in docs (8/8, 6/8) to compliance.json | Info | They match today (checked above). Drift is possible if compliance.json is regenerated without editing the docs. |
+| docs/benchmarks.md | "Earlier run failed in both conditions" has no artifact in the repo | Info | Rests on the user-accepted UAT note. The doc words it as a report of an earlier run, not a measurement. |
+| bench/results/tokens.md | load-all and native ceiling are identical columns (9,972) | Info | Disclosed in docs. |
+| Compliance suite | One sample per cell; the 3 path-scoped tasks measure path-scoping cost under a no-file-tools setup; user memory may reach both conditions | Info | All three are stated under Limitations and in the Status paragraph; the docs explicitly say the run does not show ruly beats native. |
 
 ### Requirements Coverage
 
-Phase has no requirement IDs. Nothing orphaned.
+The phase declares no requirement IDs (`requirements: []` in all three plans). Nothing orphaned.
 
 ### Human Verification Required
 
-1. **Live compliance run** (paid): `bundle exec ruby bench/compliance.rb --live`. Expected: compliance.json/md written, then publish the pass rates in docs/benchmarks.md. This is required to fully satisfy the compliance half of the phase goal.
-2. **Live-only assumptions** from 06-REVIEW-FIX.md: that `--tools Skill` is the right way to enable skill invocation, and that the single-quotes regex scores real replies correctly.
-3. **Unreferenced-file detection** (WR-01) is a verbatim-substring heuristic; sanity-check on a second corpus.
+None. The three prior items are resolved by 06-UAT.md: (1) the live run completed on the Max subscription; (2) skill triggering variance and the quote scorer were accepted; (3) the no-recipe detector was accepted after the second-corpus check.
 
 ### Gaps Summary
 
-No gaps. The token benchmark is measured, reproducible, correctly published, and the 85% claim is replaced with the measured fixture figure (74.3% median vs load-all, not 85%). The compliance harness is built and guarded but unmeasured by locked scope, so the phase is `human_needed` pending a paid manual run.
+No gaps. The README change from phase 8 is unrelated to the benchmark and the README benchmark claim still matches tokens.json. Token figures are unchanged, reproducible and correctly published. Compliance numbers are published and exactly match compliance.json, and the docs' caveats describe the data accurately. One caveat cannot be checked from artifacts: the earlier-run skill failure, which relies on the accepted UAT record.
 
 ---
 
-_Verified: 2026-11-02_
+_Verified: 2026-11-08_
 _Verifier: Claude (gsd-verifier)_

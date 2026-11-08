@@ -1,0 +1,171 @@
+{
+  "complete": true,
+  "conditions": {
+    "native": {
+      "errors": 0,
+      "passed": 6,
+      "total": 8
+    },
+    "ruly": {
+      "errors": 0,
+      "passed": 8,
+      "total": 8
+    }
+  },
+  "corpus": "bench/fixtures/corpus",
+  "model": "claude-sonnet-5-5",
+  "schema": 2,
+  "tasks": [
+    {
+      "id": "ruby-single-quotes",
+      "native": {
+        "cost_usd": 0.07403610000000001,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\n# Formats invoice data for display.\nclass InvoiceFormatter\n  STATUS_LABELS = %w[draft sent paid].freeze\n\n  def status_label(status)\n    label = status.to_s\n    return label if STATUS_LABELS.include?(label)\n\n    raise ArgumentError, \"unknown invoice status: #{status.inspect}, expected one of #{STATUS_LABELS.join(', ')}\"\n  end\nend\n```"
+      },
+      "recipe": "ruby-feature",
+      "ruly": {
+        "cost_usd": 0.0399041,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\n# Formats invoice data for display.\nclass InvoiceFormatter\n  STATUS_LABELS = %w[draft sent paid].freeze\n\n  class UnknownStatus < StandardError; end\n\n  # Returns the label for a status symbol (:draft, :sent or :paid).\n  def status_label(status)\n    label = status.to_s\n    return label if STATUS_LABELS.include?(label)\n\n    raise UnknownStatus, \"unknown invoice status #{status.inspect}, expected one of #{STATUS_LABELS.join(', ')}\"\n  end\nend\n```"
+      }
+    },
+    {
+      "id": "frozen-string-literal",
+      "native": {
+        "cost_usd": 0.07053649999999999,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\n# Turns article titles into lowercase, hyphen-separated URL slugs.\nmodule Slugify\n  SEPARATOR = '-'\n  COMBINING_MARKS = /\\p{Mn}/\n  NON_ALPHANUMERIC = /[^a-z0-9]+/\n\n  # Example: Slugify.call('Héllo, Wörld!') # => 'hello-world'\n  def self.call(title, max_length: nil)\n    slug = title.to_s\n                .unicode_normalize(:nfkd)\n                .gsub(COMBINING_MARKS, '')\n                .downcase\n                .gsub(NON_ALPHANUMERIC, SEPARATOR)\n                .delete_prefix(SEPARATOR)\n                .delete_suffix(SEPARATOR)\n\n    return slug unless max_length\n\n    # Cutting can leave a trailing separator, so strip it again.\n    slug[0, max_length].delete_suffix(SEPARATOR)\n  end\nend\n```"
+      },
+      "recipe": "ruby-feature",
+      "ruly": {
+        "cost_usd": 0.0427889,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\n# Turns article titles into lowercase, hyphen-separated URL slugs.\nmodule Slugify\n  class Error < StandardError; end\n  class InvalidTitle < Error; end\n\n  DEFAULT_MAX_LENGTH = 80\n  MAX_TITLE_LENGTH = 500\n\n  # Accented letters are reduced to their ASCII base letter; any other\n  # non-alphanumeric run becomes a single hyphen. Raises InvalidTitle when\n  # the input is not a usable string or contains nothing sluggable.\n  def self.slugify(title, max_length: DEFAULT_MAX_LENGTH)\n    validate!(title, max_length)\n\n    slug = title.unicode_normalize(:nfkd).gsub(/\\p{Mn}/, '').downcase\n    slug = slug.gsub(/[^a-z0-9]+/, '-').gsub(/\\A-+|-+\\z/, '')\n    slug = slug[0, max_length].sub(/-+\\z/, '')\n\n    raise InvalidTitle, \"title has no letters or digits (length #{title.length})\" if slug.empty?\n\n    slug\n  end\n\n  def self.validate!(title, max_length)\n    raise InvalidTitle, \"expected a String title, got #{title.class}\" unless title.is_a?(String)\n    raise InvalidTitle, 'title has invalid encoding' unless title.valid_encoding?\n    raise InvalidTitle, \"title longer than #{MAX_TITLE_LENGTH} characters\" if title.length > MAX_TITLE_LENGTH\n    raise ArgumentError, \"max_length must be a positive Integer, got #{max_length.inspect}\" unless\n      max_length.is_a?(Integer) && max_length.positive?\n  end\n  private_class_method :validate!\nend\n```"
+      }
+    },
+    {
+      "id": "no-puts-in-library",
+      "native": {
+        "cost_usd": 0.07975249999999999,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\nrequire 'csv'\nrequire 'logger'\n\n# Writes rows to a CSV file and logs progress every 100 rows.\nclass CsvExporter\n  class Error < StandardError; end\n  class InvalidRows < Error; end\n  class WriteError < Error; end\n\n  PROGRESS_INTERVAL = 100\n\n  # The default logger discards output so the gem stays silent unless the host app injects one.\n  def initialize(path:, headers: nil, logger: Logger.new(nil))\n    @path = path\n    @headers = headers\n    @logger = logger\n  end\n\n  # Returns the number of data rows written.\n  def export(rows)\n    validate_rows!(rows)\n    started = monotonic_now\n    count = write_rows(rows)\n    @logger.info(event: 'csv_export.finished', path: @path, rows: count,\n                 duration_ms: ((monotonic_now - started) * 1000).round)\n    count\n  rescue SystemCallError => e\n    raise WriteError, \"could not write CSV to #{@path.inspect}: #{e.message}\"\n  end\n\n  private\n\n  def write_rows(rows)\n    count = 0\n    CSV.open(@path, 'w') do |csv|\n      csv << @headers if @headers\n      rows.each do |row|\n        csv << row\n        count += 1\n        report_progress(count) if (count % PROGRESS_INTERVAL).zero?\n      end\n    end\n    count\n  end\n\n  def report_progress(count)\n    @logger.info(event: 'csv_export.progress', path: @path, rows: count)\n  end\n\n  def validate_rows!(rows)\n    return if rows.respond_to?(:each)\n\n    raise InvalidRows, \"rows must respond to each, got #{rows.class}\"\n  end\n\n  def monotonic_now\n    Process.clock_gettime(Process::CLOCK_MONOTONIC)\n  end\nend\n```"
+      },
+      "recipe": "ruby-feature",
+      "ruly": {
+        "cost_usd": 0.0423049,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\nrequire 'csv'\nrequire 'logger'\n\n# Writes rows to a CSV file and logs progress every PROGRESS_INTERVAL rows.\nclass CsvExporter\n  class Error < StandardError; end\n  class InvalidPath < Error; end\n  class InvalidRow < Error; end\n  class WriteFailed < Error; end\n\n  PROGRESS_INTERVAL = 100\n\n  def initialize(path:, headers: nil, logger: Logger.new(nil))\n    @path = validate_path!(path)\n    @headers = headers\n    @logger = logger\n  end\n\n  # Writes every row and returns the number of rows written.\n  # Rows are arrays of values; the optional headers are written first.\n  def export(rows)\n    started = monotonic_now\n    count = write_rows(rows)\n    log_finished(count, started)\n    count\n  end\n\n  private\n\n  def validate_path!(path)\n    unless path.is_a?(String) || path.respond_to?(:to_path)\n      raise InvalidPath, \"path must be a String or Pathname, got #{path.class}\"\n    end\n\n    path = path.to_s\n    raise InvalidPath, 'path must not be empty' if path.empty?\n\n    path\n  end\n\n  def write_rows(rows)\n    count = 0\n    CSV.open(@path, 'w') do |csv|\n      csv << @headers if @headers\n      rows.each do |row|\n        csv << validate_row!(row, count)\n        count += 1\n        log_progress(count) if (count % PROGRESS_INTERVAL).zero?\n      end\n    end\n    count\n  rescue SystemCallError, IOError => e\n    raise WriteFailed, \"could not write #{@path}: #{e.message}\"\n  end\n\n  def validate_row!(row, index)\n    return row if row.is_a?(Array)\n\n    raise InvalidRow, \"row #{index} must be an Array, got #{row.class}\"\n  end\n\n  def log_progress(count)\n    @logger.info(event: 'csv_export.progress', path: @path, rows_written: count)\n  end\n\n  def log_finished(count, started)\n    duration_ms = ((monotonic_now - started) * 1000).round\n    @logger.info(event: 'csv_export.finished', path: @path, rows_written: count,\n                 duration_ms: duration_ms)\n  end\n\n  def monotonic_now\n    Process.clock_gettime(Process::CLOCK_MONOTONIC)\n  end\nend\n```"
+      }
+    },
+    {
+      "id": "rspec-expect",
+      "native": {
+        "cost_usd": 0.0731845,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\nrequire 'calculator'\n\nRSpec.describe Calculator do\n  subject(:calculator) { described_class.new }\n\n  describe '#add' do\n    it 'adds two positive numbers' do\n      expect(calculator.add(2, 3)).to eq(5)\n    end\n\n    it 'adds negative numbers' do\n      expect(calculator.add(-2, -3)).to eq(-5)\n    end\n\n    it 'adds a positive and a negative number' do\n      expect(calculator.add(5, -3)).to eq(2)\n    end\n\n    it 'returns the other operand when adding zero' do\n      expect(calculator.add(7, 0)).to eq(7)\n    end\n\n    it 'adds floating point numbers' do\n      expect(calculator.add(0.5, 0.25)).to be_within(0.0001).of(0.75)\n    end\n  end\n\n  describe '#divide' do\n    it 'divides two numbers evenly' do\n      expect(calculator.divide(10, 2)).to eq(5)\n    end\n\n    it 'returns a fractional result for floats' do\n      expect(calculator.divide(7.0, 2)).to be_within(0.0001).of(3.5)\n    end\n\n    it 'handles negative divisors' do\n      expect(calculator.divide(10, -2)).to eq(-5)\n    end\n\n    it 'returns zero when the dividend is zero' do\n      expect(calculator.divide(0, 5)).to eq(0)\n    end\n\n    context 'when the divisor is zero' do\n      it 'raises ZeroDivisionError' do\n        expect { calculator.divide(10, 0) }.to raise_error(ZeroDivisionError)\n      end\n\n      it 'raises ZeroDivisionError even when the dividend is zero' do\n        expect { calculator.divide(0, 0) }.to raise_error(ZeroDivisionError)\n      end\n    end\n  end\nend\n```"
+      },
+      "recipe": "testing",
+      "ruly": {
+        "cost_usd": 0.0381561,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\nRSpec.describe Calculator do\n  subject(:calculator) { described_class.new }\n\n  describe '#add' do\n    context 'with two positive numbers' do\n      it 'returns their sum' do\n        expect(calculator.add(2, 3)).to eq(5)\n      end\n    end\n\n    context 'with a negative number' do\n      it 'subtracts the magnitude from the other operand' do\n        expect(calculator.add(5, -3)).to eq(2)\n      end\n    end\n\n    context 'with zero' do\n      it 'returns the other operand unchanged' do\n        expect(calculator.add(0, 7)).to eq(7)\n      end\n    end\n\n    context 'with floats' do\n      it 'returns the sum as a float' do\n        expect(calculator.add(0.5, 0.25)).to eq(0.75)\n      end\n    end\n  end\n\n  describe '#divide' do\n    context 'with a non-zero divisor' do\n      it 'returns the quotient' do\n        expect(calculator.divide(10, 2)).to eq(5)\n      end\n\n      it 'returns a float when given float operands' do\n        expect(calculator.divide(7.5, 2.5)).to eq(3.0)\n      end\n\n      it 'returns a negative result when the signs differ' do\n        expect(calculator.divide(9, -3)).to eq(-3)\n      end\n    end\n\n    context 'with a zero dividend' do\n      it 'returns zero' do\n        expect(calculator.divide(0, 4)).to eq(0)\n      end\n    end\n\n    context 'with a zero divisor' do\n      it 'raises ZeroDivisionError' do\n        expect { calculator.divide(1, 0) }.to raise_error(ZeroDivisionError, /divided by 0/)\n      end\n    end\n  end\nend\n```"
+      }
+    },
+    {
+      "id": "commit-subject",
+      "native": {
+        "cost_usd": 0.0676065,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "feat(payments): retry webhook handler with exponential backoff\n\nTransient failures in the payment webhook handler, such as timeouts\nfrom downstream services, caused events to be dropped until the\nprovider redelivered them. That delayed order confirmation and made\nfailures hard to trace.\n\nRetry the handler a bounded number of times with exponential backoff\nand jitter. Each retry is logged at warn level, and the original error\nis raised after the final attempt. Only idempotent processing steps are\nretried, so a repeated delivery cannot charge or credit twice."
+      },
+      "recipe": "pr-review",
+      "ruly": {
+        "cost_usd": 0.0373681,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "feat(webhooks): add exponential backoff retry to payment handler\n\nPayment webhook deliveries failed permanently on the first transient\nerror, such as a timeout or a 5xx from the provider, so a brief outage\ncould leave orders unconfirmed until someone replayed the events by\nhand.\n\nRetry failed handler runs with exponential backoff and jitter, up to a\nfixed maximum number of attempts. Non-retryable errors, such as\nvalidation failures and 4xx responses, still fail immediately. Each\nattempt logs the attempt number, the delay and the error class, and\nexhausting the retries emits a failure metric and an error report with\nthe event id.\n\nRisk: handlers can now run more than once for the same event, so they\nmust be idempotent. The existing handler already deduplicates on event\nid.\n\nRejected a queue-based redelivery design as more infrastructure than\nthis problem needs today.\n\nPAY-000"
+      }
+    },
+    {
+      "id": "migration-up-down",
+      "native": {
+        "cost_usd": 0.0668725,
+        "error": null,
+        "failed": [
+          "forbid code /\\bdef change\\b/",
+          "require code /\\bdef up\\b/",
+          "require code /\\bdef down\\b/"
+        ],
+        "pass": false,
+        "reply": "```ruby\n# frozen_string_literal: true\n\nclass AddArchivedAtToProjects < ActiveRecord::Migration[7.1]\n  def change\n    add_column :projects, :archived_at, :datetime, null: true\n    add_index :projects, :archived_at\n  end\nend\n```"
+      },
+      "recipe": "ruby-feature",
+      "ruly": {
+        "cost_usd": 0.0358549,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```ruby\n# frozen_string_literal: true\n\n# Adds a nullable archived_at timestamp to projects, with an index for archive lookups.\nclass AddArchivedAtToProjects < ActiveRecord::Migration[7.1]\n  # Concurrent index creation cannot run inside a transaction.\n  disable_ddl_transaction!\n\n  def up\n    add_column :projects, :archived_at, :datetime, null: true\n    add_index :projects, :archived_at, algorithm: :concurrently\n  end\n\n  def down\n    remove_index :projects, :archived_at, algorithm: :concurrently\n    remove_column :projects, :archived_at\n  end\nend\n```"
+      }
+    },
+    {
+      "id": "react-named-export",
+      "native": {
+        "cost_usd": 0.0692605,
+        "error": null,
+        "failed": [
+          "forbid code /\\bexport\\s+default\\b|\\bas\\s+default\\b/"
+        ],
+        "pass": false,
+        "reply": "```tsx\nimport React from 'react';\n\nexport interface UserBadgeProps {\n  displayName: string;\n  avatarUrl: string;\n  size?: number;\n}\n\nexport function UserBadge({ displayName, avatarUrl, size = 32 }: UserBadgeProps) {\n  return (\n    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>\n      {/* Empty alt: the adjacent display name already identifies the user. */}\n      <img\n        src={avatarUrl}\n        alt=\"\"\n        width={size}\n        height={size}\n        style={{ borderRadius: '50%', objectFit: 'cover' }}\n      />\n      <span>{displayName}</span>\n    </span>\n  );\n}\n\nexport default UserBadge;\n```"
+      },
+      "recipe": "frontend",
+      "ruly": {
+        "cost_usd": 0.0335921,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "```tsx\nimport styles from './UserBadge.module.css';\n\nexport interface UserBadgeProps {\n  displayName: string;\n  avatarUrl: string;\n  onSelect?: () => void;\n}\n\nexport function UserBadge({ displayName, avatarUrl, onSelect }: UserBadgeProps) {\n  const content = (\n    <>\n      {/* The display name is rendered next to the avatar, so the image is decorative. */}\n      <img className={styles.avatar} src={avatarUrl} alt=\"\" width={32} height={32} />\n      <span className={styles.displayName}>{displayName}</span>\n    </>\n  );\n\n  if (onSelect) {\n    return (\n      <button type=\"button\" className={styles.badgeButton} onClick={onSelect}>\n        {content}\n      </button>\n    );\n  }\n\n  return <span className={styles.badge}>{content}</span>;\n}\n```"
+      }
+    },
+    {
+      "id": "bug-root-cause",
+      "native": {
+        "cost_usd": 0.0789744,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "Root cause: The password-reset mailer job was enqueued in two places, the controller and an `after_commit` callback, so each reset request sent two emails.\n\n**Impact:** Every password-reset request after the last release sent two emails instead of one. I don't have the number of affected users or the exact time window. Both need to be pulled from the mailer job logs.\n\n**Timeline:** The duplicate enqueue was introduced in the last release. I don't have the detection time or the fix ship date, so those need to be filled in.\n\n**Fix:** Keep a single enqueue point and remove the other. I'd recommend keeping the `after_commit` callback, because it only fires once the record is saved. The pull request link is still to be added.\n\n**Data repair:** None expected. The bug sent extra emails and didn't corrupt data. Each reset request may have issued two tokens, so confirm that only the latest token is valid.\n\n**Follow-up:**\n- Add a test asserting that exactly one mailer job is enqueued per reset request.\n- Check the other mailers for the same controller-plus-callback pattern.\n\n**For support:** Customers who asked for a password reset received two identical reset emails. They don't need to do anything, and either email works, unless the investigation finds that the first token was invalidated."
+      },
+      "recipe": "bug",
+      "ruly": {
+        "cost_usd": 0.0464689,
+        "error": null,
+        "failed": [],
+        "pass": true,
+        "reply": "Root cause: The last release enqueued the password-reset mailer job in two places, the controller and an `after_commit` callback, so each reset request sent two emails.\n\n**Impact:** Users who requested a password reset after the last release received the email twice. I don't have a count of affected requests or the exact time window. *(Unknown: needs a mail log query.)*\n\n**Timeline:**\n- Introduced: the last release. *(Date and version to be filled in.)*\n- Detected: not recorded.\n- Fix shipped: not yet recorded.\n\n**Fix:** Enqueue the mailer job in only one place. Keep the `after_commit` callback, since it only fires once the record is saved, and remove the call from the controller. *(This is my suggestion. The change and its PR are not yet linked.)* Add a test that a single reset request enqueues exactly one job.\n\n**Data repair:** None needed. The only effect was duplicate emails, and no records were changed. *(Assumes the duplicates did not generate two valid reset tokens. Worth confirming.)*\n\n**Follow-up:**\n- Add a regression test for the single-enqueue behavior.\n- Consider an alert on duplicate mailer jobs for the same user within a short window.\n\n**For support:** Some customers received two identical password-reset emails after the last release. They don't need to do anything. Either link works, and the duplicate can be ignored."
+      }
+    }
+  ],
+  "total_cost_usd": 0.896662
+}

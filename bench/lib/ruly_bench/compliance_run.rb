@@ -54,7 +54,7 @@ module RulyBench
     # Run every task under both conditions through the executor, score the replies and write
     # compliance.json and compliance.md to output_dir. Each cell is appended to compliance.partial.jsonl as soon as
     # it completes; if the run stops early (Ctrl-C or any error), the tasks finished so far are written with
-    # `complete: false` and the journal is kept, so no paid reply is lost.
+    # `complete: false` and the journal is kept, so no finished reply is lost.
     # @param output_dir [String]
     # @return [Integer] 0 after writing the results, 1 when the suite is invalid (nothing is run)
     def live_run(output_dir:)
@@ -227,8 +227,9 @@ module RulyBench
       {'cost_usd' => cost, 'error' => nil, 'failed' => score[:failed], 'pass' => score[:pass], 'reply' => reply}
     end
 
+    # claude writes UTF-8, but Open3 tags stdout with the locale's encoding (US-ASCII under LC_CTYPE=C).
     def parse_json(text)
-      JSON.parse(text.to_s)
+      JSON.parse(text.to_s.dup.force_encoding(Encoding::UTF_8))
     rescue JSON::ParserError
       nil
     end

@@ -16,9 +16,8 @@ module RulyBench
     # @param executor [#call] runs claude in a live run
     # @param out [IO]
     # @param repo_root [String] repository root the default output dirs and the guard resolve against
-    def initialize(argv, env: ENV, err: $stderr, executor: DEFAULT_EXECUTOR, out: $stdout, repo_root: REPO_ROOT)
+    def initialize(argv, err: $stderr, executor: DEFAULT_EXECUTOR, out: $stdout, repo_root: REPO_ROOT)
       @argv = argv.dup
-      @env = env
       @err = err
       @executor = executor
       @out = out
@@ -68,15 +67,14 @@ module RulyBench
       opts.on('--dry-run', 'Validate tasks and workspaces, print the claude commands (default)') do
         @options[:dry_run] = true
       end
-      opts.on('--live', 'Run claude -p for every task and condition (costs API money)') { @options[:live] = true }
+      opts.on('--live', 'Run claude -p for every task and condition (uses your Claude subscription)') do
+        @options[:live] = true
+      end
       opts.on('--check-cli', 'Dry run only: check that claude --help lists every flag used') do
         @options[:check_cli] = true
       end
       opts.on('--allow-private-corpus', 'Allow --live on a corpus other than the fixture') do
         @options[:allow_private_corpus] = true
-      end
-      opts.on('--isolated-home', 'Run claude with a temp HOME (needs ANTHROPIC_API_KEY)') do
-        @options[:isolated_home] = true
       end
     end
 
@@ -101,10 +99,8 @@ module RulyBench
 
     def usage_problem
       return '--live and --dry-run are exclusive' if @options[:live] && @options[:dry_run]
-      return '--check-cli works in a dry run only' if @options[:live] && @options[:check_cli]
-      return nil unless @options[:isolated_home] && @env['ANTHROPIC_API_KEY'].to_s.empty?
 
-      '--isolated-home needs ANTHROPIC_API_KEY set (a temp HOME has no login)'
+      '--check-cli works in a dry run only' if @options[:live] && @options[:check_cli]
     end
 
     def usage(message)
@@ -114,21 +110,13 @@ module RulyBench
 
     def live(corpus, tasks)
       unless corpus.fixture? || @options[:allow_private_corpus]
-        return usage('--live sends the corpus rules to the API; pass --allow-private-corpus for a non-fixture corpus')
+        return usage('--live sends the corpus rules to Claude; pass --allow-private-corpus for a non-fixture corpus')
       end
 
       output_dir = OutputDir.resolve(corpus:, repo_root: @repo_root, requested: @options[:output_dir])
       return usage(OutputDir.refusal(output_dir)) if OutputDir.forbidden?(corpus:, output_dir:, repo_root: @repo_root)
 
-      with_claude_env { |env| compliance_run(corpus, tasks, env).live_run(output_dir:) }
-    end
-
-    # Environment overrides for claude. --isolated-home points HOME at an empty temp dir so user memory and
-    # settings cannot reach the run; the API key is inherited from the process environment, never copied.
-    def with_claude_env
-      return yield({}) unless @options[:isolated_home]
-
-      Dir.mktmpdir('ruly-compliance-home') { |home| yield({'CLAUDE_CONFIG_DIR' => nil, 'HOME' => home}) }
+      compliance_run(corpus, tasks, ClaudeCommand::SUBSCRIPTION_ENV).live_run(output_dir:)
     end
 
     def compliance_run(corpus, tasks, env)
