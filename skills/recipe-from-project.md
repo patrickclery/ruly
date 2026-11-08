@@ -204,6 +204,7 @@ Check that each subagent recipe exists among the clone's recipe keys, because a 
 A squash also writes everything a listed entry pulls in, so list only the roots:
 
 - Drop an entry that another matched entry reaches through `requires:` or frontmatter `skills:`. Read those keys from the clone's copy of each matched source, and follow them transitively.
+- Fold matched `files:` entries back into their directory. A squash reads a directory entry recursively, so if every `.md` file under a clone directory matched or was reached through `requires:`, replace those entries with the directory path, such as `<folder>/`, and use the highest directory that qualifies. Label it exact when every file in it matched exactly, and inferred otherwise, and give that reason. Never fold a directory with an unmatched file, because the squash would add it. A folded directory also picks up files added there later, as a directory entry in the source recipe would.
 - Subtract the names in each matched agent's `skills:` frontmatter from the recipe's own `skills:`. URL-sourced names count too, in their derived form such as `some-skill/SKILL`.
 - Drop MCP names found in a matched agent's `mcpServers:` frontmatter or a matched rule's `mcp_servers:` frontmatter.
 - Never add a subagent's rule files to `files:`. They belong to the subagent's own recipe.
@@ -217,7 +218,7 @@ Unmatched content is listed in the report and left out of the recipe. Never crea
 
 ### 6. Show the draft and wait for approval
 
-`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, plus `omit_command_prefix` when the command rule below calls for it, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. List every entry in full, with no shorthand, so the draft is exactly what will be written. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
+`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, plus `omit_command_prefix` when the command rule below calls for it, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. List every entry in full, with no shorthand, so the draft is exactly what will be written. A directory folded in Step 4 is one entry, not shorthand. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
 
 ```yaml
 <recipe-name>:
