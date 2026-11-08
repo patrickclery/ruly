@@ -204,13 +204,13 @@ A squash also writes everything a listed entry pulls in, so list only the roots:
 
 ### 5. Stop when nothing matched
 
-If no entries remain after pruning, print the report, say that no recipe was written, and stop. An empty recipe would pass a dry run, so this check is yours to make.
+If no entries remain after pruning, print the report, say that no recipe was written, and stop. An empty recipe would pass a dry run, so this check is yours to make. Run the name check from Step 6 first, and say in the report whether the default name is already a recipe, so the user knows before trying again.
 
 Unmatched content is listed in the report and left out of the recipe. Never create a rule file from it.
 
 ### 6. Show the draft and wait for approval
 
-`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
+`RECIPE` defaults to the project folder's name. Show the recipe as YAML using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`, leaving out any that are empty. Write local sources as paths relative to the clone, and URLs verbatim. List every entry in full, with no shorthand, so the draft is exactly what will be written. Put each entry's label beside the draft and never inside the YAML, and say that nothing has been written.
 
 ```yaml
 <recipe-name>:
