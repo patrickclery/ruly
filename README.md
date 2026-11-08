@@ -906,13 +906,14 @@ There are two ways to run it:
 - **A project already built from a recipe.** Add the URL to that recipe's `skills:`, or add it under `overrides:` in `~/.config/ruly/recipes.yml` for one machine, then squash as usual. The skill defaults to the current folder.
 - **Any other project.** Run `ruly squash ruly-tools` in an empty directory (add `--sync` the first time so the mirror has the recipe). Start Claude there with `claude --add-dir <project> --add-dir <rules clone>`, and pass the project path to the skill.
 
-The `ruly-tools` recipe has one entry, so you can define it in your own recipes file:
+The `ruly-tools` recipe is defined in the rules repo's `recipes.yml`, so a machine that mirrors that repo gets it from `ruly squash --sync`. Ruly reads `recipes:` from `./.recipes.yml` or `~/.config/ruly/recipes.yml` only when no remote is mirrored, and `overrides:` cannot add a new recipe. Without a mirror, define it in one of those files:
 
 ```yaml
-ruly-tools:
-  description: "Ruly authoring tools"
-  skills:
-    - https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
+recipes:
+  ruly-tools:
+    description: "Ruly authoring tools"
+    skills:
+      - https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md
 ```
 
 Do not squash `ruly-tools` inside the project you want to scan. Squashing there overwrites `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, even when the fetch fails, which destroys the files the skill reads.
