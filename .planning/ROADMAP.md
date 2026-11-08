@@ -51,7 +51,7 @@ Phases execute in numeric order.
 | 5. Claude Code Plugin Packaging | 3/3 | Complete    | 2026-11-02 |
 | 6. Token and Compliance Benchmark | 3/3 | Complete    | 2026-11-04 |
 | 7. Competitor Composition Audit | 1/1 | Complete    | 2026-11-02 |
-| 8. Project-to-recipe generator skill | 1/3 | In Progress | - |
+| 8. Project-to-recipe generator skill | 2/3 | In Progress | - |
 
 ### Phase 2: Lean Out Native Duplication
 
@@ -140,14 +140,14 @@ Plans:
 **Goal:** A Ruly skill takes a project folder and drafts a recipe from the rules, skills and other agent configuration that project currently uses. Built as an AI skill rather than a CLI command because matching a project's setup to shared rules takes judgment; `ruly introspect` only lists markdown files.
 **Requirements**: TBD
 **Depends on:** Phase 7
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
 - [x] 08-01-PLAN.md — `skills/recipe-from-project.md`: draft from a project's generated skills (tracer), every scan-list source, pruning and report, approved write, preflight and validation
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 08-02-PLAN.md — README bullet and usage routes; rules repo sort commit, then `ruly-tools` commit; pending fetch recorded
+- [x] 08-02-PLAN.md — README bullet and usage routes; rules repo sort commit, then `ruly-tools` commit; pending fetch recorded
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 08-03-PLAN.md — Checkpoint on route to `main` and rules repo push, take the route, verify the URL end to end, or record a deferral
