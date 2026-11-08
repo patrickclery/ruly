@@ -129,7 +129,7 @@ end
 RUBY
 ```
 
-Each row is tab-separated: label, project-relative path, clone-relative source or sources, note. `exact-name`, `exact-body` and `exact-rule` are exact. A `body-differs` note means the project's copy was edited after it was generated, so show that note in the draft. `self` is this skill, not one of the project's rules.
+Each row is tab-separated: label, project-relative path, clone-relative source or sources, note. `exact-name`, `exact-body` and `exact-rule` are exact. A `body-differs` note means the project's copy differs from the clone's. It may be a local edit or a hand-written skill that shares the name, and the next squash replaces it with the clone's body. Show that note in the draft, list the skill in the report as a loss, and offer to show the diff. `self` is this skill, not one of the project's rules.
 
 Skills and rule files can also come from URLs listed in the clone's `recipes.yml`. Those have no body in the clone, so check them against the fetched source.
 
@@ -245,7 +245,7 @@ Unmatched content is listed in the report and left out of the recipe. Never crea
 
 A command source lands in the project under the folders that hold it, so a source under `<folder>/commands/` lands in `.claude/commands/<folder>/`. If a matched command sits at a shorter project path, add `omit_command_prefix` with the folder to strip, so its name stays the same, and label it with that reason. Otherwise leave the key out.
 
-Below the draft, show the report: unmatched content, hand-written agents, skills not from the rules repo, the recipe the project was generated from, and what the next squash of this recipe will lose. That covers MCP servers left out of `mcp_servers:` and any unmatched content in `CLAUDE.local.md`.
+Below the draft, show the report: unmatched content, hand-written agents, skills not from the rules repo, the recipe the project was generated from, and what the next squash of this recipe will lose. That covers MCP servers left out of `mcp_servers:`, any unmatched content in `CLAUDE.local.md`, and every `body-differs` skill, whose project copy the next squash overwrites.
 
 Check the name against the clone's recipe keys, not the mirror:
 
