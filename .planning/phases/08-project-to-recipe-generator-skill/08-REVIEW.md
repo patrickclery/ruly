@@ -1,175 +1,159 @@
 ---
 phase: 08-project-to-recipe-generator-skill
-reviewed: 2026-11-08T07:30:00Z
+reviewed: 2026-11-08T07:41:08Z
 depth: standard
+iteration: 3
 files_reviewed: 2
 files_reviewed_list:
   - skills/recipe-from-project.md
   - README.md
 findings:
-  critical: 0
-  warning: 8
-  info: 6
-  total: 14
+  critical: 1
+  warning: 0
+  info: 8
+  total: 9
 status: issues_found
 ---
 
-# Phase 8: Code Review Report
+# Phase 8: Code Review Report (iteration 3)
 
-**Reviewed:** 2026-11-08T07:30:00Z
+**Reviewed:** 2026-11-08T07:41:08Z
 **Depth:** standard
 **Files Reviewed:** 2
 **Status:** issues_found
 
 ## Summary
 
-I reviewed `skills/recipe-from-project.md` (every embedded bash, jq and ruby block) and the README lines this phase added (892-920), plus the `ruly-tools` recipe from rules commit 611a89e. I ran the snippets in zsh against scratch fixtures: a `ruly-tools` squash, a `spike` squash, a bad recipe, an offline squash under `unshare -n`, and copies of `recipes.yml`. I did not change the real clone or any config.
+This pass re-checks the iter-2 fixes (b5448d9, 6aa6520, 3729eee) in `skills/recipe-from-project.md`. README lines 892-920 have not changed since iter 2. Everything ran in the session scratchpad under a temp `HOME`, using a git-initialised scratch rules clone at `$TMPHOME/github.com/patrickclery/rules`. That way the skill's default `RULES` pointed at the scratch clone. The real rules clone and `~/.config/ruly/` were not read or changed.
 
-The core blocks work as written. These all behave as the skill says:
-- exact-match, url-match and preflight
-- the temp-HOME dry run, including its findings grep
-- the README claims that an offline run exits 1 and still overwrites the evidence
+| Iter-2 finding | Status | Evidence |
+| --- | --- | --- |
+| CR-01 (fold turns skills and commands into rules) | **holds, including the agent's behaviour** | Two headless agent runs below. The Step 8 skill and command check also catches the bad fold. |
+| WR-01 (`body-differs` loss not reported) | holds | The prose now says the next squash overwrites the copy, and Step 6 lists it as a loss. |
+| WR-02 (`CLAUDE.md`/`.cursor/rules` gave `no-evidence`) | **fixed, but it adds a regression** | See CR-01 below. |
 
-There are no blockers. The defects are:
-- **Sort step:** it rewrites lines outside the insert, which the skill says never happens.
-- **Self skill:** it gets two contradictory rows.
-- **Evidence check:** it rejects a valid layout, and passes silently when the path has a literal `~`.
-- **Labels:** a name-only match is labelled exact.
-- **Step 6:** it contradicts itself about `omit_command_prefix`.
-- **README:** one setup step is silently ignored in the standard mirror-based setup.
+### Agent-behaviour evidence for the iter-2 CR-01 fix
 
-## Warnings
+**Setup.** The scratch clone has `tag/a.md` and `tag/b.md`, whose bodies are over 200 characters, plus `tag/skills/tag-skill.md` (`name: tag-skill`) and `tag/commands/tagcmd.md`. Recipe `orig` is `files: [tag/a.md, tag/b.md]`, `skills: [tag/skills/tag-skill.md]` and `commands: [tag/commands/tagcmd.md]`. `ruly squash orig` in `$TMPHOME/proj/tagproj` wrote `CLAUDE.local.md`, `.claude/skills/tag-skill/SKILL.md`, `.claude/commands/tag/tagcmd.md` and `.mcp.json`. The exact-match block printed `exact-name` (skill), `exact-body` (command), and `exact-rule` for `tag/a.md` and `tag/b.md`. Every `.md` under `tag/` matched, which is the case that triggered the old fold.
 
-### WR-01: `yalphabetize -a` rewrites unrelated lines, so the approved insert is not the only write
+**Skill install.** The current `skills/recipe-from-project.md` was copied to `$TMPHOME/run/.claude/skills/recipe-from-project/SKILL.md`.
 
-**File:** `skills/recipe-from-project.md:254-262, 331`
-**Issue:** Step 7 inserts the recipe under `recipes:` and then runs `yalphabetize -a`. Any insert out of sorted order counts as an offence, so the whole file gets re-emitted. On a copy of the current `recipes.yml`, inserting one recipe changed 8 unrelated lines:
-- comments re-indented at original lines 537, 541, 552 and 555
-- a trailing space added after `mcp_servers:` at 669, 734, 765 and 788
-- the final blank line removed
-
-That breaks the line 331 promise ("Its only write is the approved insert"). It also breaks the reasoning on line 255, which forbids re-dumping through a YAML library because that rewrites comments and quoting across the file. When I inserted the same recipe at its sorted position, `yalphabetize` reported `Offences: 0` and changed nothing else.
-**Fix:** Insert at the alphabetical position. Check without autocorrect, and only autocorrect if needed:
+**Command (run 1):**
 ```bash
-cd "${RULES}" && RUBYOPT=-Eutf-8 yalphabetize recipes.yml
-# Only if it reports an offence:
-cd "${RULES}" && RUBYOPT=-Eutf-8 yalphabetize -a recipes.yml && git -C "${RULES}" diff -- recipes.yml
+cd "$TMPHOME/run" && HOME="$TMPHOME" CLAUDE_CONFIG_DIR=/home/patrick/.claude \
+  claude -p "/recipe-from-project $TMPHOME/proj/tagproj" \
+  --add-dir "$TMPHOME/proj/tagproj" --add-dir "$TMPHOME/github.com/patrickclery/rules" \
+  --permission-mode bypassPermissions --disallowedTools Edit Write
 ```
-Then show the full diff and point out any hunk outside the new recipe before reporting.
+`CLAUDE_CONFIG_DIR` keeps the subscription login available under the temp `HOME`. `--disallowedTools Edit Write` makes sure the run cannot write to the recipe.
 
-### WR-02: The self skill gets both a `self` row and an `exact-url` row
-
-**File:** `skills/recipe-from-project.md:104-112, 158-165, 178, 203`
-**Issue:** The `ruly-tools` URL is listed in the clone's `recipes.yml`. So when the skill runs in a project that has `.claude/skills/recipe-from-project/SKILL.md` (route 1), url-match prints:
-`exact-url  .claude/skills/recipe-from-project/SKILL.md  https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md`
-exact-match prints `self` for the same path. I reproduced both rows. Line 178 only says a URL row replaces a `none` row, and line 178 also says "Put matched URLs in the draft verbatim". So an agent can reasonably put the tool's own URL into the draft as exact, against Step 4 line 203.
-**Fix:** Skip the self path in url-match, mirroring exact-match:
-```ruby
-next if derive[url] == 'recipe-from-project'
+**Observed draft (run 1, verbatim YAML):**
+```yaml
+tagproj:
+  description: "Tag workflow project: release tagging skill, tag command, and two service rules"
+  files:
+    - tag/a.md
+    - tag/b.md
+  skills:
+    - tag/skills/tag-skill.md
+  commands:
+    - tag/commands/tagcmd.md
 ```
-Or state in the prose that `self` overrides every URL row for the same path.
+All four entries were labelled exact. The report said: "Not folded into `tag/`: that folder also holds the skill and the command, so the two rule files stay listed separately." The draft keeps `skills:` and `commands:`, and nothing was folded into `files: [tag/]`.
 
-### WR-03: The evidence check rejects real projects whose recipe has no `files:`
+**Run 2 (fold still allowed where it is correct).** This layout uses `tag2/rules/{a,b}.md`, `tag2/skills/tag2-skill.md` and `tag2/commands/tag2cmd.md` (recipe `orig2`), squashed into `$TMPHOME/proj/rulesproj`. The command was the same with that path. Observed draft:
+```yaml
+rulesproj:
+  description: "Tag2 release tagging rules, skill and command"
+  files:
+    - tag2/rules/
+  skills:
+    - tag2/skills/tag2-skill.md
+  commands:
+    - tag2/commands/tag2cmd.md
+```
+The fold went to the highest qualifying directory, `tag2/rules/` and not `tag2/`, and the skill and command were kept. `git status` on the scratch clone was empty after both runs.
 
-**File:** `skills/recipe-from-project.md:27-39`
-**Issue:** `no-evidence` fires when all three hold: the skill is installed, `CLAUDE.local.md` is empty, and `.mcp.json` has no servers. A recipe with only `skills:`, `commands:` or `subagents:` and no MCP servers produces exactly that state. My `ruly-tools` squash wrote a 0-byte `CLAUDE.local.md`. Route 1 adds this skill to such a recipe, and the skill then says the folder holds no evidence and stops, even though `.claude/skills`, `.claude/commands` and `.claude/agents` are full of matchable files.
-**Fix:** Also require that nothing else is present:
+**Step 8 check catches the bad fold.** A recipe of `files: [tag/]` plus the same `skills:` and `commands:` entries was run through the validate-recipe block. It printed `exit=0`, `4 rule files combined` and empty findings, with no `Would create skill files` or `Would create command files` sections. The new comparison rule therefore flags both draft entries as failures, as intended.
+
+## Critical Issues
+
+### CR-01: The WR-02 fix stops the evidence check from spotting the tool's own squash in any project with a hand-written `CLAUDE.md`
+
+**File:** `skills/recipe-from-project.md:32-41, 44`
+**Issue:** CONTEXT.md requires: "The skill warns when it detects that state" (a `ruly-tools` squash inside the target project). Commit 3729eee added `[ ! -s CLAUDE.md ]` and the empty `.cursor/rules` test to the same AND chain that detects that state. Any project with a non-empty `CLAUDE.md` now always gets `evidence-ok`, even when its `CLAUDE.local.md` and `.mcp.json` were just wiped. Most real projects have one. CONTEXT.md names this ruly repo as the example target, and its `CLAUDE.md` is 18,300 bytes.
+
+Scratch reproduction:
+- **Project:** the `tagproj` copy, with the rule-filled `CLAUDE.local.md`, a `teams` MCP server and a hand-written `CLAUDE.md`.
+- **Squash:** `ruly squash ruly-tools` ran inside it, with a local skill entry. It left a 0-byte `CLAUDE.local.md`, `"mcpServers": {}` and only `.claude/skills/recipe-from-project/SKILL.md`.
+- **Current block:** prints `evidence-ok` in bash and in zsh.
+- **Block at 880e2e1:** prints `no-evidence`.
+
+The skill then goes on silently with judgment-only matches against `CLAUDE.md`. Its report says nothing is lost, because `CLAUDE.local.md` is empty and there are no MCP servers. It never says that the evidence was overwritten or that git may recover it. The user can approve a confident draft that drops every rule file and MCP server the project used. The iter-2 false `no-evidence` was a noisy failure. This one is silent, and it disables the only guard for the hazard the README and Anti-patterns warn about.
+**Fix:** Detect the clobber signature separately from deciding whether evidence is left. Then warn and ask, rather than collapsing both into one test:
 ```bash
-others="$(find "${PROJECT}/.claude/skills" "${PROJECT}/.claude/commands" "${PROJECT}/.claude/agents" \
-  -name '*.md' ! -path '*/recipe-from-project/*' 2>/dev/null | head -1)"
-# ...and add `[ -z "${others}" ] && [ ! -e "${PROJECT}/AGENTS.md" ] &&` to the condition.
+if [ -f "${PROJECT}/.claude/skills/recipe-from-project/SKILL.md" ] &&
+  [ -z "${others}" ] && [ ! -e "${PROJECT}/AGENTS.md" ] &&
+  [ -f "${PROJECT}/CLAUDE.local.md" ] && [ ! -s "${PROJECT}/CLAUDE.local.md" ] &&
+  [ -f "${PROJECT}/.mcp.json" ] &&
+  jq -e '(.mcpServers // {}) | length == 0' "${PROJECT}/.mcp.json" > /dev/null 2>&1; then
+  if [ -s "${PROJECT}/CLAUDE.md" ] || [ -n "$(find "${PROJECT}/.cursor/rules" -type f 2>/dev/null | head -1)" ]; then
+    echo clobbered-partial
+  else
+    echo no-evidence
+  fi
+else
+  echo evidence-ok
+fi
 ```
-
-### WR-04: The blocks handle a literal `~` inconsistently, and the evidence check passes it silently
-
-**File:** `skills/recipe-from-project.md:14, 21, 29-32, 250, 259, 313`
-**Issue:** Line 14 tells the agent to `export PROJECT="..." RULES="..."` with double quotes, and the default `RULES` is written `~/github.com/patrickclery/rules`, so a literal `~` is likely. The blocks handle it differently:
-
-| Blocks | Literal `~` |
-| --- | --- |
-| Ruby blocks (`File.expand_path`) and validate-recipe (`${RULES/#\~/${HOME}}`) | handled |
-| evidence check (`[ -f "${PROJECT}/..." ]`) | silently prints `evidence-ok` |
-| `git -C "${RULES}"` (line 250) | fails: `fatal: cannot change to '~/github.com/...'` (verified) |
-| `cd "${RULES}"` (line 259) | fails |
-| `jq ... "${PROJECT}/.mcp.json"` (line 58) | fails |
-
-**Fix:** Normalize once, at the top of every block that uses the variables:
-```bash
-PROJECT="${PROJECT/#\~/${HOME}}" RULES="${RULES/#\~/${HOME}}"
-```
-Or change line 14 to say the paths must be absolute, and fix the example to `export PROJECT="$PWD" RULES="${HOME}/github.com/patrickclery/rules"`.
-
-### WR-05: A name-only match with a different body is labelled exact
-
-**File:** `skills/recipe-from-project.md:95-96, 128`
-**Issue:** If exactly one clone file shares the project skill's `name:`, the row is `exact-name` even when the bodies differ. Line 128 makes that exact and explains `body-differs` as "edited after it was generated". A hand-written skill that only happens to share a common name (for example `debugging`) is then labelled exact and goes into the recipe. Squashing that recipe replaces the user's skill with the shared one. That weakens the CONTEXT.md decision that every label is honest ("Label every match ... as exact or inferred").
-**Fix:** Label `exact-name` + `body-differs` as inferred, and have the agent compare the content before keeping it:
-```ruby
-row[bodies[named.first] == body[text] ? 'exact-name' : 'inferred-name', rel, named.first, '']
-```
-
-### WR-06: Step 6 says to use only six keys, then says to add `omit_command_prefix`
-
-**File:** `skills/recipe-from-project.md:213, 236`
-**Issue:** Line 213 says to show the recipe "using only the keys `description`, `files`, `skills`, `commands`, `subagents` and `mcp_servers`". Line 236, in the same step, says to add `omit_command_prefix`, and CONTEXT.md allows that key. An agent that follows line 213 drops the key, and the drafted recipe then renames the project's commands. The YAML template on lines 215-229 also leaves it out.
-**Fix:** Add `omit_command_prefix` to the line 213 key list ("...and `omit_command_prefix` when Step 6 requires it"), and add it to the template as an optional key.
-
-### WR-07: The README says to define `ruly-tools` in your own recipes file, which ruly ignores once a mirror exists
-
-**File:** `README.md:912-918`
-**Issue:** `RecipeLoader#select_recipe_source` uses mirrored remotes whenever any exist. It reads `recipes:` from `./.recipes.yml` or `~/.config/ruly/recipes.yml` only when there are no mirrors. Overrides cannot add a recipe either: `apply_overrides!` raises "does not match a loaded recipe". I tested a temp HOME with one mirror and `ruly-tools2` defined in the user file, and `ruly squash ruly-tools2 --dry-run` printed `Recipe 'ruly-tools2' not found`. The mirror-based setup is the documented standard, so this README advice fails for most users.
-**Fix:** Say the snippet works only without `remotes:`, or that it belongs in the rules repo's `recipes.yml`. Mirror users already get `ruly-tools` from the rules repo after `ruly squash --sync`.
-
-### WR-08: Recipe directory entries come back as long lists of single files
-
-**File:** `skills/recipe-from-project.md:118-124, 199, 213`
-**Issue:** `exact-rule` reports one row per clone file found in `CLAUDE.local.md`. In a project squashed from `spike` (whose `files:` includes `comms/` and `workaxle/orchestrator/`), it printed about 50 single-file rows. Nothing in Steps 4 or 6 says to fold these back into a directory entry. Line 213 ("List every entry in full, with no shorthand") pushes toward listing each file. The resulting recipe freezes today's file set: files added to `comms/` later are silently not picked up, which differs from the recipe the project came from.
-**Fix:** Add a pruning rule: if every `.md` file under a clone directory matched (or was reached through `requires:`), replace them with the directory entry and label it exact with that reason.
+On `clobbered-partial`, say that `CLAUDE.local.md` and `.mcp.json` look overwritten by this tool's own recipe and that git may recover them. Then ask whether to continue with `CLAUDE.md` and `.cursor/rules` only. If the user continues, put that warning at the top of the report. Update example 3 to match.
 
 ## Info
 
-### IN-01: The name-check one-liner crashes if `recipes.yml` has no `recipes:` key
+### IN-01: The name-check one-liner crashes when `recipes.yml` has no `recipes:` key (carried over, unfixed)
 
-**File:** `skills/recipe-from-project.md:243`
-**Issue:** `YAML.safe_load_file(...)["recipes"].keys` raises `NoMethodError` on nil (verified). The other blocks guard with `|| {}`.
+**File:** `skills/recipe-from-project.md:254`
 **Fix:** `puts((YAML.safe_load_file(ARGV[0], aliases: true) || {}).fetch("recipes", {}).keys)`
 
-### IN-02: The name check allows names that YAML reads as numbers or booleans
+### IN-02: The name check accepts names YAML reads as non-strings, and names starting with `-` (carried over)
 
-**File:** `skills/recipe-from-project.md:246`
-**Issue:** `[A-Za-z0-9._-]` accepts `2024`, `on`, `yes`, `null` and `1.0`. Unquoted, Psych loads these keys as Integer, Boolean, nil or Float. Preflight then aborts with "not in recipes.yml", and `ruly squash` cannot find the recipe. A leading `-` also gets parsed as a CLI option.
-**Fix:** Also require `\A[A-Za-z][A-Za-z0-9._-]*\z`, and reject YAML 1.1 boolean/null words.
+**File:** `skills/recipe-from-project.md:257`
+**Fix:** Require `\A[A-Za-z][A-Za-z0-9._-]*\z`, and reject `yes`, `no`, `on`, `off`, `true`, `false` and `null`.
 
-### IN-03: url-match drops failed `files:` fetches silently and handles only some URL forms
+### IN-03: url-match skips failed `files:` fetches silently and never collects `commands:` URLs (carried over)
 
-**File:** `skills/recipe-from-project.md:142-145, 149, 171`
-**Issue:**
-- `fetched = fetch[url] or next` leaves no row and no warning when a `files:` URL fails to fetch, so its content looks unmatched.
-- The regex handles only `github.com/.../blob/<ref>/...` with no `/` in the ref.
-- `commands:` URLs are never collected, although preflight checks them.
+**File:** `skills/recipe-from-project.md:154, 179`
+**Fix:** Print an `unfetched-url` row when a fetch fails, and add `'commands' => []` to `urls`.
 
-**Fix:** Print an `unfetched-url` row on failure, and add `commands` to `urls`.
+### IN-04: A nonzero `exit=` is not stated as a failure, and the grep misses `Recipe '...' not found` (carried over)
 
-### IN-04: Errors that stop the squash do not show up in the findings section
+**File:** `skills/recipe-from-project.md:329, 336`
+**Fix:** Say that a nonzero `exit=` is always a failure, and add `not found|No recipes found|Error` to the grep.
 
-**File:** `skills/recipe-from-project.md:318, 325`
-**Issue:** The grep does not match `Recipe 'x' not found`, `No recipes found` or a Ruby exception. Those runs show `exit=1` with an empty findings section. Line 325 calls only preflight rows and findings lines failures.
-**Fix:** Add "A nonzero `exit=` is always a failure" to line 325, and add `not found|No recipes found|Error` to the grep.
+### IN-05: The 200-character cutoff for `exact-rule` is not documented (carried over)
 
-### IN-05: Rule files under 200 characters can never be an exact match
+**File:** `skills/recipe-from-project.md:127, 133, 180`
+**Issue:** A rule with a short body can never be `exact-rule`. Under the new Step 4 rule, its directory can then fold only through a judgment match.
+**Fix:** Document the cutoff next to line 133.
 
-**File:** `skills/recipe-from-project.md:122, 172`
-**Issue:** The `>= 200` size cutoff is not mentioned anywhere in the prose. Short rule files silently fall through to judgment.
-**Fix:** Document the cutoff next to line 128.
-
-### IN-06: The README lists the skill under "Available Ruly Commands" although nothing installs it
+### IN-06: The README lists the skill under "Available Ruly Commands" with no note that a recipe must list it first (carried over)
 
 **File:** `README.md:894`
-**Issue:** The other entries in that list are available in this repo. This one exists only after a recipe that lists the URL has been squashed, which line 902 explains only afterwards.
-**Fix:** Add "(add to a recipe first, see [Drafting a Recipe From a Project](#drafting-a-recipe-from-a-project))" to the bullet.
+**Fix:** Add "(add to a recipe first, see [Drafting a Recipe From a Project](#drafting-a-recipe-from-a-project))".
+
+### IN-07: "Alphabetical position" does not say which order yalphabetize uses (carried over)
+
+**File:** `skills/recipe-from-project.md:265`
+**Fix:** Say "in Ruby string (byte) order: `-` < `.` < digits < uppercase < `_` < lowercase".
+
+### IN-08: The new Step 8 comparison does not say how a source path maps to a dry-run line
+
+**File:** `skills/recipe-from-project.md:336`
+**Issue:** `Display#dry_run_skills` and `#dry_run_commands` print derived targets, not the draft's source paths. For example, `tag/skills/tag-skill.md` prints as `.claude/skills/tag-skill/SKILL.md`, and `tag/commands/tagcmd.md` prints as `tag/tagcmd.md` after `omit_command_prefix`. A `skills:` directory entry prints one line per file. An agent comparing literally could report false failures, or miss a real one.
+**Fix:** Add: "Map each source with the rule in url-match's `derive` (`.claude/skills/<derived>/SKILL.md`) and Step 6's command-path rule, and expect one line per file for a directory entry."
 
 ---
 
-_Reviewed: 2026-11-08T07:30:00Z_
+_Reviewed: 2026-11-08T07:41:08Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
