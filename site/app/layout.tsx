@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Ruly — Compose the rules each task needs from one shared rules repo",
   description:
-    "Recipes pick the rules, skills and commands for a task, requires: pulls in their dependencies, and ruly squash --sync shares one rules repo across machines.",
+    "Recipes pick the rules, skills and commands for a task, requires: pulls in their dependencies, and ruly squash --sync shares one rules repo across machines. Output goes to Claude Code, AGENTS.md or a Claude Code plugin.",
 };
 
 export default function RootLayout({
