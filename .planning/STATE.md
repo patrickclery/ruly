@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 08
 current_phase_name: Project-to-recipe generator skill
 status: executing
-stopped_at: Phase 06 complete, ready to plan Phase 08
-last_updated: "2026-11-05T05:19:25.411Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-11-08T03:00:48.308Z"
 last_activity: 2026-11-04
-last_activity_desc: Phase 06 complete, transitioned to Phase 08
-state_head: 90547c1fe480e6e7dcf5f5b6408dd9675d2b31c6
+last_activity_desc: Phase 08 execution started
+state_head: ea8fffd443a5b9d66ddf6b492164cfc58186e2d5
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Rules get squashed correctly into agent instruction files every time
-**Current focus:** Phase 4 — AGENTS.md Output Target
+**Current focus:** Phase 08 — Project-to-recipe generator skill
 
 ## Current Position
 
-Phase: 08 (Project-to-recipe generator skill) — READY TO EXECUTE
-Plan: Not started
+Phase: 08 (Project-to-recipe generator skill) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-11-04 — Phase 06 complete, transitioned to Phase 08
+Last activity: 2026-11-04 — Phase 08 execution started
 
-Progress: [████████░░] 81% (existing work)
+Progress: [█████████░] 88% (existing work)
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [████████░░] 81% (existing work)
 | Phase 06 P01 | 10min | 3 tasks | 47 files |
 | Phase 06 P02 | 10min | 2 tasks | 15 files |
 | Phase 06 P03 | 3min | 2 tasks | 3 files |
+| Phase 08 P01 | Tasks 2-3 ~30min (continuation) | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,8 @@ Recent decisions affecting current work:
 - [Phase 06]: bench/ harness runs real bin/ruly squash with isolated HOME/RULY_HOME; non-fixture corpora write only to git-ignored bench/results/local
 - [Phase 06]: Compliance harness: dry run default; --live runs claude -p (claude-sonnet-5-5) with per-call budget cap; OutputDir guard shared with TokensCLI
 - [Phase 06]: Benchmark docs publish the fixture median (76.9% vs load-all, 68.4% vs native floor), always labeled fixture-based; compliance marked pending a paid live run
+- [Phase 08]: recipe-from-project: match order stays name first, then content, per CONTEXT
+- [Phase 08]: recipe-from-project: no-match report includes the name collision check; drafts list entries in full
 
 ### Pending Todos
 
@@ -134,6 +137,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-02T11:51:45.847Z
-Stopped at: Phase 06 complete, ready to plan Phase 08
+Last session: 2026-11-08T03:00:48.209Z
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
