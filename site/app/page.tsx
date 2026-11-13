@@ -81,7 +81,7 @@ export default function Home() {
             </svg>
             <h3 className="text-lg font-semibold text-white">Fixture benchmark</h3>
             <p className="mt-2 text-sm text-gray-400">
-              On ruly&apos;s synthetic bench fixture (five recipes, cl100k_base tokens), the squashed recipe output plus its skill and command descriptions was a median 74.3% smaller than loading every rule, and 68.4% smaller than a native layout&apos;s always-loaded set. The numbers describe the synthetic fixture, not a real rules repo.{" "}
+              On ruly&apos;s synthetic bench fixture (five recipes, cl100k_base tokens), the squashed recipe output plus its skill and command descriptions was a median 74.3% smaller than loading every rule, and 68.4% smaller than a native layout&apos;s always-loaded set. Three fixture rules are in no recipe; without them the medians are 70.9% and 63.0%. The numbers describe the synthetic fixture, not a real rules repo.{" "}
               <a
                 href="https://github.com/patrickclery/ruly/blob/main/docs/benchmarks.md"
                 className="text-green-400 hover:brightness-110 transition duration-200"
