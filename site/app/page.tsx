@@ -96,7 +96,7 @@ export default function Home() {
             </svg>
             <h3 className="text-lg font-semibold text-white">Draft a recipe from a project</h3>
             <p className="mt-2 text-sm text-gray-400">
-              The /recipe-from-project skill drafts a recipe from a project folder&apos;s current rules, skills, commands, subagents and MCP servers, and writes it to the rules repo&apos;s recipes.yml only after you approve the draft. It is not installed with the gem: list <code className="font-mono text-green-400 break-all">https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md</code> under a recipe&apos;s skills: and ruly squash fetches it, so that squash needs the network.{" "}
+              The /recipe-from-project skill drafts a recipe from a project folder&apos;s current rules, skills, commands, subagents and MCP servers, and writes it to the rules repo&apos;s recipes.yml only after you approve the draft. It is not installed with the gem; ruly squash fetches it, so that squash needs the network. For a project already built from a recipe, add <code className="font-mono text-green-400 break-all">https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md</code> to that recipe&apos;s skills: list. For any other project, squash the ruly-tools recipe in an empty directory. Do not squash ruly-tools inside the project you want to scan: that squash overwrites CLAUDE.local.md and empties mcpServers in .mcp.json, which destroys the files the skill reads.{" "}
               <a
                 href="https://github.com/patrickclery/ruly#drafting-a-recipe-from-a-project"
                 className="text-green-400 hover:brightness-110 transition duration-200"
