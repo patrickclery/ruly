@@ -1,12 +1,13 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 07
-status: completed
+current_phase: 03
+current_phase_name: Emphasize Core Advantages
+status: executing
 stopped_at: Phase 07 complete — all phases complete
-last_updated: "2026-11-08T18:36:32.324Z"
-last_activity: 2026-11-08
-last_activity_desc: Phase 07 complete
-state_head: 31ceba0345b0272c83006956fdc47b63089f7ba3
+last_updated: "2026-11-13T09:09:50.659Z"
+last_activity: 2026-11-13
+last_activity_desc: Phase 03 execution started
+state_head: 48bfef80bb67cbc74ca58f0e56eeb2ce83f0aebc
 progress:
   total_phases: 8
   completed_phases: 8
@@ -22,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Rules get squashed correctly into agent instruction files every time
-**Current focus:** Phase 08 — Project-to-recipe generator skill
+**Current focus:** Phase 03 — Emphasize Core Advantages
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-11-08 - Completed quick task 261108-fxc: Update demo site for phases 4-8 and merge to main
+Phase: 03 (Emphasize Core Advantages) — AWAITING HUMAN VERIFICATION
+Plan: 1 of 1
+Status: Phase 03 re-verified 5/6; one human check pending in 03-UAT.md (/gsd-verify-work 3)
+Last activity: 2026-11-13 — Phase 03 re-verified after site review fixes; human check pending
 
 Progress: [██████████] 100% (existing work)
 
@@ -144,9 +145,10 @@ None yet.
 
 | Phase | State | Resume |
 |-------|-------|--------|
+| 3 | verification_deferred_human | /gsd-verify-work 3 |
 
 ## Session Continuity
 
-Last session: 2026-11-08T03:09:17.659Z
-Stopped at: Phase 07 complete — all phases complete
+Last session: 2026-11-13T09:40:00Z
+Stopped at: Phase 03 re-verification, human check pending (/gsd-verify-work 3)
 Resume file: None
