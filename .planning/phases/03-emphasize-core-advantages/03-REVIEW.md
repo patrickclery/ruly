@@ -1,103 +1,89 @@
 ---
 phase: 03-emphasize-core-advantages
-reviewed: 2026-11-02T09:41:01Z
+reviewed: 2026-11-13T09:12:23Z
 depth: standard
-files_reviewed: 4
+files_reviewed: 2
 files_reviewed_list:
+  - site/app/layout.tsx
   - site/app/page.tsx
-  - site/components/FileTree.tsx
-  - README.md
-  - .claude/ruly-recipes-mcp-patterns.md
 findings:
   critical: 0
-  warning: 4
-  info: 4
-  total: 8
+  warning: 3
+  info: 3
+  total: 6
 status: issues_found
 ---
 
 # Phase 3: Code Review Report
 
-**Reviewed:** 2026-11-02T09:41:01Z
+**Reviewed:** 2026-11-13T09:12:23Z
 **Depth:** standard
-**Files Reviewed:** 4
+**Files Reviewed:** 2
 **Status:** issues_found
 
 ## Summary
 
-Docs/positioning phase. Verified clean:
+This is an incremental re-review of the 483c4c2 delta (`site/app/layout.tsx`, `site/app/page.tsx`); the 8 findings of the 2026-11-02 report were closed in 03-REVIEW-FIX.md.
 
-- `eslint` on both changed TSX files exits 0, and `tsc --noEmit` exits 0. The FileTree `{"// "}` fix renders the same text as before.
-- Every `ruly ...` example in README.md is valid against `bin/ruly help <cmd>` (0.2.0). No `-r` or `--recipe` is left, and the introspect docs and examples match `introspect RECIPE SOURCE...` with `-d/-o/--dry-run/--relative`.
-- All internal anchors resolve to exactly one heading: `#ruly-vs-native-claude-code`, `#subagents` and `#sharing-recipes-across-machines` (twice).
-- The Subagents subtree moved without losing content. The only differences from `8734d26~4` are `ruly squash -r full` changed to `ruly squash full`, Prettier table alignment and one blank line.
-- The scoped files say nothing about Ruler or rulesync, so they make no superiority claims against them.
-- The README claims about ruly match the code: stats cycle detection in `operations/stats.rb`, the two checks in `checks.rb`, the subagent > recipe > `inherit` model order in `subagent_processor.rb:267`, and `--strict`/`--sync` in squash help. The native-Claude-Code cells match the doc quotes recorded in 03-01-PLAN.md.
+Verified clean:
 
-The issues are in the parts the phase only partly touched. The auto-imported patterns file still has a broken command and contradictory path rules. The site metadata and demo still carry the old "three modes" positioning. One site card overstates when circular `requires:` chains are reported.
+- `eslint app/page.tsx app/layout.tsx` and `tsc --noEmit` both exit 0.
+- AGENTS.md card and hero: `-a agents` writes `AGENTS.md`, skips commands, subagents, hooks and MCP servers (README "AGENTS.md Output", CHANGELOG 0.3.0). `-a claude-plugin` packages skills, commands, agents, hooks and MCP servers for `claude --plugin-dir`, and the rules ship as `/RECIPE:RECIPE-rules` (README "Claude Code Plugin Output", CHANGELOG 0.4.0). Both shipped in 0.3.0/0.4.0, and `VERSION` is 0.4.0.
+- "Every squash that writes files runs checks" still holds for the new targets. `write_agents_md` and `write_claude_plugin` both call `run_checks` (`lib/ruly/cli.rb:408`, `:511`). Dry-run still returns first.
+- Benchmark card: 74.3% (vs load-all median), 68.4% (vs native floor median), five recipes and `cl100k_base` all match docs/benchmarks.md, and the card labels them as synthetic-fixture figures.
+- Links resolve. `docs/benchmarks.md` and `skills/recipe-from-project.md` exist on `origin/main`, and `#drafting-a-recipe-from-a-project` matches exactly one README heading.
+- "Not installed with the gem" is correct. `ruly.gemspec` `spec.files` does not include `skills/`.
+
+Remaining problems: the new recipe-from-project card has a layout overflow, and it leaves out the README's data-loss warning. The benchmark card also drops a qualifier that docs/benchmarks.md places next to the same numbers.
 
 ## Narrative Findings (AI reviewer)
 
 ## Warnings
 
-### WR-01: Patterns file (auto-imported into CLAUDE.md) still instructs a command that fails on 0.2.0
+### WR-01: Raw skill URL overflows the "Draft a recipe from a project" card
 
-**File:** `.claude/ruly-recipes-mcp-patterns.md:246`, `:252`
-**Issue:** `ruly squash --recipe workaxle-testing` fails with `Unknown switches "--recipe"` (verified: the CLI sets `check_unknown_options!` at `lib/ruly/cli.rb:21`). CLAUDE.md:23 `@`-imports this file, so every agent session gets told to run it. The phase edited this file and had a "fix 0.2.0 command examples" goal, but it missed this line. Line 252 says `mise install ruby` updates the installed ruly, which it does not: it installs a Ruby version.
-**Fix:**
-```bash
-# Squash a recipe for testing (run from temp directory)
-cd $(mktemp -d)
-ruly squash workaxle-testing
+**File:** `site/app/page.tsx:99`
+**Issue:** The full URL `https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md` is plain prose with no wrap opportunity. In headless Chrome at text-sm, a 224px box (the card's content width at the `max-w-4xl` 3-column layout) gives `scrollWidth` 357 against `clientWidth` 224. At the `md` breakpoint the content width is about 181px, and in the single-column mobile layout about 295px. Both are narrower than the URL, so the text spills past the card's border at every breakpoint. The footer already guards its long command with `break-all` (`page.tsx:115`), but the card does not.
+**Fix:** Render the URL as a wrapping code span (or a link), for example:
+```tsx
+list <code className="font-mono text-green-400 break-all">https://github.com/patrickclery/ruly/blob/main/skills/recipe-from-project.md</code> under a recipe&apos;s skills:
 ```
-Replace `mise install ruby` with the project's actual reinstall step (for example `gem build ruly.gemspec && gem install ./ruly-*.gem`, or whatever the README install path is).
+Alternatively, add `break-words` / `[overflow-wrap:anywhere]` to the card's `<p>`.
 
-### WR-02: Patterns file gives contradictory path rules to agents
+### WR-02: Recipe-from-project card tells users to squash the skill into "a recipe" without the README's data-loss warning
 
-**File:** `.claude/ruly-recipes-mcp-patterns.md:21-23` vs `:178-183`; examples at `:38-44`, `:105-125`, `:175`
-**Issue:** Section 1 marks machine-specific absolute paths as WRONG and repo-relative paths as CORRECT. Anti-pattern 3 says relative paths are WRONG and "Must use absolute paths". The Directory vs File and Complete Example blocks use `/Users/patrick/Projects/...` absolute paths. These are macOS paths, and this machine is Linux under `/home/patrick/github.com/...`. An agent following this file can write either form, and both are labelled wrong somewhere.
-**Fix:** Delete anti-pattern 3. Convert the example `files:` entries to repo-relative paths (`workaxle/core.md`, `bug/`, ...) so they match section 1 and the README's "Sharing Recipes Across Machines".
+**File:** `site/app/page.tsx:99`
+**Issue:** The card says "list [URL] under a recipe's skills: and ruly squash fetches it". README "Drafting a Recipe From a Project" (README.md:902-922) allows only two routes: add the URL to *the project's own* recipe, or squash `ruly-tools` in an *empty* directory. It also warns: "Do not squash `ruly-tools` inside the project you want to scan. Squashing there overwrites `CLAUDE.local.md` and empties `mcpServers` in `.mcp.json`, even when the fetch fails, which destroys the files the skill reads." A reader who follows the card (any recipe, squashed where they want to use the skill, which is naturally the project to scan) can wipe the project's `CLAUDE.local.md` and MCP server config. This is the data the skill is meant to read. The "How to run it" link does not offset an instruction that, as written, is unsafe.
+**Fix:** Narrow the instruction and carry the warning, for example: "...list [URL] under the project's own recipe's skills:, or squash the ruly-tools recipe in an empty directory. Do not squash another recipe inside the project you want to scan; that overwrites its CLAUDE.local.md and .mcp.json servers." Alternatively, drop the how-to sentence and keep only the "How to run it" link.
 
-### WR-03: Site metadata and demo still carry the positioning this phase removed
+### WR-03: Benchmark card drops the "rules in no recipe" qualifier that docs/benchmarks.md attaches to the same medians
 
-**File:** `site/app/layout.tsx:16-18`; `site/components/InteractiveTerminal.tsx:93-96,192-222` (rendered by `site/app/page.tsx:34`)
-**Issue:** The new hero says "Compose the rules each task needs from one shared rules repo." The page `<title>`/description still say "Bring your own rules, skills, and agents to anywhere Claude is installed", which is the old h1 word for word. Search results and link previews will show the old message. The interactive demo directly under the hero still asks "How do you want to deploy your rules?" and offers Override / Merge / Ghost. The "Three Modes" card that explained those terms was removed (page.tsx:59-63), so the demo now uses undefined terms the site no longer explains.
-**Fix:** Update `metadata` in `layout.tsx` to the new hero line and subtitle. Then either relabel the demo's deploy-mode step with the real flags (`--home-override`, `--git-ignore`/`--git-exclude`) plus a one-line explanation, or remove that step.
-
-### WR-04: Site Recipes card says squash reports circular `requires:` chains, but only `ruly stats` does
-
-**File:** `site/app/page.tsx:45`
-**Issue:** "Dependencies declared with requires: are resolved and included once, and circular chains are reported." In the squash path, a cycle is silently deduplicated by the processed-file Set. `Checks.run_all` (`lib/ruly/checks.rb:12-27`) runs only AmbiguousLinks and DuplicateSkillRequires. Cycle detection exists only in `Operations::Stats#find_circular_dependencies` (`operations/stats.rb:124`). Cycles also do not appear on the console; they are written to `stats.md`, and `display_result` prints only the orphan count. The README is accurate ("`ruly stats` reports circular chains"), but the site card is not.
-**Fix:** "...resolved and included once, and `ruly stats` lists any circular chains."
+**File:** `site/app/page.tsx:84`
+**Issue:** The card quotes 74.3% (vs load-all) and 68.4% (vs native floor). docs/benchmarks.md states the qualifier in the paragraph right after those headline numbers, and again under Limitations. Three always-loaded fixture rules (1,175 tokens, 14.5% of the native floor) are in no recipe, so they inflate every reduction. Without them the medians are 70.9% and 63.0%. The docs also say the native floor/ceiling "bracket native cost rather than pin it". The card's only caveat is "describe the synthetic fixture", so a reader takes 68.4% as the saving against a native setup. In the source, that figure is an upper-leaning number. For a page whose figures must match the benchmark doc, leaving out the doc's own adjacent qualifier is an overclaim.
+**Fix:** Add the bounded figures, for example: "...a median 74.3% smaller than loading every rule and 68.4% smaller than a native layout's always-loaded set (70.9% and 63.0% without three fixture rules that no recipe includes)."
 
 ## Info
 
-### IN-01: "Checks after every squash" is not true for `--dry-run`
+### IN-01: New copy adds more config/CLI tokens as bare prose (carry-over of prior IN-02)
 
-**File:** `README.md:18`, `README.md:103`, `site/app/page.tsx:15`, `site/app/page.tsx:63`
-**Issue:** `squash --dry-run` returns before `post_squash` (`lib/ruly/cli.rb:76-84`), so no checks run.
-**Fix:** "Every squash that writes output checks for..." Alternatively, run `Checks.run_all` in the dry-run branch too.
+**File:** `site/app/page.tsx:18`, `:75`, `:99`; `site/app/layout.tsx:18`
+**Issue:** Prior IN-02 was marked out of scope in 03-REVIEW-FIX.md, and the delta makes it worse. `(-a agents)`, `-a claude-plugin`, `claude --plugin-dir`, `/RECIPE:RECIPE-rules`, `skills:` and a raw URL are all rendered as plain text, which gives copy like "under a recipe's skills: and ruly squash fetches it".
+**Fix:** Wrap the tokens in `<code className="font-mono text-green-400">…</code>`. This also fixes WR-01.
 
-### IN-02: Config tokens rendered as bare prose on the site
+### IN-02: New site claims contradict the README comparison-table row they should match
 
-**File:** `site/app/page.tsx:15`, `:45`, `:54`, `:63`
-**Issue:** `requires:`, `overrides:`, `ruly squash --sync`, `.claude/agents/` and `inherit` render as plain text, giving copy like "with per-machine overrides:." and "requires: pulls in". Without code styling the colons read as punctuation errors.
-**Fix:** Wrap them in `<code className="font-mono text-green-400">…</code>`, as is done for the `gem install ruly` badge.
+**File:** `site/app/layout.tsx:18`, `site/app/page.tsx:18`, `:75` (conflict at `README.md:126`, outside this review's scope)
+**Issue:** The site now says output goes to "Claude Code, AGENTS.md or a Claude Code plugin". README.md:126 (Ruler/rulesync table, "Agents" row) still says "3 targets, `claude`, `agents` (`AGENTS.md`) and `cursor`; skills, commands and subagents are written only for Claude Code". That row leaves out `claude-plugin` (0.4.0), and `AGENTS.md` does inline skills. The site is right and the README row is stale, so a reader who checks the site against the README finds a contradiction.
+**Fix:** Update README.md:126 to list `claude-plugin` as a fourth target, and note that `AGENTS.md` inlines skills.
 
-### IN-03: Install story contradicts itself
+### IN-03: Meta description is 219 characters
 
-**File:** `README.md:127`, `README.md:129`; `site/app/page.tsx:9`, `:79`
-**Issue:** The README says "No gem installation required" and installs by curl/clone, but the site hero badge and footer say `gem install ruly`. The new "Requirements" line is also listed under "Benefits" with a ✅.
-**Fix:** Pick one install path, or document both. Move Requirements out of the Benefits list.
-
-### IN-04: Internal planning jargon and a leftover overclaim in a session-loaded context file
-
-**File:** `.claude/ruly-recipes-mcp-patterns.md:5`, `:156`, `:257-258`
-**Issue:** "Phase 6 token benchmark" refers to `.planning/` and means nothing to an agent reading this file. Line 257 still sits under a "Key Achievements" heading. Line 258, "Conditional loading based on file patterns", contradicts the no-glob rule in the same file. README.md:105 also says native behavior is "quoted" from the docs, but most cells are paraphrases.
-**Fix:** Change the qualifier to "(self-reported; not yet benchmarked)". Rename the heading to "Reported results" and drop "file patterns". In the README, say "summarized from" instead of "quoted from".
+**File:** `site/app/layout.tsx:18`
+**Issue:** The appended sentence makes the description 219 characters long. Search results truncate at about 155-160 characters, so the new "AGENTS.md or a Claude Code plugin" clause is the part that gets cut.
+**Fix:** Shorten it, for example: "Recipes pick the rules, skills and commands each task needs from one shared rules repo, for Claude Code, AGENTS.md or a Claude Code plugin."
 
 ---
 
-_Reviewed: 2026-11-02T09:41:01Z_
+_Reviewed: 2026-11-13T09:12:23Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
