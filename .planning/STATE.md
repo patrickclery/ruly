@@ -1,12 +1,12 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 07
+current_phase: 03
 status: completed
-stopped_at: Phase 07 complete — all phases complete
-last_updated: "2026-11-08T07:50:52.850Z"
-last_activity: 2026-11-08
-last_activity_desc: Phase 07 complete
-state_head: 5afd0dc72524c427699e697375d7e7f46283520e
+stopped_at: Phase 03 complete — all phases complete
+last_updated: "2026-11-13T09:19:56.395Z"
+last_activity: 2026-11-13
+last_activity_desc: Phase 03 complete
+state_head: eb5b3318f2fc2b6a6aad41e4017b41d5002c82c7
 progress:
   total_phases: 8
   completed_phases: 8
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-02)
 
 **Core value:** Rules get squashed correctly into agent instruction files every time
-**Current focus:** Phase 08 — Project-to-recipe generator skill
+**Current focus:** Phase 03 — Emphasize Core Advantages
 
 ## Current Position
 
-Phase: 07
+Phase: 03
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-11-08 — Phase 07 complete
+Last activity: 2026-11-13 — Phase 03 complete
 
 Progress: [██████████] 100% (existing work)
 
@@ -122,6 +122,7 @@ Recent decisions affecting current work:
 - [Phase 08]: recipe-from-project: no-match report includes the name collision check; drafts list entries in full
 - [Phase 08]: 08-02: rules repo sort commit restores yalphabetize's comment reindents and whitespace so it reorders lines only
 - [Phase 08]: 08-03: separate-pr with merge and rules-push yes, chosen by the orchestrator under the user's standing bypass instruction; PR #5 merged (0d91b71), rules main pushed after gates
+- [Phase 03]: 2026-11-13 re-verification after the site update: 3 review warnings fixed in site/app/page.tsx; the quick-task cards accepted as a D-10 override by the orchestrator on the user's standing instruction (reversible, see 03-VERIFICATION.md); 4 Info findings left open in 03-REVIEW.md
 
 ### Pending Todos
 
@@ -134,6 +135,12 @@ None yet.
 - ⚠️ [Phase 2] Installed `ruly` binary not refreshed with 0.2.0 changes (per CLAUDE.md: update after changes)
 - ⚠️ [Phase 2] Pre-existing: 15 baseline rspec failures; `ruly stats` writes stats.md into gem rules/ dir regardless of cwd
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261108-fxc | Update demo site for phases 4-8 and merge to main | 2026-11-08 | 31ceba0 | [261108-fxc-update-demo-site-for-phases-4-8-and-merg](./quick/261108-fxc-update-demo-site-for-phases-4-8-and-merg/) |
+
 ## Deferred Verification
 
 | Phase | State | Resume |
@@ -141,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-08T03:09:17.659Z
-Stopped at: Phase 07 complete — all phases complete
+Last session: 2026-11-13T09:40:00Z
+Stopped at: Phase 03 complete — all phases complete
 Resume file: None
